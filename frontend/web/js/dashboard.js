@@ -530,7 +530,7 @@ function renderRecapTable({ bodyEl, peopleList, recordsMap, filterConfig, emptyM
     if (tableEl) tableEl.classList.add('is-empty-table');
     bodyEl.innerHTML = `
       <tr class="empty-row">
-        <td colspan="7" class="empty-table-cell">
+        <td colspan="6" class="empty-table-cell">
           <div class="empty-sticky-banner">
             ${emptyMessageHtml || 'Belum ada data terdaftar.'}
           </div>
@@ -587,7 +587,6 @@ function renderRecapTable({ bodyEl, peopleList, recordsMap, filterConfig, emptyM
         <td><span class="badge-count badge-hadir">${totalHadir}</span></td>
         <td><span class="badge-count badge-sakit">${totalSakit}</span></td>
         <td><span class="badge-count badge-alfa">${totalAlfa}</span></td>
-        <td style="font-weight: 600;">${effectiveDays} Hari</td>
         <td>
           <div class="progress-wrap">
             <div class="progress-bar">
