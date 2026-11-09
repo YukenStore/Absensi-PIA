@@ -1,7 +1,7 @@
 /**
  * Logika Halaman Pendaftaran Siswa
  * Sistem Informasi Pendidikan Islam At-Taqwa (PIA)
- * Tersinkronisasi dengan SQLite Lokal, Cloudflare Worker, & GitHub Pages
+ * Terhubung Langsung ke Database SQL (SQLite Lokal & Cloudflare D1)
  */
 
 const MONTH_NAMES_ID = [
@@ -19,8 +19,37 @@ const MONTH_NAMES_ID = [
   'Desember',
 ];
 
+const API_BASES = window.location.hostname.includes('github.io')
+  ? ['http://localhost:5173', 'https://absensi-pia.yumenoboken.workers.dev']
+  : ['', 'http://localhost:5173', 'https://absensi-pia.yumenoboken.workers.dev'];
+
 let studentsList = [];
 let currentUser = null;
+
+async function callDatabaseApi(apiPath, options = {}) {
+  for (const base of API_BASES) {
+    try {
+      const resp = await fetch(`${base}${apiPath}`, options);
+      const contentType = resp.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const data = await resp.json();
+        if (!resp.ok) {
+          throw new Error(data.detail || data.message || 'Permintaan database gagal.');
+        }
+        return data;
+      }
+    } catch (err) {
+      if (
+        !(err instanceof TypeError) &&
+        !String(err.message).includes('JSON') &&
+        !String(err.message).includes('Failed to fetch')
+      ) {
+        throw err;
+      }
+    }
+  }
+  return null;
+}
 
 function initHeaderAndAuth() {
   const nameEl = document.getElementById('activeUserName');
@@ -90,11 +119,23 @@ async function fetchStudentsFromServer() {
   renderStudentsTable();
 
   try {
-    const resp = await fetch('/api/students');
-    if (!resp.ok) return;
-    const data = await resp.json();
-    if (data && Array.isArray(data.students)) {
-      studentsList = data.students;
+    // Sinkronkan siswa di browser dengan tabel SQL `students` di database
+    const syncData = await callDatabaseApi('/api/students/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ students: studentsList }),
+    });
+
+    if (syncData && Array.isArray(syncData.students)) {
+      studentsList = syncData.students;
+      saveLocalStudents();
+      renderStudentsTable();
+      return;
+    }
+
+    const getData = await callDatabaseApi('/api/students');
+    if (getData && Array.isArray(getData.students)) {
+      studentsList = getData.students;
       saveLocalStudents();
       renderStudentsTable();
     }
@@ -145,7 +186,7 @@ function renderStudentsTable() {
     btn.addEventListener('click', async () => {
       const id = parseInt(btn.getAttribute('data-delete-id'), 10);
       const name = btn.getAttribute('data-name');
-      if (!confirm(`Hapus siswa "${name}" dari daftar dan Dashboard?`)) return;
+      if (!confirm(`Hapus siswa "${name}" dari database dan Dashboard?`)) return;
       await deleteStudent(id);
     });
   });
@@ -154,38 +195,26 @@ function renderStudentsTable() {
 async function addStudent({ fullName, className, birthDate }) {
   const createdBy = currentUser ? currentUser.full_name : 'Guru PIA';
 
-  // Coba simpan ke server SQL terlebih dahulu
-  try {
-    const resp = await fetch('/api/students', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        full_name: fullName,
-        class_name: className,
-        birth_date: birthDate,
-        created_by: createdBy,
-      }),
-    });
-    const contentType = resp.headers.get('content-type') || '';
-    if (contentType.includes('application/json')) {
-      const data = await resp.json();
-      if (!resp.ok) {
-        throw new Error(data.detail || 'Gagal menyimpan data siswa.');
-      }
-      if (data.student) {
-        studentsList.push(data.student);
-        saveLocalStudents();
-        renderStudentsTable();
-        return;
-      }
-    }
-  } catch (err) {
-    if (!(err instanceof TypeError) && !String(err.message).includes('JSON')) {
-      throw err;
-    }
+  // Simpan langsung ke tabel SQL `students` di database
+  const dbRes = await callDatabaseApi('/api/students', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      full_name: fullName,
+      class_name: className,
+      birth_date: birthDate,
+      created_by: createdBy,
+    }),
+  });
+
+  if (dbRes && dbRes.student) {
+    studentsList.push(dbRes.student);
+    saveLocalStudents();
+    renderStudentsTable();
+    return;
   }
 
-  // Fallback untuk GitHub Pages / Offline
+  // Fallback apabila sedang offline
   const nextId =
     studentsList.length > 0
       ? Math.max(...studentsList.map((s) => Number(s.id) || 0)) + 1
@@ -211,14 +240,14 @@ async function deleteStudent(studentId) {
   renderStudentsTable();
 
   try {
-    await fetch('/api/students/delete', {
+    await callDatabaseApi('/api/students/delete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ student_id: studentId }),
     });
   } catch (_) {}
 
-  showBanner('Data siswa berhasil dihapus dari sistem.', 'success');
+  showBanner('Data siswa berhasil dihapus dari database dan Dashboard.', 'success');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -240,17 +269,17 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Menyimpan Data...';
+      submitBtn.textContent = 'Menyimpan ke Database...';
 
       try {
         await addStudent({ fullName, className, birthDate });
         form.reset();
         showBanner(
-          `Siswa "${fullName}" (Kelas: ${className}) berhasil didaftarkan dan telah masuk ke Dashboard!`,
+          `Siswa "${fullName}" (${className}) berhasil disimpan ke Database dan telah masuk ke Dashboard!`,
           'success'
         );
       } catch (err) {
-        showBanner(err.message || 'Gagal menyimpan data siswa.', 'error');
+        showBanner(err.message || 'Gagal menyimpan data siswa ke database.', 'error');
       } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Simpan & Tambahkan ke Dashboard';
@@ -258,4 +287,3 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
-

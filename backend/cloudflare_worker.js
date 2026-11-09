@@ -13,11 +13,15 @@ const memoryStore = {
       password_hash: 'd60a21f8dad3657f52d52c97d4ea9e5af62cb0df49ecb59e5d3d1010dd3dd126',
       password_salt: '6b5c963375d89fa95bd982a8250df01d',
       role: 'admin',
+      is_hidden: 0,
       is_active: 1,
     },
   ],
   otps: [],
+  students: [],
+  customHolidays: {},
   nextUserId: 2,
+  nextStudentId: 1,
 };
 
 async function sha256Hex(message) {
@@ -110,6 +114,8 @@ async function ensureD1Schema(db) {
         password_hash TEXT NOT NULL,
         password_salt TEXT NOT NULL,
         is_active INTEGER NOT NULL DEFAULT 0,
+        role TEXT NOT NULL DEFAULT 'guru',
+        is_hidden INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
       )`
     )
@@ -124,6 +130,29 @@ async function ensureD1Schema(db) {
         expires_at INTEGER NOT NULL,
         is_used INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )`
+    )
+    .run();
+
+  await db
+    .prepare(
+      `CREATE TABLE IF NOT EXISTS students (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        full_name TEXT NOT NULL,
+        class_name TEXT NOT NULL,
+        birth_date TEXT NOT NULL,
+        created_by TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )`
+    )
+    .run();
+
+  await db
+    .prepare(
+      `CREATE TABLE IF NOT EXISTS custom_holidays (
+        holiday_date TEXT PRIMARY KEY,
+        is_holiday INTEGER NOT NULL DEFAULT 1,
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
       )`
     )
     .run();
@@ -479,6 +508,169 @@ export default {
         }
       } catch (err) {
         return jsonResponse({ detail: `Worker Error: ${err.message}` }, 500);
+      }
+    }
+
+    // ENDPOINT DATA SISWA (PENDAFTARAN & SINKRONISASI DATABASE D1)
+    if (pathname.startsWith('/api/students') || pathname.startsWith('/api/attendance') || pathname.startsWith('/api/teachers')) {
+      try {
+        const db = env.DB || null;
+        if (db) {
+          await ensureD1Schema(db);
+        }
+
+        if (pathname === '/api/students' && request.method === 'GET') {
+          if (db) {
+            const { results } = await db
+              .prepare('SELECT id, full_name, class_name, birth_date, created_by, created_at FROM students ORDER BY id ASC')
+              .all();
+            return jsonResponse({ success: true, students: results || [] });
+          }
+          return jsonResponse({ success: true, students: memoryStore.students });
+        }
+
+        if (pathname === '/api/students' && request.method === 'POST') {
+          const body = await request.json();
+          const fullName = (body.full_name || '').trim();
+          const className = (body.class_name || '').trim();
+          const birthDate = (body.birth_date || '').trim();
+          const createdBy = (body.created_by || 'Guru PIA').trim();
+
+          if (!fullName || !className || !birthDate) {
+            return jsonResponse({ detail: 'Nama siswa, kelas, dan tanggal lahir wajib diisi.' }, 400);
+          }
+
+          if (db) {
+            await db
+              .prepare('INSERT INTO students (full_name, class_name, birth_date, created_by) VALUES (?, ?, ?, ?)')
+              .bind(fullName, className, birthDate, createdBy)
+              .run();
+            const newRow = await db
+              .prepare('SELECT * FROM students ORDER BY id DESC LIMIT 1')
+              .first();
+            return jsonResponse({
+              success: true,
+              message: `Data siswa "${fullName}" berhasil disimpan ke Database!`,
+              student: newRow,
+            }, 201);
+          }
+
+          const newStudent = {
+            id: memoryStore.nextStudentId++,
+            full_name: fullName,
+            class_name: className,
+            birth_date: birthDate,
+            created_by: createdBy,
+            created_at: new Date().toISOString(),
+          };
+          memoryStore.students.push(newStudent);
+          return jsonResponse({
+            success: true,
+            message: `Data siswa "${fullName}" berhasil disimpan!`,
+            student: newStudent,
+          }, 201);
+        }
+
+        if (pathname === '/api/students/delete' && request.method === 'POST') {
+          const body = await request.json();
+          const studentId = Number(body.student_id);
+          if (db) {
+            await db.prepare('DELETE FROM students WHERE id = ?').bind(studentId).run();
+          } else {
+            memoryStore.students = memoryStore.students.filter((s) => Number(s.id) !== studentId);
+          }
+          return jsonResponse({ success: true, message: 'Data siswa berhasil dihapus.' });
+        }
+
+        if (pathname === '/api/students/sync' && request.method === 'POST') {
+          const body = await request.json();
+          const clientStudents = Array.isArray(body.students) ? body.students : [];
+          if (db) {
+            for (const s of clientStudents) {
+              const fullName = (s.full_name || s.name || '').trim();
+              const className = (s.class_name || '').trim();
+              const birthDate = (s.birth_date || '').trim();
+              const createdBy = (s.created_by || 'Guru PIA').trim();
+              if (!fullName || !className || !birthDate) continue;
+              const existing = await db
+                .prepare('SELECT id FROM students WHERE lower(full_name) = lower(?) AND birth_date = ? LIMIT 1')
+                .bind(fullName, birthDate)
+                .first();
+              if (!existing) {
+                await db
+                  .prepare('INSERT INTO students (full_name, class_name, birth_date, created_by) VALUES (?, ?, ?, ?)')
+                  .bind(fullName, className, birthDate, createdBy)
+                  .run();
+              }
+            }
+            const { results } = await db
+              .prepare('SELECT id, full_name, class_name, birth_date, created_by, created_at FROM students ORDER BY id ASC')
+              .all();
+            return jsonResponse({ success: true, students: results || [] });
+          }
+          return jsonResponse({ success: true, students: memoryStore.students });
+        }
+
+        if (pathname === '/api/attendance/overview' && request.method === 'GET') {
+          if (db) {
+            const { results: stuRows } = await db
+              .prepare('SELECT id, full_name, class_name, birth_date FROM students ORDER BY id ASC')
+              .all();
+            const { results: usrRows } = await db
+              .prepare('SELECT id, full_name, email, username, role, is_hidden FROM users WHERE is_active = 1 ORDER BY id ASC')
+              .all();
+            const allTeachers = (usrRows || []).map((u) => ({
+              id: u.id,
+              name: u.full_name,
+              email: u.email,
+              username: u.username,
+              role: u.email.toLowerCase() === 'yumenoboken@gmail.com' ? 'admin' : u.role || 'guru',
+              is_hidden: Boolean(u.is_hidden),
+            }));
+            return jsonResponse({
+              success: true,
+              students: (stuRows || []).map((s) => ({
+                id: s.id,
+                name: s.full_name,
+                class_name: s.class_name,
+                birth_date: s.birth_date,
+              })),
+              teachers: allTeachers.filter((t) => !t.is_hidden),
+              all_teachers: allTeachers,
+              custom_holidays: {},
+              student_records: {},
+              teacher_records: {},
+            });
+          }
+
+          const allTeachers = memoryStore.users
+            .filter((u) => u.is_active)
+            .map((u) => ({
+              id: u.id,
+              name: u.full_name,
+              email: u.email,
+              username: u.username,
+              role: u.role || 'guru',
+              is_hidden: Boolean(u.is_hidden),
+            }));
+
+          return jsonResponse({
+            success: true,
+            students: memoryStore.students.map((s) => ({
+              id: s.id,
+              name: s.full_name,
+              class_name: s.class_name,
+              birth_date: s.birth_date,
+            })),
+            teachers: allTeachers.filter((t) => !t.is_hidden),
+            all_teachers: allTeachers,
+            custom_holidays: memoryStore.customHolidays,
+            student_records: {},
+            teacher_records: {},
+          });
+        }
+      } catch (err) {
+        return jsonResponse({ detail: `Worker DB Error: ${err.message}` }, 500);
       }
     }
 

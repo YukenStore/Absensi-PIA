@@ -347,6 +347,9 @@ function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Private-Network': 'true',
   });
   res.end(JSON.stringify(payload));
 }
@@ -381,6 +384,16 @@ const MIME_TYPES = {
 };
 
 const server = http.createServer(async (req, res) => {
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Private-Network': 'true',
+    });
+    return res.end();
+  }
+
   const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
   let pathname = decodeURIComponent(parsedUrl.pathname);
 
@@ -774,6 +787,44 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, {
         success: true,
         message: 'Data siswa berhasil dihapus.',
+      });
+    } catch (err) {
+      return sendJson(res, 500, { detail: err.message });
+    }
+  }
+
+  if (pathname === '/api/students/sync' && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const clientStudents = Array.isArray(body.students) ? body.students : [];
+      for (const s of clientStudents) {
+        const fullName = (s.full_name || s.name || '').trim();
+        const className = (s.class_name || '').trim();
+        const birthDate = (s.birth_date || '').trim();
+        const createdBy = (s.created_by || 'Guru PIA').trim();
+        if (!fullName || !className || !birthDate) continue;
+
+        const exists = db
+          .prepare(
+            'SELECT id FROM students WHERE lower(full_name) = lower(?) AND birth_date = ? LIMIT 1'
+          )
+          .get(fullName, birthDate);
+
+        if (!exists) {
+          db.prepare(
+            'INSERT INTO students (full_name, class_name, birth_date, created_by) VALUES (?, ?, ?, ?)'
+          ).run(fullName, className, birthDate, createdBy);
+        }
+      }
+
+      const rows = db
+        .prepare(
+          'SELECT id, full_name, class_name, birth_date, created_by, created_at FROM students ORDER BY id ASC'
+        )
+        .all();
+      return sendJson(res, 200, {
+        success: true,
+        students: rows,
       });
     } catch (err) {
       return sendJson(res, 500, { detail: err.message });

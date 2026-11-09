@@ -22,6 +22,24 @@ const MONTH_NAMES = [
 const DAY_SHORT_NAMES = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 const AVAILABLE_YEARS = [2024, 2025, 2026, 2027];
 
+const API_BASES = window.location.hostname.includes('github.io')
+  ? ['http://localhost:5173', 'https://absensi-pia.yumenoboken.workers.dev']
+  : ['', 'http://localhost:5173', 'https://absensi-pia.yumenoboken.workers.dev'];
+
+async function callDatabaseApi(apiPath, options = {}) {
+  for (const base of API_BASES) {
+    try {
+      const resp = await fetch(`${base}${apiPath}`, options);
+      const contentType = resp.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const data = await resp.json();
+        if (resp.ok) return data;
+      }
+    } catch (_) {}
+  }
+  return null;
+}
+
 // State bersih (Tanpa data dummy — 100% tersinkronisasi dari Pendaftaran Siswa & Registrasi Guru)
 let state = {
   students: [],
@@ -121,7 +139,7 @@ async function toggleHolidayDate(year, monthIndex, day) {
 
   try {
     localStorage.setItem('pia_custom_holidays', JSON.stringify(state.customHolidays));
-    await fetch('/api/attendance/toggle-holiday', {
+    await callDatabaseApi('/api/attendance/toggle-holiday', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -215,9 +233,24 @@ function loadLocalSyncedData() {
 // Ambil data dari server SQL jika tersedia dan sinkronkan dengan penyimpanan browser
 async function loadServerOverview() {
   try {
-    const resp = await fetch('/api/attendance/overview');
-    if (!resp.ok) return;
-    const data = await resp.json();
+    // Jika ada siswa yang baru diinput di browser, sinkronkan terlebih dahulu ke tabel SQL `students`
+    if (state.students.length > 0) {
+      await callDatabaseApi('/api/students/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          students: state.students.map((s) => ({
+            id: s.id,
+            full_name: s.name,
+            class_name: s.class_name,
+            birth_date: s.birth_date,
+          })),
+        }),
+      });
+    }
+
+    const data = await callDatabaseApi('/api/attendance/overview');
+    if (!data) return;
 
     if (Array.isArray(data.students)) {
       state.students = data.students;
@@ -307,7 +340,7 @@ async function toggleTeacherVisibility(userId, hideUser) {
   // Kirim ke server SQLite jika sedang berjalan di local/worker
   try {
     const adminEmail = state.currentUser ? state.currentUser.email : 'yumenoboken@gmail.com';
-    await fetch('/api/teachers/toggle-hide', {
+    await callDatabaseApi('/api/teachers/toggle-hide', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -428,12 +461,9 @@ function renderDailyMatrix({
   // Body Tabel
   let bodyHtml = '';
   peopleList.forEach((person, idx) => {
-    const subClass = person.class_name
-      ? `<span class="student-class-tag">${person.class_name}</span>`
-      : '';
     bodyHtml += `<tr>
       <td class="sticky-no">${idx + 1}</td>
-      <td class="sticky-col">${person.name}${subClass}</td>`;
+      <td class="sticky-col">${person.name}</td>`;
 
     for (let d = 1; d <= daysCount; d++) {
       const holiday = isHolidayDate(year, monthIndex, d);
@@ -521,14 +551,10 @@ function renderRecapTable({ bodyEl, peopleList, recordsMap, filterConfig, emptyM
     const percentage =
       effectiveDays > 0 ? Math.round((totalHadir * 100) / effectiveDays) : 0;
 
-    const subClass = person.class_name
-      ? `<span class="student-class-tag">${person.class_name}</span>`
-      : '';
-
     rowsHtml += `
       <tr>
         <td>${idx + 1}</td>
-        <td style="font-weight: 700; color: var(--secondary);">${person.name}${subClass}</td>
+        <td style="font-weight: 700; color: var(--secondary);">${person.name}</td>
         <td><span class="badge-count badge-hadir">${totalHadir}</span></td>
         <td><span class="badge-count badge-sakit">${totalSakit}</span></td>
         <td><span class="badge-count badge-alfa">${totalAlfa}</span></td>
