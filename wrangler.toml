@@ -6,7 +6,9 @@ compatibility_date = "2024-11-01"
 directory = "./frontend/web"
 binding = "ASSETS"
 
-# Setelah Anda membuat Database D1 di Dashboard Cloudflare (Storage & Databases -> D1),
-# Anda dapat menghubungkannya langsung melalui menu Settings -> Bindings -> Add D1 Database
-# dengan Variable name: DB
+[[d1_databases]]
+binding = "DB"
+database_name = "absensi-pia-db"
+database_id = "1101b8c6-dbf5-4b55-898e-52be5d03986b"
+
 
