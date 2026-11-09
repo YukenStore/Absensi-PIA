@@ -1171,11 +1171,12 @@ const server = http.createServer(async (req, res) => {
   });
 });
 
-server.listen(PORT, '127.0.0.1', () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log('\n======================================================');
   console.log('  🚀 Absensi PIA - Fullstack Dev Server (UI + SQL + SMTP)');
   console.log('======================================================');
-  console.log(`  ➜ Halaman Login      : http://localhost:${PORT}/`);
+  console.log(`  ➜ Akses Lokal        : http://localhost:${PORT}/`);
+  console.log(`  ➜ Akses Jaringan/LAN : http://0.0.0.0:${PORT}/`);
   console.log(`  ➜ Halaman Registrasi : http://localhost:${PORT}/register.html`);
   console.log(`  ➜ Halaman OTP Email  : http://localhost:${PORT}/verify-otp.html`);
   console.log(`  ➜ Konfigurasi SMTP   : ${ENV_PATH}`);
