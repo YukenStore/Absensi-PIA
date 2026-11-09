@@ -556,6 +556,11 @@ export default {
             );
           }
 
+          const userRole =
+            user.email.toLowerCase() === 'yumenoboken@gmail.com'
+              ? 'admin'
+              : user.role || 'guru';
+
           return jsonResponse({
             success: true,
             message: 'Login berhasil!',
@@ -565,6 +570,7 @@ export default {
               full_name: user.full_name,
               username: user.username,
               email: user.email,
+              role: userRole,
             },
           });
         }

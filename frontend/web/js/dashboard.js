@@ -62,6 +62,17 @@ function getCurrentUser() {
   return null;
 }
 
+function updateAdminUiVisibility() {
+  const adminManageWrap = document.getElementById('adminManageTeachersWrap');
+  const visibilityPanel = document.getElementById('adminTeacherVisibilityPanel');
+  if (adminManageWrap) {
+    adminManageWrap.style.display = state.isAdmin ? 'block' : 'none';
+  }
+  if (visibilityPanel && !state.isAdmin) {
+    visibilityPanel.style.display = 'none';
+  }
+}
+
 // Muat info user yang sedang login
 function initUserHeader() {
   const nameEl = document.getElementById('activeUserName');
@@ -72,18 +83,18 @@ function initUserHeader() {
   if (user) {
     if (user.full_name && nameEl) nameEl.textContent = user.full_name;
     if (user.email && emailEl) emailEl.textContent = user.email;
-    state.isAdmin =
+    state.isAdmin = Boolean(
       (user.email && user.email.toLowerCase() === 'yumenoboken@gmail.com') ||
-      user.role === 'admin';
+      user.role === 'admin'
+    );
+  } else {
+    state.isAdmin = false;
   }
 
-  const adminManageWrap = document.getElementById('adminManageTeachersWrap');
+  updateAdminUiVisibility();
+
   const toggleBtn = document.getElementById('toggleHideTeachersPanelBtn');
   const visibilityPanel = document.getElementById('adminTeacherVisibilityPanel');
-
-  if (state.isAdmin && adminManageWrap) {
-    adminManageWrap.style.display = 'block';
-  }
 
   if (toggleBtn && visibilityPanel) {
     toggleBtn.addEventListener('click', () => {
@@ -330,6 +341,28 @@ async function loadServerOverview() {
     state.allTeachers = Array.from(teacherMap.values());
     state.teachers = state.allTeachers.filter((t) => !t.is_hidden);
 
+    // Pastikan status admin user yang sedang login disinkronkan dari database
+    if (state.currentUser) {
+      const currentEmail = (state.currentUser.email || '').toLowerCase();
+      const currentUsername = (state.currentUser.username || '').toLowerCase();
+      const matchedTeacher = state.allTeachers.find(
+        (t) =>
+          (t.email && t.email.toLowerCase() === currentEmail) ||
+          (t.username && t.username.toLowerCase() === currentUsername)
+      );
+      if (matchedTeacher) {
+        state.currentUser.role = matchedTeacher.role;
+        state.isAdmin = Boolean(
+          matchedTeacher.role === 'admin' ||
+          (matchedTeacher.email && matchedTeacher.email.toLowerCase() === 'yumenoboken@gmail.com')
+        );
+        try {
+          localStorage.setItem('pia_user', JSON.stringify(state.currentUser));
+        } catch (_) {}
+      }
+    }
+    updateAdminUiVisibility();
+
     if (data.custom_holidays) {
       state.customHolidays = { ...state.customHolidays, ...data.custom_holidays };
       localStorage.setItem('pia_custom_holidays', JSON.stringify(state.customHolidays));
@@ -485,7 +518,17 @@ document.addEventListener('click', (e) => {
 
 function renderAdminTeacherVisibilityPanel() {
   const listEl = document.getElementById('adminTeacherVisibilityList');
-  if (!listEl || !state.isAdmin) return;
+  const visibilityPanel = document.getElementById('adminTeacherVisibilityPanel');
+  const adminManageWrap = document.getElementById('adminManageTeachersWrap');
+
+  if (!state.isAdmin) {
+    if (adminManageWrap) adminManageWrap.style.display = 'none';
+    if (visibilityPanel) visibilityPanel.style.display = 'none';
+    if (listEl) listEl.innerHTML = '';
+    return;
+  }
+  if (adminManageWrap) adminManageWrap.style.display = 'block';
+  if (!listEl) return;
 
   if (state.allTeachers.length === 0) {
     listEl.innerHTML = `<div class="empty-inline">Belum ada akun user terdaftar.</div>`;
