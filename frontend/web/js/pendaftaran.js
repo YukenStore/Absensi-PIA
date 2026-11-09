@@ -102,32 +102,36 @@ async function fetchStudentsFromServer() {
 }
 
 function renderStudentsTable() {
+  const tableEl = document.getElementById('registeredStudentsTable');
   const bodyEl = document.getElementById('registeredStudentsBody');
   const countEl = document.getElementById('totalStudentsCount');
   if (countEl) countEl.textContent = String(studentsList.length);
   if (!bodyEl) return;
 
   if (studentsList.length === 0) {
+    if (tableEl) tableEl.classList.add('is-empty-table');
     bodyEl.innerHTML = `
-      <tr>
+      <tr class="empty-row">
         <td colspan="6" class="empty-table-cell">
-          Belum ada data siswa yang didaftarkan. Silakan isi formulir di samping untuk menambahkan siswa pertama.
+          Belum ada data siswa yang didaftarkan. Silakan isi formulir di atas untuk menambahkan siswa pertama.
         </td>
       </tr>
     `;
     return;
   }
 
+  if (tableEl) tableEl.classList.remove('is-empty-table');
+
   bodyEl.innerHTML = studentsList
     .map(
       (s, idx) => `
       <tr>
-        <td>${idx + 1}</td>
-        <td style="font-weight: 700; color: var(--secondary);">${s.full_name || s.name}</td>
-        <td><span class="student-class-tag" style="margin-left: 0;">${s.class_name || '-'}</span></td>
-        <td>${formatBirthDateId(s.birth_date)}</td>
-        <td>${s.created_by || 'Guru PIA'}</td>
-        <td>
+        <td data-label="No">${idx + 1}</td>
+        <td data-label="Nama Siswa" style="font-weight: 700; color: var(--secondary);">${s.full_name || s.name}</td>
+        <td data-label="Kelas"><span class="student-class-tag" style="margin-left: 0;">${s.class_name || '-'}</span></td>
+        <td data-label="Tanggal Lahir">${formatBirthDateId(s.birth_date)}</td>
+        <td data-label="Didaftarkan Oleh">${s.created_by || 'Guru PIA'}</td>
+        <td data-label="Aksi">
           <button type="button" class="btn-danger-sm" data-delete-id="${s.id}" data-name="${s.full_name || s.name}">
             Hapus
           </button>
@@ -254,3 +258,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+

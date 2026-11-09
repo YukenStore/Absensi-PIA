@@ -43,6 +43,7 @@ body {
   background: var(--bg-page);
   color: var(--text-main);
   min-height: 100vh;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -677,11 +678,12 @@ body {
     width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    padding: 4px;
+    padding: 5px;
     background: #f8fafc;
     border: 1px solid var(--border-color);
-    border-radius: 10px;
-    gap: 4px;
+    border-radius: 12px;
+    gap: 6px;
+    justify-content: flex-start;
   }
 
   .nav-links::-webkit-scrollbar {
@@ -689,9 +691,9 @@ body {
   }
 
   .nav-item {
-    flex: 1;
+    flex: 0 0 auto;
     text-align: center;
-    padding: 8px 12px;
+    padding: 8px 14px;
     font-size: 0.8rem;
   }
 }
@@ -877,11 +879,24 @@ body {
 }
 
 .empty-table-cell {
-  padding: 28px 16px !important;
+  padding: 24px 16px !important;
   text-align: center !important;
   color: var(--text-muted);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   background: #f8fafc !important;
+}
+
+.empty-sticky-banner {
+  position: sticky;
+  left: 12px;
+  max-width: calc(100vw - 56px);
+  margin: 0 auto;
+  line-height: 1.5;
+  white-space: normal;
+}
+
+.recap-table.is-empty-table {
+  min-width: 100% !important;
 }
 
 .empty-table-link {
@@ -974,6 +989,7 @@ body {
 .admin-user-toggle-item .u-email {
   color: var(--text-muted);
   font-size: 0.8rem;
+  word-break: break-all;
 }
 
 .vis-badge {
@@ -1028,9 +1044,15 @@ body {
 /* ========================================================================= */
 .pendaftaran-grid {
   display: grid;
-  grid-template-columns: 380px 1fr;
+  grid-template-columns: 380px minmax(0, 1fr);
   gap: 24px;
   align-items: start;
+  width: 100%;
+}
+
+.pendaftaran-grid > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .form-stack {
@@ -1053,6 +1075,9 @@ body {
 
 .form-input {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
   padding: 11px 14px;
   border-radius: 10px;
   border: 1.5px solid var(--border-color);
@@ -1062,6 +1087,8 @@ body {
   font-weight: 500;
   outline: none;
   transition: all 0.2s ease;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .form-input:focus {
@@ -1072,6 +1099,7 @@ body {
 
 .btn-primary-submit {
   width: 100%;
+  min-height: 46px;
   padding: 12px 18px;
   border-radius: 10px;
   border: none;
@@ -1139,5 +1167,97 @@ body {
 @media (max-width: 920px) {
   .pendaftaran-grid {
     grid-template-columns: 1fr;
+    gap: 18px;
+  }
+}
+
+@media (max-width: 640px) {
+  #adminManageTeachersWrap,
+  .btn-outline-admin {
+    width: 100%;
+    text-align: center;
+  }
+
+  .admin-visibility-panel {
+    padding: 12px;
+  }
+
+  .admin-user-toggle-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .admin-user-toggle-item .user-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .admin-user-toggle-item .user-actions,
+  .admin-user-toggle-item .btn-vis-toggle {
+    width: 100%;
+    text-align: center;
+    padding: 8px 12px;
+  }
+
+  /* Responsive Card View untuk Tabel Daftar Siswa di Halaman Pendaftaran pada Layar HP */
+  #registeredStudentsTable:not(.is-empty-table) {
+    min-width: 100% !important;
+    border: none;
+  }
+
+  #registeredStudentsTable:not(.is-empty-table) thead {
+    display: none;
+  }
+
+  #registeredStudentsTable:not(.is-empty-table) tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 10px;
+    background: #f8fafc;
+  }
+
+  #registeredStudentsTable:not(.is-empty-table) tbody tr {
+    display: block;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 10px 14px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  #registeredStudentsTable:not(.is-empty-table) tbody td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px dashed #e2e8f0;
+    text-align: right !important;
+    font-size: 0.83rem;
+  }
+
+  #registeredStudentsTable:not(.is-empty-table) tbody td:last-child {
+    border-bottom: none;
+    padding-top: 10px;
+  }
+
+  #registeredStudentsTable:not(.is-empty-table) tbody td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: var(--text-muted);
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    text-align: left;
+    flex-shrink: 0;
+  }
+
+  #registeredStudentsTable:not(.is-empty-table) .btn-danger-sm {
+    padding: 7px 14px;
+    font-size: 0.8rem;
   }
 }

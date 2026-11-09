@@ -416,7 +416,9 @@ function renderDailyMatrix({
     bodyEl.innerHTML = `
       <tr>
         <td colspan="${daysCount + 2}" class="empty-table-cell">
-          ${emptyMessageHtml || 'Belum ada data terdaftar.'}
+          <div class="empty-sticky-banner">
+            ${emptyMessageHtml || 'Belum ada data terdaftar.'}
+          </div>
         </td>
       </tr>
     `;
@@ -464,16 +466,21 @@ function renderDailyMatrix({
 // RENDER TABEL REKAP ABSENSI (TOTAL HADIR, SAKIT, ALFA, PERSENTASE)
 // =========================================================================
 function renderRecapTable({ bodyEl, peopleList, recordsMap, filterConfig, emptyMessageHtml }) {
+  const tableEl = bodyEl ? bodyEl.closest('table') : null;
   if (!peopleList || peopleList.length === 0) {
+    if (tableEl) tableEl.classList.add('is-empty-table');
     bodyEl.innerHTML = `
-      <tr>
+      <tr class="empty-row">
         <td colspan="7" class="empty-table-cell">
-          ${emptyMessageHtml || 'Belum ada data terdaftar.'}
+          <div class="empty-sticky-banner">
+            ${emptyMessageHtml || 'Belum ada data terdaftar.'}
+          </div>
         </td>
       </tr>
     `;
     return;
   }
+  if (tableEl) tableEl.classList.remove('is-empty-table');
 
   const targetMonths = [];
 
