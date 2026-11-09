@@ -26,6 +26,7 @@
 
       <nav class="nav-links" aria-label="Menu Navigasi">
         <a href="dashboard.html" class="nav-item active">Dashboard</a>
+        <a href="pendaftaran.html" class="nav-item">Pendaftaran</a>
         <a href="#absensi-guru" class="nav-item" data-coming-soon="Halaman Absensi Guru akan segera kita bangun.">Absensi Guru</a>
         <a href="#absensi-siswa" class="nav-item" data-coming-soon="Halaman Absensi Siswa akan segera kita bangun.">Absensi Siswa</a>
         <a href="#rekap-pembelajaran" class="nav-item" data-coming-soon="Halaman Rekap Pembelajaran Siswa akan segera kita bangun.">Rekap Pembelajaran</a>
@@ -210,6 +211,22 @@
             <h3 id="guruDailyTitle">Tabel Harian Presensi Guru</h3>
             <p>Matriks kehadiran harian dewan guru selama 1 bulan penuh (Sabtu otomatis libur).</p>
           </div>
+          <div id="adminManageTeachersWrap" style="display: none;">
+            <button type="button" id="toggleHideTeachersPanelBtn" class="btn-outline-admin">
+              Kelola / Sembunyikan Nama User
+            </button>
+          </div>
+        </div>
+
+        <!-- Panel Khusus Admin untuk Hide / Show Nama User di Tabel Guru -->
+        <div id="adminTeacherVisibilityPanel" class="admin-visibility-panel" style="display: none;">
+          <div class="admin-panel-head">
+            <div>
+              <h4>Pengaturan Visibilitas Nama User / Guru (Khusus Admin)</h4>
+              <p>Pilih akun terdaftar yang ingin ditampilkan atau disembunyikan dari Tabel Harian &amp; Rekap Guru.</p>
+            </div>
+          </div>
+          <div id="adminTeacherVisibilityList" class="admin-user-toggle-list"></div>
         </div>
 
         <div class="legend-bar">

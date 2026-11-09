@@ -1,6 +1,7 @@
 /**
- * Logika Halaman Utama (Rekap Absensi Siswa & Guru)
+ * Logika Halaman Utama (Dashboard Monitoring & Rekapitulasi Presensi)
  * Sistem Informasi Pendidikan Islam At-Taqwa (PIA)
+ * Terhubung ke Database SQLite Lokal, Cloudflare Worker, & Sinkronisasi Browser
  */
 
 const MONTH_NAMES = [
@@ -21,45 +22,60 @@ const MONTH_NAMES = [
 const DAY_SHORT_NAMES = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 const AVAILABLE_YEARS = [2024, 2025, 2026, 2027];
 
-// Daftar Siswa & Guru Pendidikan Islam At-Taqwa (terhubung ke API / Database SQL)
+// State bersih (Tanpa data dummy — 100% tersinkronisasi dari Pendaftaran Siswa & Registrasi Guru)
 let state = {
-  students: [
-    { id: 1, name: 'Ahmad Fauzan' },
-    { id: 2, name: 'Aisyah Putri Azzahra' },
-    { id: 3, name: 'Muhammad Rizky Pratama' },
-    { id: 4, name: 'Siti Nurhaliza' },
-    { id: 5, name: 'Zaidan Al-Farizi' },
-    { id: 6, name: 'Khadijah Humaira' },
-    { id: 7, name: 'Naufal Ramadhan' },
-    { id: 8, name: 'Fatimah Az-Zahra' },
-  ],
-  teachers: [
-    { id: 1, name: 'Ustadz H. Abdullah, S.Pd.I' },
-    { id: 2, name: 'Ustadzah Siti Aminah, S.Ag' },
-    { id: 3, name: 'Kak Fikri (Admin / Koordinator)' },
-    { id: 4, name: 'Ustadz Muhammad Yusuf' },
-    { id: 5, name: 'Ustadzah Nurul Hidayah' },
-  ],
-  // Map tanggal libur tambahan: { "YYYY-MM-DD": true }
+  students: [],
+  teachers: [],
+  allTeachers: [],
   customHolidays: {},
-  // Map absensi siswa: { "studentId_YYYY-MM-DD": "H" | "S" | "A" }
   studentRecords: {},
-  // Map absensi guru: { "teacherId_YYYY-MM-DD": "H" | "S" | "A" }
   teacherRecords: {},
+  currentUser: null,
+  isAdmin: false,
 };
+
+function getCurrentUser() {
+  try {
+    const rawUser = localStorage.getItem('pia_user');
+    if (rawUser) {
+      return JSON.parse(rawUser);
+    }
+  } catch (_) {}
+  return null;
+}
 
 // Muat info user yang sedang login
 function initUserHeader() {
   const nameEl = document.getElementById('activeUserName');
   const emailEl = document.getElementById('activeUserEmail');
-  try {
-    const rawUser = localStorage.getItem('pia_user');
-    if (rawUser) {
-      const user = JSON.parse(rawUser);
-      if (user.full_name && nameEl) nameEl.textContent = user.full_name;
-      if (user.email && emailEl) emailEl.textContent = user.email;
-    }
-  } catch (_) {}
+  const user = getCurrentUser();
+  state.currentUser = user;
+
+  if (user) {
+    if (user.full_name && nameEl) nameEl.textContent = user.full_name;
+    if (user.email && emailEl) emailEl.textContent = user.email;
+    state.isAdmin =
+      (user.email && user.email.toLowerCase() === 'yumenoboken@gmail.com') ||
+      user.role === 'admin';
+  }
+
+  const adminManageWrap = document.getElementById('adminManageTeachersWrap');
+  const toggleBtn = document.getElementById('toggleHideTeachersPanelBtn');
+  const visibilityPanel = document.getElementById('adminTeacherVisibilityPanel');
+
+  if (state.isAdmin && adminManageWrap) {
+    adminManageWrap.style.display = 'block';
+  }
+
+  if (toggleBtn && visibilityPanel) {
+    toggleBtn.addEventListener('click', () => {
+      const isVisible = visibilityPanel.style.display !== 'none';
+      visibilityPanel.style.display = isVisible ? 'none' : 'block';
+      toggleBtn.textContent = isVisible
+        ? 'Kelola / Sembunyikan Nama User'
+        : 'Tutup Pengaturan Nama User';
+    });
+  }
 
   document.querySelectorAll('.logout-trigger').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -118,8 +134,9 @@ async function toggleHolidayDate(year, monthIndex, day) {
   renderAllViews();
 }
 
-// Buat data deterministik awal (agar tabel langsung terlihat lengkap & nyata)
-function seedSampleAttendanceIfEmpty() {
+// Muat data fallback dari localStorage (untuk sinkronisasi GitHub Pages & Offline)
+function loadLocalSyncedData() {
+  // Bersihkan key data dummy lama jika masih ada
   try {
     const savedHolidays = localStorage.getItem('pia_custom_holidays');
     if (savedHolidays) {
@@ -127,61 +144,223 @@ function seedSampleAttendanceIfEmpty() {
     }
   } catch (_) {}
 
-  const yearsToSeed = [2025, 2026];
-  for (const year of yearsToSeed) {
-    for (let m = 0; m < 12; m++) {
-      const days = getDaysInMonth(year, m);
-      for (let d = 1; d <= days; d++) {
-        const dow = new Date(year, m, d).getDay();
-        if (dow === 6) continue; // Sabtu libur
-
-        const dateKey = formatDateKey(year, m, d);
-
-        // Siswa
-        for (const s of state.students) {
-          const key = `${s.id}_${dateKey}`;
-          if (!state.studentRecords[key]) {
-            const hash = (s.id * 31 + d * 17 + (m + 1) * 13 + year) % 20;
-            if (hash === 0) state.studentRecords[key] = 'A'; // Alfa (Merah)
-            else if (hash === 1 || hash === 2) state.studentRecords[key] = 'S'; // Sakit/Izin (Oranye)
-            else state.studentRecords[key] = 'H'; // Hadir (Hijau)
-          }
-        }
-
-        // Guru
-        for (const t of state.teachers) {
-          const key = `${t.id}_${dateKey}`;
-          if (!state.teacherRecords[key]) {
-            const hash = (t.id * 29 + d * 19 + (m + 1) * 7 + year) % 25;
-            if (hash === 0) state.teacherRecords[key] = 'A';
-            else if (hash === 1) state.teacherRecords[key] = 'S';
-            else state.teacherRecords[key] = 'H';
-          }
-        }
+  // 1. Siswa dari Pendaftaran
+  try {
+    const rawStudents = localStorage.getItem('pia_students_db');
+    if (rawStudents) {
+      const parsedStudents = JSON.parse(rawStudents);
+      if (Array.isArray(parsedStudents)) {
+        state.students = parsedStudents.map((s) => ({
+          id: s.id,
+          name: s.full_name || s.name,
+          class_name: s.class_name || '',
+          birth_date: s.birth_date || '',
+        }));
       }
     }
-  }
+  } catch (_) {}
+
+  // 2. Guru dari akun yang mendaftar (pia_gh_pages_db) + daftar nama yang disembunyikan
+  let hiddenMap = {};
+  try {
+    const rawHidden = localStorage.getItem('pia_hidden_teachers');
+    if (rawHidden) hiddenMap = JSON.parse(rawHidden) || {};
+  } catch (_) {}
+
+  try {
+    const rawDb = localStorage.getItem('pia_gh_pages_db');
+    let usersList = [];
+    if (rawDb) {
+      const parsed = JSON.parse(rawDb);
+      if (parsed && Array.isArray(parsed.users)) {
+        usersList = parsed.users.filter((u) => u.is_active);
+      }
+    }
+    if (usersList.length === 0) {
+      usersList = [
+        {
+          id: 1,
+          full_name: 'Yuken',
+          email: 'yumenoboken@gmail.com',
+          username: 'Yuken',
+          role: 'admin',
+          is_active: true,
+        },
+      ];
+    }
+
+    state.allTeachers = usersList.map((u) => ({
+      id: u.id,
+      name: u.full_name || u.username,
+      email: u.email,
+      username: u.username,
+      role: u.email && u.email.toLowerCase() === 'yumenoboken@gmail.com' ? 'admin' : u.role || 'guru',
+      is_hidden: Boolean(hiddenMap[u.id] || u.is_hidden),
+    }));
+    state.teachers = state.allTeachers.filter((t) => !t.is_hidden);
+  } catch (_) {}
+
+  // 3. Rekap absensi riil dari penyimpanan lokal
+  try {
+    const rawStudentRec = localStorage.getItem('pia_student_records');
+    if (rawStudentRec) state.studentRecords = JSON.parse(rawStudentRec) || {};
+  } catch (_) {}
+
+  try {
+    const rawTeacherRec = localStorage.getItem('pia_teacher_records');
+    if (rawTeacherRec) state.teacherRecords = JSON.parse(rawTeacherRec) || {};
+  } catch (_) {}
 }
 
-// Ambil data dari server SQL jika tersedia
+// Ambil data dari server SQL jika tersedia dan sinkronkan dengan penyimpanan browser
 async function loadServerOverview() {
   try {
     const resp = await fetch('/api/attendance/overview');
     if (!resp.ok) return;
     const data = await resp.json();
-    if (data.students && data.students.length > 0) state.students = data.students;
-    if (data.teachers && data.teachers.length > 0) state.teachers = data.teachers;
+
+    if (Array.isArray(data.students)) {
+      state.students = data.students;
+      localStorage.setItem(
+        'pia_students_db',
+        JSON.stringify(
+          data.students.map((s) => ({
+            id: s.id,
+            full_name: s.name,
+            class_name: s.class_name,
+            birth_date: s.birth_date,
+          }))
+        )
+      );
+    }
+
+    if (Array.isArray(data.all_teachers)) {
+      state.allTeachers = data.all_teachers;
+      const hiddenMap = {};
+      data.all_teachers.forEach((t) => {
+        if (t.is_hidden) hiddenMap[t.id] = true;
+      });
+      localStorage.setItem('pia_hidden_teachers', JSON.stringify(hiddenMap));
+    }
+
+    if (Array.isArray(data.teachers)) {
+      state.teachers = data.teachers;
+    } else {
+      state.teachers = state.allTeachers.filter((t) => !t.is_hidden);
+    }
+
     if (data.custom_holidays) {
       state.customHolidays = { ...state.customHolidays, ...data.custom_holidays };
+      localStorage.setItem('pia_custom_holidays', JSON.stringify(state.customHolidays));
     }
+
     if (data.student_records) {
-      state.studentRecords = { ...state.studentRecords, ...data.student_records };
+      state.studentRecords = data.student_records;
+      localStorage.setItem('pia_student_records', JSON.stringify(state.studentRecords));
     }
+
     if (data.teacher_records) {
-      state.teacherRecords = { ...state.teacherRecords, ...data.teacher_records };
+      state.teacherRecords = data.teacher_records;
+      localStorage.setItem('pia_teacher_records', JSON.stringify(state.teacherRecords));
     }
+
     renderAllViews();
   } catch (_) {}
+}
+
+// =========================================================================
+// FITUR KHUSUS ADMIN: SEMBUNYIKAN / TAMPILKAN NAMA USER DI TABEL GURU
+// =========================================================================
+async function toggleTeacherVisibility(userId, hideUser) {
+  // Update state lokal & localStorage terlebih dahulu agar instan
+  let hiddenMap = {};
+  try {
+    const raw = localStorage.getItem('pia_hidden_teachers');
+    if (raw) hiddenMap = JSON.parse(raw) || {};
+  } catch (_) {}
+
+  if (hideUser) {
+    hiddenMap[userId] = true;
+  } else {
+    delete hiddenMap[userId];
+  }
+  localStorage.setItem('pia_hidden_teachers', JSON.stringify(hiddenMap));
+
+  state.allTeachers = state.allTeachers.map((t) =>
+    t.id === userId ? { ...t, is_hidden: Boolean(hideUser) } : t
+  );
+  state.teachers = state.allTeachers.filter((t) => !t.is_hidden);
+
+  // Sinkronkan juga ke pia_gh_pages_db jika ada
+  try {
+    const rawDb = localStorage.getItem('pia_gh_pages_db');
+    if (rawDb) {
+      const parsed = JSON.parse(rawDb);
+      if (parsed && Array.isArray(parsed.users)) {
+        const target = parsed.users.find((u) => u.id === userId);
+        if (target) target.is_hidden = Boolean(hideUser);
+        localStorage.setItem('pia_gh_pages_db', JSON.stringify(parsed));
+      }
+    }
+  } catch (_) {}
+
+  // Kirim ke server SQLite jika sedang berjalan di local/worker
+  try {
+    const adminEmail = state.currentUser ? state.currentUser.email : 'yumenoboken@gmail.com';
+    await fetch('/api/teachers/toggle-hide', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        admin_email: adminEmail,
+        target_user_id: userId,
+        is_hidden: Boolean(hideUser),
+      }),
+    });
+  } catch (_) {}
+
+  renderAllViews();
+}
+
+function renderAdminTeacherVisibilityPanel() {
+  const listEl = document.getElementById('adminTeacherVisibilityList');
+  if (!listEl || !state.isAdmin) return;
+
+  if (state.allTeachers.length === 0) {
+    listEl.innerHTML = `<div class="empty-inline">Belum ada akun user terdaftar.</div>`;
+    return;
+  }
+
+  listEl.innerHTML = state.allTeachers
+    .map((u) => {
+      const statusBadge = u.is_hidden
+        ? `<span class="vis-badge hidden">Disembunyikan</span>`
+        : `<span class="vis-badge visible">Ditampilkan di Tabel</span>`;
+      const actionBtn = u.is_hidden
+        ? `<button type="button" class="btn-vis-toggle show" data-uid="${u.id}" data-hide="0">Tampilkan</button>`
+        : `<button type="button" class="btn-vis-toggle hide" data-uid="${u.id}" data-hide="1">Sembunyikan</button>`;
+
+      return `
+        <div class="admin-user-toggle-item">
+          <div class="user-info">
+            <span class="u-name">${u.name}</span>
+            <span class="u-email">${u.email || ''}</span>
+            ${statusBadge}
+          </div>
+          <div class="user-actions">
+            ${actionBtn}
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+
+  listEl.querySelectorAll('.btn-vis-toggle').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const uid = parseInt(btn.getAttribute('data-uid'), 10);
+      const shouldHide = btn.getAttribute('data-hide') === '1';
+      toggleTeacherVisibility(uid, shouldHide);
+    });
+  });
 }
 
 // =========================================================================
@@ -195,6 +374,7 @@ function renderDailyMatrix({
   year,
   monthIndex,
   personLabel,
+  emptyMessageHtml,
 }) {
   const daysCount = getDaysInMonth(year, monthIndex);
 
@@ -231,12 +411,27 @@ function renderDailyMatrix({
     });
   });
 
+  // Jika belum ada data siswa / guru
+  if (!peopleList || peopleList.length === 0) {
+    bodyEl.innerHTML = `
+      <tr>
+        <td colspan="${daysCount + 2}" class="empty-table-cell">
+          ${emptyMessageHtml || 'Belum ada data terdaftar.'}
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
   // Body Tabel
   let bodyHtml = '';
   peopleList.forEach((person, idx) => {
+    const subClass = person.class_name
+      ? `<span class="student-class-tag">${person.class_name}</span>`
+      : '';
     bodyHtml += `<tr>
       <td class="sticky-no">${idx + 1}</td>
-      <td class="sticky-col">${person.name}</td>`;
+      <td class="sticky-col">${person.name}${subClass}</td>`;
 
     for (let d = 1; d <= daysCount; d++) {
       const holiday = isHolidayDate(year, monthIndex, d);
@@ -246,14 +441,16 @@ function renderDailyMatrix({
       }
 
       const dateKey = formatDateKey(year, monthIndex, d);
-      const status = recordsMap[`${person.id}_${dateKey}`] || 'H';
+      const status = recordsMap[`${person.id}_${dateKey}`];
 
       if (status === 'H') {
         bodyHtml += `<td class="td-day" title="${person.name} - Tanggal ${d}: Hadir"><span class="status-pill cell-hadir">H</span></td>`;
       } else if (status === 'S' || status === 'I') {
         bodyHtml += `<td class="td-day" title="${person.name} - Tanggal ${d}: Izin/Sakit"><span class="status-pill cell-sakit">${status}</span></td>`;
-      } else {
+      } else if (status === 'A') {
         bodyHtml += `<td class="td-day" title="${person.name} - Tanggal ${d}: Alfa"><span class="status-pill cell-alfa">A</span></td>`;
+      } else {
+        bodyHtml += `<td class="td-day" title="${person.name} - Tanggal ${d}: Belum diisi"><span class="status-empty">-</span></td>`;
       }
     }
 
@@ -266,12 +463,21 @@ function renderDailyMatrix({
 // =========================================================================
 // RENDER TABEL REKAP ABSENSI (TOTAL HADIR, SAKIT, ALFA, PERSENTASE)
 // =========================================================================
-function renderRecapTable({ bodyEl, peopleList, recordsMap, filterConfig }) {
-  // Tentukan daftar (year, monthIndex) yang dihitung berdasarkan filterConfig
+function renderRecapTable({ bodyEl, peopleList, recordsMap, filterConfig, emptyMessageHtml }) {
+  if (!peopleList || peopleList.length === 0) {
+    bodyEl.innerHTML = `
+      <tr>
+        <td colspan="7" class="empty-table-cell">
+          ${emptyMessageHtml || 'Belum ada data terdaftar.'}
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
   const targetMonths = [];
 
   if (filterConfig.mode === 'all') {
-    // Semua data dari awal sampai akhir (seluruh tahun & bulan yang ada)
     for (const y of [2025, 2026]) {
       for (let m = 0; m < 12; m++) {
         targetMonths.push({ year: y, monthIndex: m });
@@ -298,20 +504,24 @@ function renderRecapTable({ bodyEl, peopleList, recordsMap, filterConfig }) {
         if (isHolidayDate(year, monthIndex, d)) continue;
         effectiveDays++;
         const dateKey = formatDateKey(year, monthIndex, d);
-        const st = recordsMap[`${person.id}_${dateKey}`] || 'H';
+        const st = recordsMap[`${person.id}_${dateKey}`];
         if (st === 'H') totalHadir++;
         else if (st === 'S' || st === 'I') totalSakit++;
-        else totalAlfa++;
+        else if (st === 'A') totalAlfa++;
       }
     }
 
     const percentage =
       effectiveDays > 0 ? Math.round((totalHadir * 100) / effectiveDays) : 0;
 
+    const subClass = person.class_name
+      ? `<span class="student-class-tag">${person.class_name}</span>`
+      : '';
+
     rowsHtml += `
       <tr>
         <td>${idx + 1}</td>
-        <td style="font-weight: 700; color: var(--secondary);">${person.name}</td>
+        <td style="font-weight: 700; color: var(--secondary);">${person.name}${subClass}</td>
         <td><span class="badge-count badge-hadir">${totalHadir}</span></td>
         <td><span class="badge-count badge-sakit">${totalSakit}</span></td>
         <td><span class="badge-count badge-alfa">${totalAlfa}</span></td>
@@ -366,6 +576,8 @@ function renderSiswaSection() {
   const dailyMonth = parseInt(document.getElementById('siswaDailyMonth').value, 10);
   const dailyYear = parseInt(document.getElementById('siswaDailyYear').value, 10);
 
+  const emptyStudentMsg = `Belum ada data siswa terdaftar di Dashboard. Silakan tambahkan data siswa melalui menu <a href="pendaftaran.html" class="empty-table-link">Pendaftaran</a>.`;
+
   renderDailyMatrix({
     headEl: document.getElementById('siswaDailyHead'),
     bodyEl: document.getElementById('siswaDailyBody'),
@@ -374,6 +586,7 @@ function renderSiswaSection() {
     year: dailyYear,
     monthIndex: dailyMonth,
     personLabel: 'Nama Siswa',
+    emptyMessageHtml: emptyStudentMsg,
   });
 
   // Dropdown tersendiri untuk Rekap Absensi Siswa
@@ -404,19 +617,27 @@ function renderSiswaSection() {
       year: recapYear,
       monthIndex: recapMonth,
     },
+    emptyMessageHtml: emptyStudentMsg,
   });
 }
 
 function renderGuruSection() {
-  // Satu dropdown Bulan & Tahun di atas mengatur Tabel Harian sekaligus Rekap Absensi Guru
   const masterMonth = parseInt(document.getElementById('guruMasterMonth').value, 10);
   const masterYear = parseInt(document.getElementById('guruMasterYear').value, 10);
   const periodLabel = `${MONTH_NAMES[masterMonth]} ${masterYear}`;
 
   const dailyTitle = document.getElementById('guruDailyTitle');
   const recapTitle = document.getElementById('guruRecapTitle');
-  if (dailyTitle) dailyTitle.textContent = `Tabel Harian Absensi Guru — ${periodLabel}`;
+  if (dailyTitle) dailyTitle.textContent = `Tabel Harian Presensi Guru — ${periodLabel}`;
   if (recapTitle) recapTitle.textContent = `Rekap Absensi Guru — ${periodLabel}`;
+
+  renderAdminTeacherVisibilityPanel();
+
+  const emptyGuruMsg = `Belum ada nama guru yang ditampilkan pada tabel. ${
+    state.isAdmin
+      ? 'Klik tombol <strong>Kelola / Sembunyikan Nama User</strong> di atas untuk menampilkan akun guru.'
+      : ''
+  }`;
 
   renderDailyMatrix({
     headEl: document.getElementById('guruDailyHead'),
@@ -426,6 +647,7 @@ function renderGuruSection() {
     year: masterYear,
     monthIndex: masterMonth,
     personLabel: 'Nama Guru',
+    emptyMessageHtml: emptyGuruMsg,
   });
 
   renderRecapTable({
@@ -437,6 +659,7 @@ function renderGuruSection() {
       year: masterYear,
       monthIndex: masterMonth,
     },
+    emptyMessageHtml: emptyGuruMsg,
   });
 }
 
@@ -483,9 +706,8 @@ function initMainTabsAndEvents() {
 document.addEventListener('DOMContentLoaded', () => {
   initUserHeader();
   populateMonthYearSelects();
-  seedSampleAttendanceIfEmpty();
+  loadLocalSyncedData();
   initMainTabsAndEvents();
   renderAllViews();
   loadServerOverview();
 });
-

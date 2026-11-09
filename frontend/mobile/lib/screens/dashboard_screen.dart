@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String userName;
+  final String userEmail;
 
   const DashboardScreen({
     super.key,
-    this.userName = 'Pengguna PIA',
+    this.userName = 'Yuken',
+    this.userEmail = 'yumenoboken@gmail.com',
   });
 
   @override
@@ -43,24 +45,25 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   static const List<int> _years = [2024, 2025, 2026, 2027];
 
-  final List<Map<String, dynamic>> _students = const [
-    {'id': 1, 'name': 'Ahmad Fauzan'},
-    {'id': 2, 'name': 'Aisyah Putri Azzahra'},
-    {'id': 3, 'name': 'Muhammad Rizky Pratama'},
-    {'id': 4, 'name': 'Siti Nurhaliza'},
-    {'id': 5, 'name': 'Zaidan Al-Farizi'},
-    {'id': 6, 'name': 'Khadijah Humaira'},
-    {'id': 7, 'name': 'Naufal Ramadhan'},
-    {'id': 8, 'name': 'Fatimah Az-Zahra'},
+  // Data siswa bersih (diisi melalui menu Pendaftaran Siswa)
+  final List<Map<String, dynamic>> _students = [];
+
+  // Data guru sesuai akun yang mendaftar (dapat di-hide oleh Admin)
+  final List<Map<String, dynamic>> _allTeachers = [
+    {
+      'id': 1,
+      'name': 'Yuken',
+      'email': 'yumenoboken@gmail.com',
+      'is_hidden': false,
+    },
   ];
 
-  final List<Map<String, dynamic>> _teachers = const [
-    {'id': 1, 'name': 'Ustadz H. Abdullah, S.Pd.I'},
-    {'id': 2, 'name': 'Ustadzah Siti Aminah, S.Ag'},
-    {'id': 3, 'name': 'Kak Fikri (Admin / Koordinator)'},
-    {'id': 4, 'name': 'Ustadz Muhammad Yusuf'},
-    {'id': 5, 'name': 'Ustadzah Nurul Hidayah'},
-  ];
+  List<Map<String, dynamic>> get _visibleTeachers =>
+      _allTeachers.where((t) => t['is_hidden'] != true).toList();
+
+  // Rekaman presensi riil (kosong sebelum absensi diisi)
+  final Map<String, String> _studentRecords = {};
+  final Map<String, String> _teacherRecords = {};
 
   // Filter Tab Siswa (Dibedakan antara Tabel Harian & Rekap Absensi)
   int _siswaDailyMonth = DateTime.now().month - 1;
@@ -115,19 +118,15 @@ class _DashboardScreenState extends State<DashboardScreen>
     });
   }
 
-  String _getStatus(
+  String? _getStatus(
     int personId,
     int year,
     int monthIndex,
     int day, {
     required bool isTeacher,
   }) {
-    final hash = isTeacher
-        ? (personId * 29 + day * 19 + (monthIndex + 1) * 7 + year) % 25
-        : (personId * 31 + day * 17 + (monthIndex + 1) * 13 + year) % 20;
-    if (hash == 0) return 'A';
-    if (hash == 1 || (!isTeacher && hash == 2)) return 'S';
-    return 'H';
+    final key = '${personId}_${_dateKey(year, monthIndex, day)}';
+    return isTeacher ? _teacherRecords[key] : _studentRecords[key];
   }
 
   Color _statusBgColor(String status) {
@@ -135,12 +134,142 @@ class _DashboardScreenState extends State<DashboardScreen>
       case 'H':
         return const Color(0xFF10B981); // Hijau Hadir
       case 'S':
+      case 'I':
         return const Color(0xFFF59E0B); // Oranye Sakit/Izin
       case 'A':
         return const Color(0xFFEF4444); // Merah Alfa
-      default:
+      case 'L':
         return const Color(0xFFE2E8F0); // Abu-abu Libur
+      default:
+        return Colors.transparent;
     }
+  }
+
+  // Modal Pendaftaran Siswa (Nama Siswa, Kelas, Tanggal Lahir)
+  void _openPendaftaranDialog() {
+    final nameCtrl = TextEditingController();
+    final classCtrl = TextEditingController();
+    final birthDateCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text(
+            'Pendaftaran Data Siswa',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Nama Lengkap Siswa',
+                    hintText: 'Contoh: Ahmad Fauzan',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: classCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Kelas',
+                    hintText: 'Contoh: Kelas 1 / Iqro / Al-Qur\'an',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: birthDateCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Tanggal Lahir (YYYY-MM-DD)',
+                    hintText: 'Contoh: 2018-05-14',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final name = nameCtrl.text.trim();
+                final cls = classCtrl.text.trim();
+                final dob = birthDateCtrl.text.trim();
+                if (name.isEmpty || cls.isEmpty || dob.isEmpty) return;
+
+                setState(() {
+                  _students.add({
+                    'id': _students.length + 1,
+                    'name': name,
+                    'class_name': cls,
+                    'birth_date': dob,
+                  });
+                });
+                Navigator.of(ctx).pop();
+              },
+              child: const Text('Simpan ke Dashboard'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Modal Khusus Admin untuk Hide / Show Nama User di Tabel Guru
+  void _openManageTeachersVisibilityDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            return AlertDialog(
+              title: const Text(
+                'Sembunyikan / Tampilkan Nama User',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _allTeachers.length,
+                  itemBuilder: (_, idx) {
+                    final t = _allTeachers[idx];
+                    final isHidden = t['is_hidden'] == true;
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        t['name'].toString(),
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      subtitle: Text(t['email']?.toString() ?? ''),
+                      trailing: Switch(
+                        value: !isHidden,
+                        onChanged: (showInTable) {
+                          setState(() {
+                            t['is_hidden'] = !showInTable;
+                          });
+                          setModalState(() {});
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Selesai'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   Widget _buildDailyMatrix({
@@ -149,6 +278,37 @@ class _DashboardScreenState extends State<DashboardScreen>
     required int monthIndex,
     required bool isTeacher,
   }) {
+    if (people.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Column(
+          children: [
+            Text(
+              isTeacher
+                  ? 'Belum ada nama guru yang ditampilkan pada tabel.'
+                  : 'Belum ada data siswa terdaftar di Dashboard.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Color(0xFF64748B)),
+            ),
+            if (!isTeacher) ...[
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: _openPendaftaranDialog,
+                icon: const Icon(Icons.person_add_alt_1, size: 18),
+                label: const Text('Pendaftaran Siswa Baru'),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
     final daysCount = _daysInMonth(year, monthIndex);
 
     return SingleChildScrollView(
@@ -225,6 +385,19 @@ class _DashboardScreenState extends State<DashboardScreen>
                         d,
                         isTeacher: isTeacher,
                       );
+                if (st == null) {
+                  return const DataCell(
+                    Center(
+                      child: Text(
+                        '-',
+                        style: TextStyle(
+                          color: Color(0xFF94A3B8),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  );
+                }
                 return DataCell(
                   Container(
                     width: 28,
@@ -261,6 +434,18 @@ class _DashboardScreenState extends State<DashboardScreen>
     required int monthIndex,
     required bool isTeacher,
   }) {
+    if (people.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: Center(
+          child: Text(
+            'Belum ada data untuk direkap.',
+            style: TextStyle(color: Color(0xFF64748B)),
+          ),
+        ),
+      );
+    }
+
     final List<Map<String, int>> periods = [];
     if (mode == 'all') {
       for (final y in [2025, 2026]) {
@@ -306,9 +491,9 @@ class _DashboardScreenState extends State<DashboardScreen>
               final st = _getStatus(id, y, m, d, isTeacher: isTeacher);
               if (st == 'H') {
                 hadir++;
-              } else if (st == 'S') {
+              } else if (st == 'S' || st == 'I') {
                 sakit++;
-              } else {
+              } else if (st == 'A') {
                 alfa++;
               }
             }
@@ -357,6 +542,13 @@ class _DashboardScreenState extends State<DashboardScreen>
             ),
           ],
         ),
+        actions: [
+          TextButton.icon(
+            onPressed: _openPendaftaranDialog,
+            icon: const Icon(Icons.person_add_alt_1, size: 18),
+            label: const Text('Pendaftaran'),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           labelColor: const Color(0xFF2563EB),
@@ -388,7 +580,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Tabel Harian Absensi Siswa',
+                        'Tabel Harian Presensi Siswa',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -463,48 +655,48 @@ class _DashboardScreenState extends State<DashboardScreen>
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 12,
-                        children: [
-                          DropdownButton<String>(
-                            value: _siswaRecapMode,
-                            items: const [
-                              DropdownMenuItem(
-                                value: 'all',
-                                child: Text('Semua Data (Awal - Akhir)'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'year',
-                                child: Text('Pilih Tahun'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'month',
-                                child: Text('Pilih Bulan & Tahun'),
-                              ),
-                            ],
-                            onChanged: (v) {
-                              if (v != null) {
-                                setState(() => _siswaRecapMode = v);
-                              }
-                            },
+                      DropdownButton<String>(
+                        value: _siswaRecapMode,
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'all',
+                            child: Text('Semua Data (Awal s/d Akhir)'),
                           ),
-                          if (_siswaRecapMode == 'month')
-                            DropdownButton<int>(
-                              value: _siswaRecapMonth,
-                              items: List.generate(12, (idx) {
-                                return DropdownMenuItem(
-                                  value: idx,
-                                  child: Text(_monthNames[idx]),
-                                );
-                              }),
-                              onChanged: (v) {
-                                if (v != null) {
-                                  setState(() => _siswaRecapMonth = v);
-                                }
-                              },
-                            ),
-                          if (_siswaRecapMode == 'year' ||
-                              _siswaRecapMode == 'month')
+                          DropdownMenuItem(
+                            value: 'year',
+                            child: Text('Pilih Tahun'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'month',
+                            child: Text('Pilih Bulan & Tahun'),
+                          ),
+                        ],
+                        onChanged: (v) {
+                          if (v != null) {
+                            setState(() => _siswaRecapMode = v);
+                          }
+                        },
+                      ),
+                      if (_siswaRecapMode != 'all')
+                        Row(
+                          children: [
+                            if (_siswaRecapMode == 'month') ...[
+                              DropdownButton<int>(
+                                value: _siswaRecapMonth,
+                                items: List.generate(12, (idx) {
+                                  return DropdownMenuItem(
+                                    value: idx,
+                                    child: Text(_monthNames[idx]),
+                                  );
+                                }),
+                                onChanged: (v) {
+                                  if (v != null) {
+                                    setState(() => _siswaRecapMonth = v);
+                                  }
+                                },
+                              ),
+                              const SizedBox(width: 12),
+                            ],
                             DropdownButton<int>(
                               value: _siswaRecapYear,
                               items: _years.map((yr) {
@@ -519,8 +711,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 }
                               },
                             ),
-                        ],
-                      ),
+                          ],
+                        ),
                       const SizedBox(height: 8),
                       _buildRecapTable(
                         people: _students,
@@ -537,65 +729,74 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
 
           // ==========================================
-          // TAB 2: DATA GURU (1 Dropdown Untuk Semua)
+          // TAB 2: DATA GURU
           // ==========================================
           ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              Card(
-                color: const Color(0xFF1E3A8A),
-                shape: RoundedRectangleBorder(
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
+                  ),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Filter Bulan & Tahun Guru:',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Filter Periode Presensi Guru',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Mengatur Tabel Harian sekaligus Rekap Absensi Guru.',
+                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        DropdownButton<int>(
+                          dropdownColor: const Color(0xFF1E3A8A),
+                          style: const TextStyle(color: Colors.white),
+                          value: _guruMasterMonth,
+                          items: List.generate(12, (idx) {
+                            return DropdownMenuItem(
+                              value: idx,
+                              child: Text(_monthNames[idx]),
+                            );
+                          }),
+                          onChanged: (v) {
+                            if (v != null) {
+                              setState(() => _guruMasterMonth = v);
+                            }
+                          },
                         ),
-                      ),
-                      DropdownButton<int>(
-                        dropdownColor: const Color(0xFF1E3A8A),
-                        style: const TextStyle(color: Colors.white),
-                        value: _guruMasterMonth,
-                        items: List.generate(12, (idx) {
-                          return DropdownMenuItem(
-                            value: idx,
-                            child: Text(_monthNames[idx]),
-                          );
-                        }),
-                        onChanged: (v) {
-                          if (v != null) {
-                            setState(() => _guruMasterMonth = v);
-                          }
-                        },
-                      ),
-                      const SizedBox(width: 8),
-                      DropdownButton<int>(
-                        dropdownColor: const Color(0xFF1E3A8A),
-                        style: const TextStyle(color: Colors.white),
-                        value: _guruMasterYear,
-                        items: _years.map((yr) {
-                          return DropdownMenuItem(
-                            value: yr,
-                            child: Text('$yr'),
-                          );
-                        }).toList(),
-                        onChanged: (v) {
-                          if (v != null) {
-                            setState(() => _guruMasterYear = v);
-                          }
-                        },
-                      ),
-                    ],
-                  ),
+                        const SizedBox(width: 16),
+                        DropdownButton<int>(
+                          dropdownColor: const Color(0xFF1E3A8A),
+                          style: const TextStyle(color: Colors.white),
+                          value: _guruMasterYear,
+                          items: _years.map((yr) {
+                            return DropdownMenuItem(
+                              value: yr,
+                              child: Text('$yr'),
+                            );
+                          }).toList(),
+                          onChanged: (v) {
+                            if (v != null) {
+                              setState(() => _guruMasterYear = v);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 16),
@@ -609,16 +810,30 @@ class _DashboardScreenState extends State<DashboardScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Tabel Harian Absensi Guru — ${_monthNames[_guruMasterMonth]} $_guruMasterYear',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Tabel Harian Guru — ${_monthNames[_guruMasterMonth]} $_guruMasterYear',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          OutlinedButton(
+                            onPressed: _openManageTeachersVisibilityDialog,
+                            child: const Text(
+                              'Kelola Nama User',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
                       _buildDailyMatrix(
-                        people: _teachers,
+                        people: _visibleTeachers,
                         year: _guruMasterYear,
                         monthIndex: _guruMasterMonth,
                         isTeacher: true,
@@ -645,9 +860,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
                       _buildRecapTable(
-                        people: _teachers,
+                        people: _visibleTeachers,
                         mode: 'month',
                         year: _guruMasterYear,
                         monthIndex: _guruMasterMonth,
@@ -664,4 +879,3 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 }
-

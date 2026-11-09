@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pendaftaran Siswa - Pendidikan Islam At-Taqwa</title>
+  <link rel="stylesheet" href="css/dashboard.css" />
+</head>
+<body>
+  <!-- Navigasi Utama -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="topbar-brand-row">
+        <a href="dashboard.html" class="brand">
+          <div class="brand-badge">PIA</div>
+          <div class="brand-text">
+            <h1>Pendidikan Islam At-Taqwa</h1>
+            <span>Sistem Informasi Presensi &amp; Pembelajaran</span>
+          </div>
+        </a>
+
+        <div class="user-menu mobile-user-menu">
+          <button type="button" class="btn-logout logout-trigger">Keluar</button>
+        </div>
+      </div>
+
+      <nav class="nav-links" aria-label="Menu Navigasi">
+        <a href="dashboard.html" class="nav-item">Dashboard</a>
+        <a href="pendaftaran.html" class="nav-item active">Pendaftaran</a>
+        <a href="#absensi-guru" class="nav-item" data-coming-soon="Halaman Absensi Guru akan segera kita bangun.">Absensi Guru</a>
+        <a href="#absensi-siswa" class="nav-item" data-coming-soon="Halaman Absensi Siswa akan segera kita bangun.">Absensi Siswa</a>
+        <a href="#rekap-pembelajaran" class="nav-item" data-coming-soon="Halaman Rekap Pembelajaran Siswa akan segera kita bangun.">Rekap Pembelajaran</a>
+      </nav>
+
+      <div class="user-menu desktop-user-menu">
+        <div class="user-chip">
+          <div class="name" id="activeUserName">Pengguna PIA</div>
+          <div class="role" id="activeUserEmail">Pendidikan Islam At-Taqwa</div>
+        </div>
+        <button type="button" id="logoutBtn" class="btn-logout logout-trigger">Keluar</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="page-header">
+      <div class="page-title">
+        <h2>Pendaftaran Data Siswa</h2>
+        <p>Tambahkan data siswa baru (Nama Siswa, Kelas, dan Tanggal Lahir) untuk disinkronkan ke dalam Dashboard.</p>
+      </div>
+    </div>
+
+    <div class="pendaftaran-grid">
+      <!-- Form Input Siswa Baru -->
+      <section class="section-card">
+        <div class="card-header">
+          <div class="card-title">
+            <h3>Formulir Pendaftaran Siswa</h3>
+            <p>Isi data lengkap siswa di bawah ini.</p>
+          </div>
+        </div>
+
+        <div id="pendaftaranAlert" class="alert-banner"></div>
+
+        <form id="pendaftaranForm" class="form-stack">
+          <div class="form-field">
+            <label for="studentFullName">Nama Lengkap Siswa</label>
+            <input
+              type="text"
+              id="studentFullName"
+              class="form-input"
+              placeholder="Contoh: Ahmad Fauzan"
+              required
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="studentClass">Kelas</label>
+            <input
+              type="text"
+              id="studentClass"
+              class="form-input"
+              list="classSuggestions"
+              placeholder="Contoh: Kelas 1 / Iqro / Al-Qur'an"
+              required
+            />
+            <datalist id="classSuggestions">
+              <option value="Kelas A"></option>
+              <option value="Kelas B"></option>
+              <option value="Kelas 1"></option>
+              <option value="Kelas 2"></option>
+              <option value="Kelas 3"></option>
+              <option value="Iqro"></option>
+              <option value="Al-Qur'an"></option>
+            </datalist>
+          </div>
+
+          <div class="form-field">
+            <label for="studentBirthDate">Tanggal Lahir</label>
+            <input
+              type="date"
+              id="studentBirthDate"
+              class="form-input"
+              required
+            />
+          </div>
+
+          <button type="submit" id="submitStudentBtn" class="btn-primary-submit">
+            Simpan &amp; Tambahkan ke Dashboard
+          </button>
+        </form>
+      </section>
+
+      <!-- Tabel Daftar Siswa yang Sudah Didaftarkan -->
+      <section class="section-card">
+        <div class="card-header">
+          <div class="card-title">
+            <h3>Daftar Siswa Terdaftar (<span id="totalStudentsCount">0</span> Siswa)</h3>
+            <p>Seluruh siswa pada tabel ini otomatis tersinkronisasi dengan tabel Data Siswa di Dashboard.</p>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="recap-table" id="registeredStudentsTable">
+            <thead>
+              <tr>
+                <th style="width: 52px;">No</th>
+                <th>Nama Siswa</th>
+                <th>Kelas</th>
+                <th>Tanggal Lahir</th>
+                <th>Didaftarkan Oleh</th>
+                <th style="width: 110px;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="registeredStudentsBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="js/pendaftaran.js"></script>
+</body>
+</html>

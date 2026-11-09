@@ -861,3 +861,283 @@ body {
     font-size: 0.8rem;
   }
 }
+
+/* ========================================================================= */
+/* EMPTY TABLE STATE, CLASS TAG, & ADMIN HIDE/SHOW USER PANEL                */
+/* ========================================================================= */
+.status-empty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 24px;
+  color: #94a3b8;
+  font-weight: 600;
+  font-size: 0.82rem;
+}
+
+.empty-table-cell {
+  padding: 28px 16px !important;
+  text-align: center !important;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  background: #f8fafc !important;
+}
+
+.empty-table-link {
+  color: var(--primary);
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.student-class-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 0.7rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.btn-outline-admin {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1.5px solid var(--primary);
+  background: #eff6ff;
+  color: var(--primary);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-outline-admin:hover {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.admin-visibility-panel {
+  background: #f8fafc;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 18px;
+}
+
+.admin-panel-head h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--secondary);
+  margin-bottom: 4px;
+}
+
+.admin-panel-head p {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.admin-user-toggle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-user-toggle-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+}
+
+.admin-user-toggle-item .user-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-user-toggle-item .u-name {
+  font-weight: 700;
+  color: var(--secondary);
+  font-size: 0.88rem;
+}
+
+.admin-user-toggle-item .u-email {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.vis-badge {
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.vis-badge.visible {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.vis-badge.hidden {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.btn-vis-toggle {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.btn-vis-toggle.hide {
+  background: #fff1f2;
+  color: #be123c;
+  border-color: #fecdd3;
+}
+
+.btn-vis-toggle.hide:hover {
+  background: #ffe4e6;
+}
+
+.btn-vis-toggle.show {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
+.btn-vis-toggle.show:hover {
+  background: #d1fae5;
+}
+
+/* ========================================================================= */
+/* HALAMAN PENDAFTARAN SISWA (pendaftaran.html)                              */
+/* ========================================================================= */
+.pendaftaran-grid {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-field label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--secondary);
+}
+
+.form-input {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border-color);
+  background: #f8fafc;
+  color: var(--secondary);
+  font-size: 0.9rem;
+  font-weight: 500;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.form-input:focus {
+  border-color: var(--primary);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.btn-primary-submit {
+  width: 100%;
+  padding: 12px 18px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.22);
+  transition: all 0.2s ease;
+}
+
+.btn-primary-submit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+}
+
+.btn-primary-submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-danger-sm {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-danger-sm:hover {
+  background: #fee2e2;
+}
+
+.alert-banner {
+  display: none;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+
+.alert-banner.show {
+  display: block;
+}
+
+.alert-banner.success {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.alert-banner.error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+@media (max-width: 920px) {
+  .pendaftaran-grid {
+    grid-template-columns: 1fr;
+  }
+}

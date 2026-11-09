@@ -274,16 +274,37 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE(user_id, attendance_date)
   );
+  CREATE TABLE IF NOT EXISTS students (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    full_name TEXT NOT NULL,
+    class_name TEXT NOT NULL,
+    birth_date TEXT NOT NULL,
+    created_by TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE TABLE IF NOT EXISTS student_attendance (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id INTEGER NOT NULL,
+    attendance_date TEXT NOT NULL,
+    status TEXT NOT NULL,
+    note TEXT NOT NULL DEFAULT '',
+    recorded_by TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(student_id, attendance_date)
+  );
 `);
 
-// Pastikan kolom role tersedia pada tabel users dan akun yumenoboken@gmail.com menjadi Admin utama
+// Pastikan kolom role & is_hidden tersedia pada tabel users dan akun yumenoboken@gmail.com menjadi Admin utama
 try {
   db.exec(`ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'guru';`);
 } catch (_) {}
 try {
+  db.exec(`ALTER TABLE users ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0;`);
+} catch (_) {}
+try {
   db.prepare(
-    `INSERT OR IGNORE INTO users (id, full_name, email, username, password_hash, password_salt, is_active, role)
-     VALUES (1, 'Yuken', 'yumenoboken@gmail.com', 'Yuken', 'd60a21f8dad3657f52d52c97d4ea9e5af62cb0df49ecb59e5d3d1010dd3dd126', '6b5c963375d89fa95bd982a8250df01d', 1, 'admin')`
+    `INSERT OR IGNORE INTO users (id, full_name, email, username, password_hash, password_salt, is_active, role, is_hidden)
+     VALUES (1, 'Yuken', 'yumenoboken@gmail.com', 'Yuken', 'd60a21f8dad3657f52d52c97d4ea9e5af62cb0df49ecb59e5d3d1010dd3dd126', '6b5c963375d89fa95bd982a8250df01d', 1, 'admin', 0)`
   ).run();
   db.exec(`UPDATE users SET role = 'admin', is_active = 1 WHERE lower(email) = 'yumenoboken@gmail.com';`);
 } catch (_) {}
@@ -589,7 +610,7 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // Endpoint Data Halaman Utama (Rekap & Hari Libur + Data Guru Terdaftar)
+  // Endpoint Data Halaman Utama (Rekap & Hari Libur + Data Siswa & Guru Terdaftar)
   if (pathname === '/api/attendance/overview' && req.method === 'GET') {
     const rows = db.prepare('SELECT holiday_date, is_holiday FROM custom_holidays').all();
     const customHolidays = {};
@@ -597,10 +618,46 @@ const server = http.createServer(async (req, res) => {
       customHolidays[r.holiday_date] = Boolean(r.is_holiday);
     }
 
-    const activeUsers = db
-      .prepare('SELECT id, full_name FROM users WHERE is_active = 1 ORDER BY id ASC')
+    const studentRows = db
+      .prepare('SELECT id, full_name, class_name, birth_date FROM students ORDER BY id ASC')
       .all();
-    const teachers = activeUsers.map((u) => ({ id: u.id, name: u.full_name }));
+    const students = studentRows.map((s) => ({
+      id: s.id,
+      name: s.full_name,
+      class_name: s.class_name,
+      birth_date: s.birth_date,
+    }));
+
+    const allActiveUsers = db
+      .prepare(
+        'SELECT id, full_name, email, username, role, is_hidden FROM users WHERE is_active = 1 ORDER BY id ASC'
+      )
+      .all();
+    const allTeachers = allActiveUsers.map((u) => ({
+      id: u.id,
+      name: u.full_name,
+      email: u.email,
+      username: u.username,
+      role: u.email.toLowerCase() === 'yumenoboken@gmail.com' ? 'admin' : u.role || 'guru',
+      is_hidden: Boolean(u.is_hidden),
+    }));
+    const visibleTeachers = allTeachers.filter((t) => !t.is_hidden);
+
+    const studentAttendanceRows = db
+      .prepare('SELECT student_id, attendance_date, status FROM student_attendance')
+      .all();
+    const studentRecords = {};
+    for (const row of studentAttendanceRows) {
+      const code =
+        row.status === 'Hadir'
+          ? 'H'
+          : row.status === 'Izin'
+          ? 'I'
+          : row.status === 'Sakit'
+          ? 'S'
+          : 'A';
+      studentRecords[`${row.student_id}_${row.attendance_date}`] = code;
+    }
 
     const approvedRows = db
       .prepare(
@@ -616,9 +673,111 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, {
       success: true,
       custom_holidays: customHolidays,
-      teachers: teachers.length > 0 ? teachers : undefined,
+      students: students,
+      teachers: visibleTeachers,
+      all_teachers: allTeachers,
+      student_records: studentRecords,
       teacher_records: teacherRecords,
     });
+  }
+
+  // Endpoint Admin untuk menyembunyikan / menampilkan nama user di tabel Data Guru Dashboard
+  if (pathname === '/api/teachers/toggle-hide' && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const adminEmail = (body.admin_email || '').trim().toLowerCase();
+      const targetUserId = Number(body.target_user_id);
+      const isHidden = body.is_hidden ? 1 : 0;
+
+      const adminUser = db
+        .prepare('SELECT * FROM users WHERE lower(email) = ? LIMIT 1')
+        .get(adminEmail);
+      const isAdmin =
+        adminEmail === 'yumenoboken@gmail.com' ||
+        (adminUser && adminUser.role === 'admin');
+
+      if (!isAdmin) {
+        return sendJson(res, 403, {
+          detail: 'Hanya Admin yang dapat menyembunyikan/menampilkan nama user.',
+        });
+      }
+
+      db.prepare('UPDATE users SET is_hidden = ? WHERE id = ?').run(isHidden, targetUserId);
+      return sendJson(res, 200, {
+        success: true,
+        target_user_id: targetUserId,
+        is_hidden: Boolean(isHidden),
+      });
+    } catch (err) {
+      return sendJson(res, 500, { detail: err.message });
+    }
+  }
+
+  // ==========================================================
+  // ENDPOINT API HALAMAN PENDAFTARAN SISWA (/api/students)
+  // ==========================================================
+  if (pathname === '/api/students' && req.method === 'GET') {
+    const rows = db
+      .prepare(
+        'SELECT id, full_name, class_name, birth_date, created_by, created_at FROM students ORDER BY id ASC'
+      )
+      .all();
+    return sendJson(res, 200, {
+      success: true,
+      students: rows,
+    });
+  }
+
+  if (pathname === '/api/students' && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const fullName = (body.full_name || '').trim();
+      const className = (body.class_name || '').trim();
+      const birthDate = (body.birth_date || '').trim();
+      const createdBy = (body.created_by || '').trim();
+
+      if (!fullName || !className || !birthDate) {
+        return sendJson(res, 400, {
+          detail: 'Nama siswa, kelas, dan tanggal lahir wajib diisi.',
+        });
+      }
+
+      const info = db
+        .prepare(
+          'INSERT INTO students (full_name, class_name, birth_date, created_by) VALUES (?, ?, ?, ?)'
+        )
+        .run(fullName, className, birthDate, createdBy);
+
+      const newStudent = db
+        .prepare('SELECT * FROM students WHERE id = ?')
+        .get(info.lastInsertRowid);
+
+      return sendJson(res, 201, {
+        success: true,
+        message: `Data siswa "${fullName}" berhasil ditambahkan ke Dashboard!`,
+        student: newStudent,
+      });
+    } catch (err) {
+      return sendJson(res, 500, { detail: err.message });
+    }
+  }
+
+  if (pathname === '/api/students/delete' && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const studentId = Number(body.student_id);
+      if (!studentId) {
+        return sendJson(res, 400, { detail: 'ID siswa tidak valid.' });
+      }
+      db.prepare('DELETE FROM students WHERE id = ?').run(studentId);
+      db.prepare('DELETE FROM student_attendance WHERE student_id = ?').run(studentId);
+      return sendJson(res, 200, {
+        success: true,
+        message: 'Data siswa berhasil dihapus.',
+      });
+    } catch (err) {
+      return sendJson(res, 500, { detail: err.message });
+    }
   }
 
   if (pathname === '/api/attendance/toggle-holiday' && req.method === 'POST') {
@@ -825,6 +984,8 @@ const server = http.createServer(async (req, res) => {
     pathname = '/verify-otp.html';
   } else if (pathname === '/dashboard') {
     pathname = '/dashboard.html';
+  } else if (pathname === '/pendaftaran') {
+    pathname = '/pendaftaran.html';
   } else if (pathname === '/absensi-guru') {
     pathname = '/absensi-guru.html';
   }
