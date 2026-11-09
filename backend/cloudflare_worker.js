@@ -74,9 +74,32 @@ function buildOtpHtmlEmail(fullName, otpCode) {
   `.trim();
 }
 
-async function sendRealEmailFromWorker(env, { toEmail, fullName, otpCode }) {
-  const subject = `[${otpCode}] Kode Aktivasi Akun Sistem Absensi PIA`;
-  const htmlBody = buildOtpHtmlEmail(fullName, otpCode);
+function buildResetOtpHtmlEmail(fullName, otpCode) {
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px;">
+      <h2 style="color: #1e3a8a; margin-top: 0;">Pemulihan Password Absensi PIA</h2>
+      <p style="color: #334155; font-size: 15px; line-height: 1.5;">
+        Halo <strong>${fullName}</strong>,<br><br>
+        Kami menerima permintaan untuk mereset kata sandi akun Anda di <strong>Sistem Informasi Absensi &amp; Pembelajaran PIA</strong>.<br>
+        Gunakan 6 digit kode OTP berikut untuk membuat kata sandi baru:
+      </p>
+      <div style="background: #eff6ff; border: 1px dashed #2563eb; border-radius: 10px; padding: 16px; text-align: center; margin: 24px 0;">
+        <span style="font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #1d4ed8;">${otpCode}</span>
+      </div>
+      <p style="color: #64748b; font-size: 13px; line-height: 1.4;">
+        Kode ini berlaku selama <strong>5 menit</strong>. Jika Anda tidak pernah meminta perubahan kata sandi ini, abaikan email ini dan akun Anda tetap aman.
+      </p>
+    </div>
+  `.trim();
+}
+
+async function sendRealEmailFromWorker(env, { toEmail, fullName, otpCode, isReset = false }) {
+  const subject = isReset
+    ? `[${otpCode}] Kode Reset Password Akun Sistem Absensi PIA`
+    : `[${otpCode}] Kode Aktivasi Akun Sistem Absensi PIA`;
+  const htmlBody = isReset
+    ? buildResetOtpHtmlEmail(fullName, otpCode)
+    : buildOtpHtmlEmail(fullName, otpCode);
   const relayUrl =
     (env && env.EMAIL_RELAY_URL) ||
     'https://script.google.com/macros/s/AKfycbyXzTnpST43yHYJ_fMTGmdLp5KEifI9N0iROHrUbpJr0gpeoJbMll8kh9x7O7c502E/exec';
@@ -543,6 +566,179 @@ export default {
               username: user.username,
               email: user.email,
             },
+          });
+        }
+
+        // 5. FORGOT PASSWORD (MINTA OTP RESET)
+        if (pathname === '/api/auth/forgot-password') {
+          const email = (body.email || '').trim().toLowerCase();
+          if (!email.includes('@') || !email.split('@')[1]?.includes('.')) {
+            return jsonResponse({ detail: 'Format alamat email tidak valid.' }, 400);
+          }
+
+          let user = null;
+          if (db) {
+            user = await db
+              .prepare('SELECT * FROM users WHERE lower(email) = lower(?) LIMIT 1')
+              .bind(email)
+              .first();
+          } else {
+            user = memoryStore.users.find((u) => u.email.toLowerCase() === email);
+          }
+
+          if (!user) {
+            return jsonResponse(
+              { detail: 'Akun dengan alamat email tersebut tidak terdaftar.' },
+              404
+            );
+          }
+
+          const otpCode = generateOtp(6);
+          const expiresAt = Math.floor(Date.now() / 1000) + 300;
+
+          if (db) {
+            await db
+              .prepare(
+                'INSERT INTO otp_verifications (email, otp_code, expires_at, is_used) VALUES (?, ?, ?, 0)'
+              )
+              .bind(email, otpCode, expiresAt)
+              .run();
+          } else {
+            memoryStore.otps.push({
+              id: memoryStore.otps.length + 1,
+              email,
+              otp_code: otpCode,
+              expires_at: expiresAt,
+              is_used: 0,
+            });
+          }
+
+          const emailSent = await sendRealEmailFromWorker(env, {
+            toEmail: email,
+            fullName: user.full_name,
+            otpCode,
+            isReset: true,
+          });
+
+          const responsePayload = {
+            success: true,
+            email_sent: emailSent,
+            message: emailSent
+              ? `Kode OTP 6 digit telah dikirimkan ke kotak masuk ${email}. Silakan cek Inbox atau folder Spam Anda.`
+              : `Kode OTP pemulihan telah dibuat untuk ${email}.`,
+          };
+
+          if (!emailSent) {
+            responsePayload.otp_preview = otpCode;
+          }
+
+          return jsonResponse(responsePayload, 200);
+        }
+
+        // 6. RESET PASSWORD (VERIFIKASI OTP & SIMPAN PASSWORD BARU)
+        if (pathname === '/api/auth/reset-password') {
+          const email = (body.email || '').trim().toLowerCase();
+          const inputOtp = (body.otp_code || '').trim();
+          const newPassword = body.new_password || '';
+
+          if (!email) {
+            return jsonResponse({ detail: 'Alamat email wajib diisi.' }, 400);
+          }
+          if (inputOtp.length < 6) {
+            return jsonResponse({ detail: 'Kode OTP harus 6 digit.' }, 400);
+          }
+          if (newPassword.length < 8) {
+            return jsonResponse(
+              { detail: 'Password baru harus terdiri dari minimal 8 karakter.' },
+              400
+            );
+          }
+
+          let user = null;
+          if (db) {
+            user = await db
+              .prepare('SELECT * FROM users WHERE lower(email) = lower(?) LIMIT 1')
+              .bind(email)
+              .first();
+          } else {
+            user = memoryStore.users.find((u) => u.email.toLowerCase() === email);
+          }
+
+          if (!user) {
+            return jsonResponse(
+              { detail: 'Akun dengan alamat email tersebut tidak ditemukan.' },
+              404
+            );
+          }
+
+          let otpRow = null;
+          if (db) {
+            otpRow = await db
+              .prepare(
+                'SELECT * FROM otp_verifications WHERE lower(email) = lower(?) AND is_used = 0 ORDER BY id DESC LIMIT 1'
+              )
+              .bind(email)
+              .first();
+          } else {
+            const matches = memoryStore.otps.filter(
+              (o) => o.email.toLowerCase() === email && o.is_used === 0
+            );
+            otpRow = matches[matches.length - 1] || null;
+          }
+
+          if (!otpRow) {
+            return jsonResponse(
+              {
+                detail:
+                  'Tidak ada kode OTP aktif untuk email ini. Silakan minta kode OTP baru.',
+              },
+              400
+            );
+          }
+
+          const nowTs = Math.floor(Date.now() / 1000);
+          if (nowTs > otpRow.expires_at) {
+            return jsonResponse(
+              {
+                detail:
+                  'Kode OTP telah kedaluwarsa. Silakan klik Kirim Ulang untuk mendapatkan kode baru.',
+              },
+              400
+            );
+          }
+
+          if (inputOtp !== otpRow.otp_code) {
+            return jsonResponse(
+              { detail: 'Kode OTP yang dimasukkan tidak sesuai.' },
+              400
+            );
+          }
+
+          const salt = generateSalt();
+          const pwHash = await hashPassword(newPassword, salt);
+
+          if (db) {
+            await db
+              .prepare('UPDATE otp_verifications SET is_used = 1 WHERE id = ?')
+              .bind(otpRow.id)
+              .run();
+            await db
+              .prepare(
+                'UPDATE users SET password_hash = ?, password_salt = ?, is_active = 1 WHERE id = ?'
+              )
+              .bind(pwHash, salt, user.id)
+              .run();
+          } else {
+            otpRow.is_used = 1;
+            user.password_hash = pwHash;
+            user.password_salt = salt;
+            user.is_active = 1;
+          }
+
+          return jsonResponse({
+            success: true,
+            message:
+              'Password akun Anda berhasil diperbarui! Silakan masuk dengan password baru Anda.',
           });
         }
       } catch (err) {

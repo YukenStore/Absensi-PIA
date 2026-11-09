@@ -26,10 +26,33 @@ function buildOtpHtmlEmailContent(fullName, otpCode) {
   `.trim();
 }
 
-async function dispatchGasEmailRelay({ toEmail, fullName, otpCode }) {
+function buildResetOtpHtmlEmailContent(fullName, otpCode) {
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px;">
+      <h2 style="color: #1e3a8a; margin-top: 0;">Pemulihan Password Absensi PIA</h2>
+      <p style="color: #334155; font-size: 15px; line-height: 1.5;">
+        Halo <strong>${fullName}</strong>,<br><br>
+        Kami menerima permintaan untuk mereset kata sandi akun Anda di <strong>Sistem Informasi Absensi &amp; Pembelajaran PIA</strong>.<br>
+        Gunakan 6 digit kode OTP berikut untuk membuat kata sandi baru:
+      </p>
+      <div style="background: #eff6ff; border: 1px dashed #2563eb; border-radius: 10px; padding: 16px; text-align: center; margin: 24px 0;">
+        <span style="font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #1d4ed8;">${otpCode}</span>
+      </div>
+      <p style="color: #64748b; font-size: 13px; line-height: 1.4;">
+        Kode ini berlaku selama <strong>5 menit</strong>. Jika Anda tidak pernah meminta perubahan kata sandi ini, abaikan email ini dan akun Anda tetap aman.
+      </p>
+    </div>
+  `.trim();
+}
+
+async function dispatchGasEmailRelay({ toEmail, fullName, otpCode, isReset = false }) {
   try {
-    const subject = `[${otpCode}] Kode Aktivasi Akun Sistem Absensi PIA`;
-    const htmlBody = buildOtpHtmlEmailContent(fullName, otpCode);
+    const subject = isReset
+      ? `[${otpCode}] Kode Reset Password Akun Sistem Absensi PIA`
+      : `[${otpCode}] Kode Aktivasi Akun Sistem Absensi PIA`;
+    const htmlBody = isReset
+      ? buildResetOtpHtmlEmailContent(fullName, otpCode)
+      : buildOtpHtmlEmailContent(fullName, otpCode);
     const resp = await fetch(GAS_EMAIL_RELAY_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -294,6 +317,84 @@ async function handleStaticAuthFallback(endpoint, payload) {
     };
   }
 
+  if (endpoint === '/forgot-password') {
+    const email = (payload.email || '').trim().toLowerCase();
+    const user = db.users.find((u) => u.email.toLowerCase() === email);
+    if (!user) {
+      throw new Error('Akun dengan alamat email tersebut tidak terdaftar.');
+    }
+
+    const otpCode = String(Math.floor(100000 + Math.random() * 900000));
+    db.otps.push({
+      email,
+      otp_code: otpCode,
+      expires_at: Date.now() + 300000,
+      is_used: false,
+    });
+    saveStaticDb(db);
+
+    const emailSent = await dispatchGasEmailRelay({
+      toEmail: email,
+      fullName: user.full_name,
+      otpCode,
+      isReset: true,
+    });
+
+    const respPayload = {
+      success: true,
+      message: emailSent
+        ? `Kode OTP 6 digit telah dikirimkan ke kotak masuk ${email}. Silakan periksa inbox atau spam email Anda.`
+        : `Kode OTP pemulihan telah dibuat untuk ${email}.`,
+    };
+    if (!emailSent) {
+      respPayload.otp_preview = otpCode;
+    }
+    return respPayload;
+  }
+
+  if (endpoint === '/reset-password') {
+    const email = (payload.email || '').trim().toLowerCase();
+    const otpCode = (payload.otp_code || '').trim();
+    const newPassword = payload.new_password || '';
+
+    if (newPassword.length < 8) {
+      throw new Error('Password baru harus terdiri dari minimal 8 karakter.');
+    }
+
+    const user = db.users.find((u) => u.email.toLowerCase() === email);
+    if (!user) {
+      throw new Error('Akun dengan alamat email tersebut tidak ditemukan.');
+    }
+
+    const otpList = db.otps.filter((o) => o.email.toLowerCase() === email && !o.is_used);
+    const latestOtp = otpList[otpList.length - 1];
+    if (!latestOtp) {
+      throw new Error('Tidak ada kode OTP aktif untuk email ini. Silakan minta kode baru.');
+    }
+    if (Date.now() > latestOtp.expires_at) {
+      throw new Error('Kode OTP telah kedaluwarsa. Silakan klik Kirim Ulang untuk mendapatkan kode baru.');
+    }
+    if (latestOtp.otp_code !== otpCode) {
+      throw new Error('Kode OTP yang dimasukkan tidak sesuai.');
+    }
+
+    const salt = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+    const pwHash = await hashPasswordPiaCore(newPassword, salt);
+
+    latestOtp.is_used = true;
+    user.password_hash = pwHash;
+    user.password_salt = salt;
+    user.is_active = true;
+    saveStaticDb(db);
+
+    return {
+      success: true,
+      message: 'Password akun Anda berhasil diperbarui! Silakan masuk dengan password baru Anda.',
+    };
+  }
+
   throw new Error('Endpoint tidak dikenali.');
 }
 
@@ -429,6 +530,38 @@ if (passwordInput && strengthText) {
     });
 
     strengthText.textContent = val.length === 0 ? 'Keamanan' : labels[Math.max(0, score - 1)];
+  });
+}
+
+const newPasswordInput = document.getElementById('newPassword');
+const newStrengthText = document.getElementById('newStrengthText');
+if (newPasswordInput && newStrengthText) {
+  const newBars = [
+    document.getElementById('newBar1'),
+    document.getElementById('newBar2'),
+    document.getElementById('newBar3'),
+    document.getElementById('newBar4'),
+  ];
+
+  newPasswordInput.addEventListener('input', () => {
+    const val = newPasswordInput.value;
+    let score = 0;
+
+    if (val.length >= 8) score++;
+    if (/[A-Z]/.test(val) && /[a-z]/.test(val)) score++;
+    if (/[0-9]/.test(val)) score++;
+    if (/[^A-Za-z0-9]/.test(val)) score++;
+
+    const colors = ['#ef4444', '#f59e0b', '#3b82f6', '#10b981'];
+    const labels = ['Lemah', 'Cukup', 'Kuat', 'Sangat Kuat'];
+
+    newBars.forEach((bar, idx) => {
+      if (bar) {
+        bar.style.background = idx < score ? colors[score - 1] : '#e2e8f0';
+      }
+    });
+
+    newStrengthText.textContent = val.length === 0 ? 'Kekuatan' : labels[Math.max(0, score - 1)];
   });
 }
 
@@ -756,6 +889,235 @@ if (loginForm) {
       showAlert(err.message);
       submitBtn.disabled = false;
       submitBtn.innerHTML = '<span>Masuk ke Aplikasi</span>';
+    }
+  });
+}
+
+// ==========================================
+// 4. LOGIKA RESET & PEMULIHAN PASSWORD
+// ==========================================
+const requestOtpForm = document.getElementById('requestOtpForm');
+const resetPasswordForm = document.getElementById('resetPasswordForm');
+
+if (requestOtpForm && resetPasswordForm) {
+  const requestEmailInput = document.getElementById('requestEmail');
+  const btnRequestOtp = document.getElementById('btnRequestOtp');
+  const targetEmailDisplay = document.getElementById('targetEmailDisplay');
+  const resetEmailHidden = document.getElementById('resetEmail');
+  const changeEmailBtn = document.getElementById('changeEmailBtn');
+  const fpResendBtn = document.getElementById('fpResendBtn');
+  const fpCountdownTimer = document.getElementById('fpCountdownTimer');
+  const btnResetSubmit = document.getElementById('btnResetSubmit');
+  const fpTitle = document.getElementById('fpTitle');
+  const fpSubtitle = document.getElementById('fpSubtitle');
+
+  // Auto-fill email dari URL parameter jika ada (misal forgot-password.html?email=...)
+  const urlParams = new URLSearchParams(window.location.search);
+  const emailParam = urlParams.get('email');
+  if (emailParam && requestEmailInput) {
+    requestEmailInput.value = emailParam.trim();
+  }
+
+  // Pengaturan OTP inputs 6 digit
+  const fpOtpInputs = Array.from(document.querySelectorAll('.otp-input.fp-otp'));
+  fpOtpInputs.forEach((input, index) => {
+    input.addEventListener('input', (e) => {
+      e.target.value = e.target.value.replace(/[^0-9]/g, '');
+      if (e.target.value && index < fpOtpInputs.length - 1) {
+        fpOtpInputs[index + 1].focus();
+      }
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !e.target.value && index > 0) {
+        fpOtpInputs[index - 1].focus();
+      }
+    });
+
+    input.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const pastedData = (e.clipboardData || window.clipboardData)
+        .getData('text')
+        .replace(/[^0-9]/g, '')
+        .slice(0, fpOtpInputs.length);
+
+      pastedData.split('').forEach((char, i) => {
+        if (fpOtpInputs[i]) fpOtpInputs[i].value = char;
+      });
+      const focusIndex = Math.min(pastedData.length, fpOtpInputs.length - 1);
+      if (fpOtpInputs[focusIndex]) fpOtpInputs[focusIndex].focus();
+    });
+  });
+
+  // Countdown timer kirim ulang OTP
+  let fpCountdown = 60;
+  let fpTimerInterval = null;
+
+  function startFpCountdown() {
+    fpCountdown = 60;
+    if (fpResendBtn) fpResendBtn.disabled = true;
+    clearInterval(fpTimerInterval);
+
+    fpTimerInterval = setInterval(() => {
+      fpCountdown--;
+      const secs = String(fpCountdown).padStart(2, '0');
+      if (fpCountdownTimer) fpCountdownTimer.textContent = `(00:${secs})`;
+
+      if (fpCountdown <= 0) {
+        clearInterval(fpTimerInterval);
+        if (fpCountdownTimer) fpCountdownTimer.textContent = '';
+        if (fpResendBtn) fpResendBtn.disabled = false;
+      }
+    }, 1000);
+  }
+
+  // Step 1: Submit Form Permintaan OTP Reset
+  requestOtpForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideAlert();
+
+    const email = (requestEmailInput.value || '').trim();
+    if (!email) {
+      showAlert('Harap masukkan alamat email akun Anda.');
+      return;
+    }
+
+    btnRequestOtp.disabled = true;
+    btnRequestOtp.innerHTML = '<span>Mengirim Kode OTP...</span>';
+
+    try {
+      const data = await callAuthApi('/forgot-password', { email });
+
+      // Update state ke Step 2
+      resetEmailHidden.value = email;
+      if (targetEmailDisplay) targetEmailDisplay.textContent = email;
+
+      requestOtpForm.style.display = 'none';
+      resetPasswordForm.style.display = 'block';
+
+      if (fpTitle) fpTitle.textContent = 'Buat Password Baru';
+      if (fpSubtitle) {
+        fpSubtitle.textContent =
+          'Masukkan 6 digit kode OTP dari email dan tentukan kata sandi baru akun Anda.';
+      }
+
+      if (data.otp_preview) {
+        showAlert(
+          `[Mode Uji Coba OTP] Kode OTP reset password Anda: ${data.otp_preview}`,
+          'success'
+        );
+      } else {
+        showAlert(
+          `Kode OTP 6 digit telah dikirimkan ke kotak masuk ${email}. Silakan cek Inbox atau folder Spam Anda.`,
+          'success'
+        );
+      }
+
+      startFpCountdown();
+      if (fpOtpInputs[0]) fpOtpInputs[0].focus();
+    } catch (err) {
+      showAlert(err.message);
+      btnRequestOtp.disabled = false;
+      btnRequestOtp.innerHTML = '<span>Kirim Kode OTP Pemulihan</span>';
+    }
+  });
+
+  // Ganti Email (Kembali ke Step 1)
+  if (changeEmailBtn) {
+    changeEmailBtn.addEventListener('click', () => {
+      hideAlert();
+      clearInterval(fpTimerInterval);
+      resetPasswordForm.style.display = 'none';
+      requestOtpForm.style.display = 'block';
+      if (fpTitle) fpTitle.textContent = 'Lupa Kata Sandi?';
+      if (fpSubtitle) {
+        fpSubtitle.textContent =
+          'Masukkan alamat email akun Anda yang terdaftar untuk menerima kode OTP pemulihan.';
+      }
+      btnRequestOtp.disabled = false;
+      btnRequestOtp.innerHTML = '<span>Kirim Kode OTP Pemulihan</span>';
+      requestEmailInput.focus();
+    });
+  }
+
+  // Kirim Ulang OTP di Step 2
+  if (fpResendBtn) {
+    fpResendBtn.addEventListener('click', async () => {
+      hideAlert();
+      const email = resetEmailHidden.value || (requestEmailInput ? requestEmailInput.value.trim() : '');
+      if (!email) {
+        showAlert('Alamat email tidak ditemukan. Harap ulangi langkah awal.');
+        return;
+      }
+
+      try {
+        const data = await callAuthApi('/forgot-password', { email });
+        if (data.otp_preview) {
+          showAlert(
+            `Kode OTP baru telah dikirim! [Mode Uji Coba] Kode OTP Anda: ${data.otp_preview}`,
+            'success'
+          );
+        } else {
+          showAlert(`Kode OTP baru telah dikirimkan ke kotak masuk ${email}.`, 'success');
+        }
+        startFpCountdown();
+      } catch (err) {
+        showAlert(err.message);
+      }
+    });
+  }
+
+  // Step 2: Submit Form Reset Password
+  resetPasswordForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideAlert();
+
+    const email = resetEmailHidden.value || (requestEmailInput ? requestEmailInput.value.trim() : '');
+    const otpCode = fpOtpInputs.map((input) => input.value).join('');
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+
+    if (!email) {
+      showAlert('Alamat email tidak terdeteksi. Silakan kembali ke form sebelumnya.');
+      return;
+    }
+    if (otpCode.length < 6) {
+      showAlert('Harap masukkan 6 digit kode OTP secara lengkap.');
+      return;
+    }
+    if (!newPassword) {
+      showAlert('Harap masukkan password baru.');
+      return;
+    }
+    if (newPassword.length < 8) {
+      showAlert('Password baru harus terdiri dari minimal 8 karakter.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      showAlert('Konfirmasi password tidak cocok dengan password baru.');
+      return;
+    }
+
+    btnResetSubmit.disabled = true;
+    btnResetSubmit.innerHTML = '<span>Menyimpan Password Baru...</span>';
+
+    try {
+      await callAuthApi('/reset-password', {
+        email,
+        otp_code: otpCode,
+        new_password: newPassword,
+      });
+
+      showAlert('Password akun Anda berhasil diperbarui! Mengalihkan ke login...', 'success');
+      btnResetSubmit.innerHTML = '<span>Berhasil Diperbarui ✓</span>';
+
+      setTimeout(() => {
+        window.location.href = 'index.html';
+      }, 1400);
+    } catch (err) {
+      showAlert(err.message);
+      btnResetSubmit.disabled = false;
+      btnResetSubmit.innerHTML = '<span>Simpan Password Baru &amp; Masuk</span>';
     }
   });
 }

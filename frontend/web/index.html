@@ -104,7 +104,10 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="password">Password</label>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label class="form-label" for="password" style="margin-bottom: 0;">Password</label>
+            <a href="forgot-password.html" class="auth-link" style="font-size: 0.8rem;">Lupa Password?</a>
+          </div>
           <div class="input-wrapper">
             <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
@@ -133,7 +136,11 @@
             <input type="checkbox" id="rememberMe" checked />
             <span>Tetap login (selanjutnya cukup password)</span>
           </label>
-          <a href="verify-otp.html" class="auth-link">Aktivasi OTP?</a>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <a href="forgot-password.html" class="auth-link">Lupa Password?</a>
+            <span style="color: #cbd5e1;">&bull;</span>
+            <a href="verify-otp.html" class="auth-link">Aktivasi OTP?</a>
+          </div>
         </div>
 
         <button type="submit" id="submitBtn" class="btn-primary">

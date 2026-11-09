@@ -55,12 +55,31 @@ function buildOtpHtmlEmail(fullName, otpCode) {
   `.trim();
 }
 
+function buildResetOtpHtmlEmail(fullName, otpCode) {
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px;">
+      <h2 style="color: #1e3a8a; margin-top: 0;">Pemulihan Password Absensi PIA</h2>
+      <p style="color: #334155; font-size: 15px; line-height: 1.5;">
+        Halo <strong>${fullName}</strong>,<br><br>
+        Kami menerima permintaan untuk mereset kata sandi akun Anda di <strong>Sistem Informasi Absensi &amp; Pembelajaran PIA</strong>.<br>
+        Gunakan 6 digit kode OTP berikut untuk membuat kata sandi baru:
+      </p>
+      <div style="background: #eff6ff; border: 1px dashed #2563eb; border-radius: 10px; padding: 16px; text-align: center; margin: 24px 0;">
+        <span style="font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #1d4ed8;">${otpCode}</span>
+      </div>
+      <p style="color: #64748b; font-size: 13px; line-height: 1.4;">
+        Kode ini berlaku selama <strong>5 menit</strong>. Jika Anda tidak pernah meminta perubahan kata sandi ini, abaikan email ini dan akun Anda tetap aman.
+      </p>
+    </div>
+  `.trim();
+}
+
 // Pengiriman Email Asli melalui SMTP Gmail (Port 465 SSL/TLS Native Node.js)
-function sendViaGmailSmtp({ smtpUser, smtpPassword, fromName, toEmail, fullName, otpCode }) {
+function sendViaGmailSmtp({ smtpUser, smtpPassword, fromName, toEmail, fullName, otpCode, subject, htmlBody }) {
   return new Promise((resolve, reject) => {
     const cleanPass = smtpPassword.replace(/\s+/g, '');
-    const subject = `[${otpCode}] Kode Aktivasi Akun Sistem Absensi PIA`;
-    const htmlBody = buildOtpHtmlEmail(fullName, otpCode);
+    const mailSubject = subject || `[${otpCode}] Kode Aktivasi Akun Sistem Absensi PIA`;
+    const mailHtml = htmlBody || buildOtpHtmlEmail(fullName, otpCode);
 
     const socket = tls.connect(
       {
@@ -122,11 +141,11 @@ function sendViaGmailSmtp({ smtpUser, smtpPassword, fromName, toEmail, fullName,
           const mimeMessage = [
             `From: "${fromName}" <${smtpUser}>`,
             `To: <${toEmail}>`,
-            `Subject: ${subject}`,
+            `Subject: ${mailSubject}`,
             'MIME-Version: 1.0',
             'Content-Type: text/html; charset=UTF-8',
             '',
-            htmlBody,
+            mailHtml,
             '.',
           ].join('\r\n');
           sendLine(mimeMessage);
@@ -151,12 +170,12 @@ function sendViaGmailSmtp({ smtpUser, smtpPassword, fromName, toEmail, fullName,
 }
 
 // Pengiriman Email Asli melalui Google Apps Script Relay URL (HTTPS)
-function sendViaRelayWebhook(relayUrl, { toEmail, fullName, otpCode }) {
+function sendViaRelayWebhook(relayUrl, { toEmail, fullName, otpCode, subject, htmlBody }) {
   return new Promise((resolve, reject) => {
     const payload = JSON.stringify({
       to: toEmail,
-      subject: `[${otpCode}] Kode Aktivasi Akun Sistem Absensi PIA`,
-      htmlBody: buildOtpHtmlEmail(fullName, otpCode),
+      subject: subject || `[${otpCode}] Kode Aktivasi Akun Sistem Absensi PIA`,
+      htmlBody: htmlBody || buildOtpHtmlEmail(fullName, otpCode),
     });
 
     function postUrl(targetUrl, redirectCount = 0) {
@@ -199,18 +218,24 @@ function sendViaRelayWebhook(relayUrl, { toEmail, fullName, otpCode }) {
   });
 }
 
-async function dispatchOtpEmail({ toEmail, fullName, otpCode }) {
+async function dispatchOtpEmail({ toEmail, fullName, otpCode, isReset = false }) {
   const env = loadEnvConfig();
+  const subject = isReset
+    ? `[${otpCode}] Kode Reset Password Akun Sistem Absensi PIA`
+    : `[${otpCode}] Kode Aktivasi Akun Sistem Absensi PIA`;
+  const htmlBody = isReset
+    ? buildResetOtpHtmlEmail(fullName, otpCode)
+    : buildOtpHtmlEmail(fullName, otpCode);
 
   console.log('\n========================================================');
-  console.log('  [OTP EMAIL SERVICE - SISTEM ABSENSI PIA]');
+  console.log(`  [${isReset ? 'RESET PASSWORD' : 'OTP'} EMAIL SERVICE - SISTEM ABSENSI PIA]`);
   console.log(`  Penerima : ${fullName} <${toEmail}>`);
   console.log(`  KODE OTP : ${otpCode} (Berlaku 5 menit)`);
   console.log('========================================================');
 
   // 1. Jika SMTP_USER & SMTP_PASSWORD diisi di backend/.env, kirim via SMTP Gmail asli
   if (env.SMTP_USER && env.SMTP_PASSWORD) {
-    console.log(`  ➜ Mengirim email OTP asli ke ${toEmail} via SMTP Gmail (${env.SMTP_USER})...`);
+    console.log(`  ➜ Mengirim email ke ${toEmail} via SMTP Gmail (${env.SMTP_USER})...`);
     await sendViaGmailSmtp({
       smtpUser: env.SMTP_USER,
       smtpPassword: env.SMTP_PASSWORD,
@@ -218,16 +243,18 @@ async function dispatchOtpEmail({ toEmail, fullName, otpCode }) {
       toEmail,
       fullName,
       otpCode,
+      subject,
+      htmlBody,
     });
-    console.log(`  ✓ [SUKSES] Email OTP berhasil terkirim ke kotak masuk ${toEmail}!\n`);
+    console.log(`  ✓ [SUKSES] Email berhasil terkirim ke kotak masuk ${toEmail}!\n`);
     return { realEmailSent: true };
   }
 
   // 2. Jika EMAIL_RELAY_URL diisi di backend/.env, kirim via Google Apps Script Relay
   if (env.EMAIL_RELAY_URL) {
-    console.log(`  ➜ Mengirim email OTP asli ke ${toEmail} via Email Relay...`);
-    await sendViaRelayWebhook(env.EMAIL_RELAY_URL, { toEmail, fullName, otpCode });
-    console.log(`  ✓ [SUKSES] Email OTP berhasil terkirim ke kotak masuk ${toEmail}!\n`);
+    console.log(`  ➜ Mengirim email ke ${toEmail} via Email Relay...`);
+    await sendViaRelayWebhook(env.EMAIL_RELAY_URL, { toEmail, fullName, otpCode, subject, htmlBody });
+    console.log(`  ✓ [SUKSES] Email berhasil terkirim ke kotak masuk ${toEmail}!\n`);
     return { realEmailSent: true };
   }
 
@@ -619,6 +646,109 @@ const server = http.createServer(async (req, res) => {
             email: user.email,
             role: userRole,
           },
+        });
+      }
+
+      // 5. FORGOT PASSWORD (MINTA OTP RESET)
+      if (pathname === '/api/auth/forgot-password') {
+        const email = (body.email || '').trim().toLowerCase();
+        if (!email.includes('@') || !email.split('@')[1]?.includes('.')) {
+          return sendJson(res, 400, { detail: 'Format alamat email tidak valid.' });
+        }
+
+        const user = db.prepare('SELECT * FROM users WHERE lower(email) = lower(?) LIMIT 1').get(email);
+        if (!user) {
+          return sendJson(res, 404, {
+            detail: 'Akun dengan alamat email tersebut tidak terdaftar.',
+          });
+        }
+
+        const otpCode = generateOtp(6);
+        const expiresAt = Math.floor(Date.now() / 1000) + 300;
+        db.prepare(
+          'INSERT INTO otp_verifications (email, otp_code, expires_at, is_used) VALUES (?, ?, ?, 0)'
+        ).run(email, otpCode, expiresAt);
+
+        const mailResult = await dispatchOtpEmail({
+          toEmail: email,
+          fullName: user.full_name,
+          otpCode,
+          isReset: true,
+        });
+
+        const responsePayload = {
+          success: true,
+          email_sent: mailResult.realEmailSent,
+          message: mailResult.realEmailSent
+            ? `Kode OTP 6 digit telah dikirimkan ke kotak masuk ${email}. Silakan cek Inbox atau folder Spam Anda.`
+            : `Kode OTP pemulihan telah dibuat untuk ${email}.`,
+        };
+
+        if (!mailResult.realEmailSent) {
+          responsePayload.otp_preview = otpCode;
+        }
+
+        return sendJson(res, 200, responsePayload);
+      }
+
+      // 6. RESET PASSWORD (VERIFIKASI OTP & SIMPAN PASSWORD BARU)
+      if (pathname === '/api/auth/reset-password') {
+        const email = (body.email || '').trim().toLowerCase();
+        const inputOtp = (body.otp_code || '').trim();
+        const newPassword = body.new_password || '';
+
+        if (!email) {
+          return sendJson(res, 400, { detail: 'Alamat email wajib diisi.' });
+        }
+        if (inputOtp.length < 6) {
+          return sendJson(res, 400, { detail: 'Kode OTP harus 6 digit.' });
+        }
+        if (newPassword.length < 8) {
+          return sendJson(res, 400, { detail: 'Password baru harus terdiri dari minimal 8 karakter.' });
+        }
+
+        const user = db.prepare('SELECT * FROM users WHERE lower(email) = lower(?) LIMIT 1').get(email);
+        if (!user) {
+          return sendJson(res, 404, {
+            detail: 'Akun dengan alamat email tersebut tidak ditemukan.',
+          });
+        }
+
+        const otpRow = db
+          .prepare(
+            'SELECT * FROM otp_verifications WHERE lower(email) = lower(?) AND is_used = 0 ORDER BY id DESC LIMIT 1'
+          )
+          .get(email);
+        if (!otpRow) {
+          return sendJson(res, 400, {
+            detail: 'Tidak ada kode OTP aktif untuk email ini. Silakan minta kode OTP baru.',
+          });
+        }
+
+        const nowTs = Math.floor(Date.now() / 1000);
+        if (nowTs > otpRow.expires_at) {
+          return sendJson(res, 400, {
+            detail: 'Kode OTP telah kedaluwarsa. Silakan klik Kirim Ulang untuk mendapatkan kode baru.',
+          });
+        }
+
+        if (inputOtp !== otpRow.otp_code) {
+          return sendJson(res, 400, {
+            detail: 'Kode OTP yang dimasukkan tidak sesuai.',
+          });
+        }
+
+        const salt = crypto.randomBytes(16).toString('hex');
+        const pwHash = hashPassword(newPassword, salt);
+
+        db.prepare('UPDATE otp_verifications SET is_used = 1 WHERE id = ?').run(otpRow.id);
+        db.prepare(
+          'UPDATE users SET password_hash = ?, password_salt = ?, is_active = 1 WHERE id = ?'
+        ).run(pwHash, salt, user.id);
+
+        return sendJson(res, 200, {
+          success: true,
+          message: 'Password akun Anda berhasil diperbarui! Silakan masuk dengan password baru Anda.',
         });
       }
     } catch (err) {
