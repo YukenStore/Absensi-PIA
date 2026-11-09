@@ -7,14 +7,67 @@ const API_BASE_URL = '/api/auth';
 const CLOUDFLARE_API_URL = 'https://absensi-pia.yumenoboken.workers.dev/api/auth';
 
 // =========================================================================
-// ENGINE DATABASE LOKAL BROWSER (FALLBACK OTOMATIS UNTUK GITHUB PAGES)
+// ENGINE DATABASE LOKAL BROWSER & SINKRONISASI AKUN (UNTUK GITHUB PAGES)
 // =========================================================================
+const DEFAULT_SEEDED_USERS = [
+  {
+    id: 1,
+    full_name: 'Yuken',
+    email: 'yumenoboken@gmail.com',
+    username: 'Yuken',
+    password_hash: 'd60a21f8dad3657f52d52c97d4ea9e5af62cb0df49ecb59e5d3d1010dd3dd126',
+    password_salt: '6b5c963375d89fa95bd982a8250df01d',
+    role: 'admin',
+    is_active: true,
+  },
+];
+
+async function sha256HexBrowser(message) {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function hashPasswordPiaCore(password, salt) {
+  let current = `${salt}:${password}:PIA_CORE_V1`;
+  for (let i = 0; i < 1000; i++) {
+    const digest = await sha256HexBrowser(current);
+    current = `${digest}:${salt}`;
+  }
+  return await sha256HexBrowser(current);
+}
+
 function getStaticDb() {
+  let db = { users: [], otps: [] };
   try {
     const raw = localStorage.getItem('pia_gh_pages_db');
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed.users)) {
+        db = parsed;
+      }
+    }
   } catch (_) {}
-  return { users: [], otps: [] };
+
+  // Pastikan akun terdaftar dari database lokal tersinkronisasi di GitHub Pages
+  let updated = false;
+  for (const seedUser of DEFAULT_SEEDED_USERS) {
+    const exists = db.users.find(
+      (u) => u.email.toLowerCase() === seedUser.email.toLowerCase()
+    );
+    if (!exists) {
+      db.users.push({ ...seedUser });
+      updated = true;
+    } else if (!exists.password_hash && !exists.password) {
+      Object.assign(exists, seedUser);
+      updated = true;
+    }
+  }
+  if (updated) {
+    saveStaticDb(db);
+  }
+  return db;
 }
 
 function saveStaticDb(dbObj) {
@@ -23,7 +76,7 @@ function saveStaticDb(dbObj) {
   } catch (_) {}
 }
 
-function handleStaticAuthFallback(endpoint, payload) {
+async function handleStaticAuthFallback(endpoint, payload) {
   const db = getStaticDb();
 
   if (endpoint === '/register') {
@@ -32,7 +85,7 @@ function handleStaticAuthFallback(endpoint, payload) {
     const username = (payload.username || '').trim();
     const password = payload.password || '';
 
-    const existingEmail = db.users.find((u) => u.email === email);
+    const existingEmail = db.users.find((u) => u.email.toLowerCase() === email);
     if (existingEmail && existingEmail.is_active) {
       throw new Error('Alamat email sudah terdaftar dan aktif. Silakan langsung login.');
     }
@@ -40,21 +93,30 @@ function handleStaticAuthFallback(endpoint, payload) {
     const existingUser = db.users.find(
       (u) => u.username.toLowerCase() === username.toLowerCase()
     );
-    if (existingUser && (!existingEmail || existingUser.email !== email)) {
+    if (existingUser && (!existingEmail || existingUser.email.toLowerCase() !== email)) {
       throw new Error('Username sudah digunakan oleh pengguna lain.');
     }
+
+    const salt = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+    const pwHash = await hashPasswordPiaCore(password, salt);
 
     if (existingEmail) {
       existingEmail.full_name = fullName;
       existingEmail.username = username;
-      existingEmail.password = password;
+      existingEmail.password_hash = pwHash;
+      existingEmail.password_salt = salt;
+      delete existingEmail.password;
     } else {
       db.users.push({
         id: db.users.length + 1,
         full_name: fullName,
         email,
         username,
-        password,
+        password_hash: pwHash,
+        password_salt: salt,
+        role: email === 'yumenoboken@gmail.com' ? 'admin' : 'guru',
         is_active: false,
       });
     }
@@ -79,11 +141,11 @@ function handleStaticAuthFallback(endpoint, payload) {
     const email = (payload.email || '').trim().toLowerCase();
     const otpCode = (payload.otp_code || '').trim();
 
-    const user = db.users.find((u) => u.email === email);
+    const user = db.users.find((u) => u.email.toLowerCase() === email);
     if (!user) {
       throw new Error('Akun dengan alamat email tersebut tidak ditemukan.');
     }
-    const otpList = db.otps.filter((o) => o.email === email && !o.is_used);
+    const otpList = db.otps.filter((o) => o.email.toLowerCase() === email && !o.is_used);
     const latestOtp = otpList[otpList.length - 1];
     if (!latestOtp) {
       throw new Error('Tidak ada kode OTP aktif untuk email ini.');
@@ -107,7 +169,7 @@ function handleStaticAuthFallback(endpoint, payload) {
 
   if (endpoint === '/resend-otp') {
     const email = (payload.email || '').trim().toLowerCase();
-    const user = db.users.find((u) => u.email === email);
+    const user = db.users.find((u) => u.email.toLowerCase() === email);
     if (!user) {
       throw new Error('Akun dengan alamat email tersebut belum terdaftar.');
     }
@@ -138,12 +200,29 @@ function handleStaticAuthFallback(endpoint, payload) {
         u.full_name.toLowerCase() === identifier.toLowerCase()
     );
 
-    if (!user || user.password !== password) {
+    if (!user) {
+      throw new Error('Username/email atau password tidak sesuai.');
+    }
+
+    let passwordMatches = false;
+    if (user.password_hash && user.password_salt) {
+      const computed = await hashPasswordPiaCore(password, user.password_salt);
+      passwordMatches = computed === user.password_hash;
+    } else if (user.password) {
+      passwordMatches = user.password === password;
+    }
+
+    if (!passwordMatches) {
       throw new Error('Username/email atau password tidak sesuai.');
     }
     if (!user.is_active) {
       throw new Error('Akun Anda belum diaktifkan. Silakan verifikasi kode OTP terlebih dahulu.');
     }
+
+    const userRole =
+      user.email.toLowerCase() === 'yumenoboken@gmail.com'
+        ? 'admin'
+        : user.role || 'guru';
 
     return {
       success: true,
@@ -154,6 +233,7 @@ function handleStaticAuthFallback(endpoint, payload) {
         full_name: user.full_name,
         username: user.username,
         email: user.email,
+        role: userRole,
       },
     };
   }

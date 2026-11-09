@@ -4,9 +4,20 @@
  */
 
 const memoryStore = {
-  users: [],
+  users: [
+    {
+      id: 1,
+      full_name: 'Yuken',
+      email: 'yumenoboken@gmail.com',
+      username: 'Yuken',
+      password_hash: 'd60a21f8dad3657f52d52c97d4ea9e5af62cb0df49ecb59e5d3d1010dd3dd126',
+      password_salt: '6b5c963375d89fa95bd982a8250df01d',
+      role: 'admin',
+      is_active: 1,
+    },
+  ],
   otps: [],
-  nextUserId: 1,
+  nextUserId: 2,
 };
 
 async function sha256Hex(message) {
@@ -18,8 +29,8 @@ async function sha256Hex(message) {
 
 async function hashPassword(password, salt) {
   let current = `${salt}:${password}:PIA_CORE_V1`;
-  // Key-stretching SHA-256
-  for (let i = 0; i < 100; i++) {
+  // Key-stretching SHA-256 (1000 putaran identik dengan C++ Core & SQLite Lokal)
+  for (let i = 0; i < 1000; i++) {
     const digest = await sha256Hex(current);
     current = `${digest}:${salt}`;
   }

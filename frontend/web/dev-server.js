@@ -261,7 +261,32 @@ db.exec(`
     is_holiday INTEGER NOT NULL DEFAULT 1,
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
+  CREATE TABLE IF NOT EXISTS teacher_attendance (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    teacher_name TEXT NOT NULL,
+    teacher_email TEXT NOT NULL,
+    attendance_date TEXT NOT NULL,
+    status TEXT NOT NULL,
+    note TEXT NOT NULL DEFAULT '',
+    approval_status TEXT NOT NULL DEFAULT 'Pending',
+    approved_by TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(user_id, attendance_date)
+  );
 `);
+
+// Pastikan kolom role tersedia pada tabel users dan akun yumenoboken@gmail.com menjadi Admin utama
+try {
+  db.exec(`ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'guru';`);
+} catch (_) {}
+try {
+  db.prepare(
+    `INSERT OR IGNORE INTO users (id, full_name, email, username, password_hash, password_salt, is_active, role)
+     VALUES (1, 'Yuken', 'yumenoboken@gmail.com', 'Yuken', 'd60a21f8dad3657f52d52c97d4ea9e5af62cb0df49ecb59e5d3d1010dd3dd126', '6b5c963375d89fa95bd982a8250df01d', 1, 'admin')`
+  ).run();
+  db.exec(`UPDATE users SET role = 'admin', is_active = 1 WHERE lower(email) = 'yumenoboken@gmail.com';`);
+} catch (_) {}
 
 function hashPassword(password, salt) {
   let current = `${salt}:${password}:PIA_CORE_V1`;
@@ -516,8 +541,10 @@ const server = http.createServer(async (req, res) => {
         const password = body.password || '';
 
         const user = db
-          .prepare('SELECT * FROM users WHERE username = ? OR email = ? LIMIT 1')
-          .get(identifier, identifier.toLowerCase());
+          .prepare(
+            'SELECT * FROM users WHERE lower(username) = lower(?) OR lower(email) = lower(?) OR lower(full_name) = lower(?) LIMIT 1'
+          )
+          .get(identifier, identifier, identifier);
 
         if (!user) {
           return sendJson(res, 401, {
@@ -539,6 +566,11 @@ const server = http.createServer(async (req, res) => {
           });
         }
 
+        const userRole =
+          user.email.toLowerCase() === 'yumenoboken@gmail.com'
+            ? 'admin'
+            : user.role || 'guru';
+
         return sendJson(res, 200, {
           success: true,
           message: 'Login berhasil!',
@@ -548,6 +580,7 @@ const server = http.createServer(async (req, res) => {
             full_name: user.full_name,
             username: user.username,
             email: user.email,
+            role: userRole,
           },
         });
       }
@@ -556,16 +589,35 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // Endpoint Data Halaman Utama (Rekap & Hari Libur)
+  // Endpoint Data Halaman Utama (Rekap & Hari Libur + Data Guru Terdaftar)
   if (pathname === '/api/attendance/overview' && req.method === 'GET') {
     const rows = db.prepare('SELECT holiday_date, is_holiday FROM custom_holidays').all();
     const customHolidays = {};
     for (const r of rows) {
       customHolidays[r.holiday_date] = Boolean(r.is_holiday);
     }
+
+    const activeUsers = db
+      .prepare('SELECT id, full_name FROM users WHERE is_active = 1 ORDER BY id ASC')
+      .all();
+    const teachers = activeUsers.map((u) => ({ id: u.id, name: u.full_name }));
+
+    const approvedRows = db
+      .prepare(
+        "SELECT user_id, attendance_date, status FROM teacher_attendance WHERE approval_status = 'Approved'"
+      )
+      .all();
+    const teacherRecords = {};
+    for (const row of approvedRows) {
+      const code = row.status === 'Hadir' ? 'H' : row.status === 'Izin' ? 'I' : 'S';
+      teacherRecords[`${row.user_id}_${row.attendance_date}`] = code;
+    }
+
     return sendJson(res, 200, {
       success: true,
       custom_holidays: customHolidays,
+      teachers: teachers.length > 0 ? teachers : undefined,
+      teacher_records: teacherRecords,
     });
   }
 
@@ -587,6 +639,184 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  // ==========================================================
+  // ENDPOINT API HALAMAN 2: ABSENSI GURU & PANEL ACC ADMIN
+  // ==========================================================
+  if (pathname === '/api/teacher-attendance/data' && req.method === 'GET') {
+    const emailParam = (parsedUrl.searchParams.get('email') || '').trim().toLowerCase();
+    const dateParam =
+      parsedUrl.searchParams.get('date') || new Date().toISOString().slice(0, 10);
+
+    const currentUser = emailParam
+      ? db.prepare('SELECT * FROM users WHERE lower(email) = ? LIMIT 1').get(emailParam)
+      : null;
+
+    const isAdmin =
+      emailParam === 'yumenoboken@gmail.com' ||
+      (currentUser && currentUser.role === 'admin');
+
+    const userId = currentUser ? currentUser.id : 0;
+    const todayRecord = userId
+      ? db
+          .prepare(
+            'SELECT * FROM teacher_attendance WHERE user_id = ? AND attendance_date = ? LIMIT 1'
+          )
+          .get(userId, dateParam)
+      : null;
+
+    const myHistory = userId
+      ? db
+          .prepare(
+            'SELECT * FROM teacher_attendance WHERE user_id = ? ORDER BY attendance_date DESC, id DESC LIMIT 30'
+          )
+          .all(userId)
+      : [];
+
+    const allSubmissions = isAdmin
+      ? db
+          .prepare(
+            'SELECT * FROM teacher_attendance ORDER BY CASE WHEN approval_status = \'Pending\' THEN 0 ELSE 1 END, attendance_date DESC, id DESC LIMIT 50'
+          )
+          .all()
+      : [];
+
+    const registeredUsers = isAdmin
+      ? db
+          .prepare(
+            'SELECT id, full_name, username, email, role, created_at FROM users WHERE is_active = 1 ORDER BY id ASC'
+          )
+          .all()
+      : [];
+
+    return sendJson(res, 200, {
+      success: true,
+      is_admin: Boolean(isAdmin),
+      current_user: currentUser
+        ? {
+            id: currentUser.id,
+            full_name: currentUser.full_name,
+            email: currentUser.email,
+            username: currentUser.username,
+            role: isAdmin ? 'admin' : 'guru',
+          }
+        : null,
+      today_record: todayRecord || null,
+      my_history: myHistory,
+      all_submissions: allSubmissions,
+      registered_users: registeredUsers,
+    });
+  }
+
+  if (pathname === '/api/teacher-attendance/submit' && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const email = (body.email || '').trim().toLowerCase();
+      const status = (body.status || '').trim();
+      const note = (body.note || '').trim();
+      const dateStr =
+        (body.attendance_date || '').trim() || new Date().toISOString().slice(0, 10);
+
+      if (!['Hadir', 'Izin', 'Sakit'].includes(status)) {
+        return sendJson(res, 400, { detail: 'Pilih status kehadiran (Hadir / Izin / Sakit).' });
+      }
+
+      let user = db.prepare('SELECT * FROM users WHERE lower(email) = ? LIMIT 1').get(email);
+      if (!user) {
+        return sendJson(res, 404, {
+          detail: 'Akun guru tidak ditemukan di database. Silakan login ulang.',
+        });
+      }
+
+      const existing = db
+        .prepare(
+          'SELECT * FROM teacher_attendance WHERE user_id = ? AND attendance_date = ? LIMIT 1'
+        )
+        .get(user.id, dateStr);
+
+      if (existing) {
+        return sendJson(res, 400, {
+          detail: 'Anda sudah mengisi absensi untuk hari ini (Batas 1 kali absen per hari).',
+        });
+      }
+
+      db.prepare(
+        `INSERT INTO teacher_attendance
+         (user_id, teacher_name, teacher_email, attendance_date, status, note, approval_status)
+         VALUES (?, ?, ?, ?, ?, ?, 'Pending')`
+      ).run(user.id, user.full_name, user.email, dateStr, status, note);
+
+      return sendJson(res, 201, {
+        success: true,
+        message: 'Absensi berhasil dikirim dan sedang menunggu ACC Admin.',
+      });
+    } catch (err) {
+      return sendJson(res, 500, { detail: err.message });
+    }
+  }
+
+  if (pathname === '/api/teacher-attendance/approve' && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const adminEmail = (body.admin_email || '').trim().toLowerCase();
+      const attendanceId = Number(body.attendance_id);
+      const decision = body.decision === 'Rejected' ? 'Rejected' : 'Approved';
+
+      const adminUser = db
+        .prepare('SELECT * FROM users WHERE lower(email) = ? LIMIT 1')
+        .get(adminEmail);
+      const isAdmin =
+        adminEmail === 'yumenoboken@gmail.com' ||
+        (adminUser && adminUser.role === 'admin');
+
+      if (!isAdmin) {
+        return sendJson(res, 403, { detail: 'Hanya Admin yang dapat melakukan ACC absensi guru.' });
+      }
+
+      const adminName = adminUser ? adminUser.full_name : 'Admin';
+      db.prepare(
+        'UPDATE teacher_attendance SET approval_status = ?, approved_by = ? WHERE id = ?'
+      ).run(decision, adminName, attendanceId);
+
+      return sendJson(res, 200, {
+        success: true,
+        message:
+          decision === 'Approved'
+            ? 'Absensi guru berhasil di-ACC dan telah masuk ke Rekap Dashboard!'
+            : 'Pengajuan absensi guru telah ditolak.',
+      });
+    } catch (err) {
+      return sendJson(res, 500, { detail: err.message });
+    }
+  }
+
+  if (pathname === '/api/teacher-attendance/set-role' && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const adminEmail = (body.admin_email || '').trim().toLowerCase();
+      const targetUserId = Number(body.target_user_id);
+      const newRole = body.role === 'admin' ? 'admin' : 'guru';
+
+      const adminUser = db
+        .prepare('SELECT * FROM users WHERE lower(email) = ? LIMIT 1')
+        .get(adminEmail);
+      const isAdmin =
+        adminEmail === 'yumenoboken@gmail.com' ||
+        (adminUser && adminUser.role === 'admin');
+
+      if (!isAdmin) {
+        return sendJson(res, 403, { detail: 'Hanya Admin yang dapat mengubah role pengguna.' });
+      }
+
+      db.prepare('UPDATE users SET role = ? WHERE id = ?').run(newRole, targetUserId);
+      return sendJson(res, 200, {
+        success: true,
+        message: `Role akun berhasil diubah menjadi ${newRole.toUpperCase()}.`,
+      });
+    } catch (err) {
+      return sendJson(res, 500, { detail: err.message });
+    }
+  }
+
   if (pathname === '/' || pathname === '/login') {
     pathname = '/index.html';
   } else if (pathname === '/register') {
@@ -595,6 +825,8 @@ const server = http.createServer(async (req, res) => {
     pathname = '/verify-otp.html';
   } else if (pathname === '/dashboard') {
     pathname = '/dashboard.html';
+  } else if (pathname === '/absensi-guru') {
+    pathname = '/absensi-guru.html';
   }
 
   const safePath = path.normalize(pathname).replace(/^(\.\.[/\\])+/, '');
