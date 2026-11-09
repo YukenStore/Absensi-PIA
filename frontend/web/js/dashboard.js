@@ -23,7 +23,7 @@ const DAY_SHORT_NAMES = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 const AVAILABLE_YEARS = [2024, 2025, 2026, 2027];
 
 const API_BASES = window.location.hostname.includes('github.io')
-  ? ['http://localhost:5173', 'https://absensi-pia.yumenoboken.workers.dev']
+  ? ['https://absensi-pia.yumenoboken.workers.dev', 'http://localhost:5173']
   : ['', 'http://localhost:5173', 'https://absensi-pia.yumenoboken.workers.dev'];
 
 async function callDatabaseApi(apiPath, options = {}) {
@@ -234,14 +234,33 @@ function loadLocalSyncedData() {
 // Ambil data dari server SQL jika tersedia dan sinkronkan dengan penyimpanan browser
 async function loadServerOverview() {
   try {
-    // 1. Kumpulkan akun guru dari penyimpanan browser untuk disinkronkan ke server SQL
+    // 1. Kumpulkan akun guru dari penyimpanan browser untuk disinkronkan ke server SQL / Cloudflare D1
     let localTeachersToSync = [];
     try {
       const rawDb = localStorage.getItem('pia_gh_pages_db');
       if (rawDb) {
         const parsed = JSON.parse(rawDb);
         if (parsed && Array.isArray(parsed.users)) {
-          localTeachersToSync = parsed.users;
+          localTeachersToSync = [...parsed.users];
+        }
+      }
+    } catch (_) {}
+
+    // Tambahkan juga akun yang saat ini sedang login di browser (pia_user / pia_current_user)
+    try {
+      const rawUser = localStorage.getItem('pia_user') || localStorage.getItem('pia_current_user');
+      if (rawUser) {
+        const u = JSON.parse(rawUser);
+        if (u && (u.email || u.full_name)) {
+          const email = (u.email || '').toLowerCase();
+          if (!localTeachersToSync.some((t) => (t.email || '').toLowerCase() === email)) {
+            localTeachersToSync.push({
+              name: u.full_name || u.name || u.username,
+              email: u.email,
+              username: u.username || (email ? email.split('@')[0] : 'guru'),
+              role: u.role || 'guru',
+            });
+          }
         }
       }
     } catch (_) {}

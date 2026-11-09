@@ -173,10 +173,25 @@ async function ensureD1Schema(db) {
         attendance_date TEXT NOT NULL,
         status TEXT NOT NULL,
         note TEXT NOT NULL DEFAULT '',
-        approval_status TEXT NOT NULL DEFAULT 'Pending',
+        approval_status TEXT NOT NULL DEFAULT 'Approved',
         approved_by TEXT NOT NULL DEFAULT '',
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         UNIQUE(user_id, attendance_date)
+      )`
+    )
+    .run();
+
+  await db
+    .prepare(
+      `CREATE TABLE IF NOT EXISTS student_attendance (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER NOT NULL,
+        attendance_date TEXT NOT NULL,
+        status TEXT NOT NULL,
+        note TEXT NOT NULL DEFAULT '',
+        recorded_by TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE(student_id, attendance_date)
       )`
     )
     .run();
@@ -706,6 +721,17 @@ export default {
               }
             } catch (_) {}
 
+            const studentRecords = {};
+            try {
+              const { results: sAttRows } = await db
+                .prepare("SELECT student_id, attendance_date, status FROM student_attendance")
+                .all();
+              for (const row of sAttRows || []) {
+                const code = row.status === 'Hadir' ? 'H' : row.status === 'Izin' ? 'I' : row.status === 'Sakit' ? 'S' : 'A';
+                studentRecords[`${row.student_id}_${row.attendance_date}`] = code;
+              }
+            } catch (_) {}
+
             return jsonResponse({
               success: true,
               students: (stuRows || []).map((s) => ({
@@ -717,7 +743,7 @@ export default {
               teachers: allTeachers.filter((t) => !t.is_hidden),
               all_teachers: allTeachers,
               custom_holidays: {},
-              student_records: {},
+              student_records: studentRecords,
               teacher_records: teacherRecords,
             });
           }
@@ -826,6 +852,58 @@ export default {
             teachers: allTeachers.filter((t) => !t.is_hidden),
             all_teachers: allTeachers,
           });
+        }
+
+        // ==========================================================
+        // API HALAMAN 3: ABSENSI SISWA
+        // ==========================================================
+        if (pathname === '/api/student-attendance' && request.method === 'GET') {
+          const dateParam = (url.searchParams.get('date') || '').trim() || new Date().toISOString().slice(0, 10);
+          if (db) {
+            const { results: stuList } = await db.prepare('SELECT id, full_name, class_name, birth_date, created_by FROM students ORDER BY id ASC').all();
+            const { results: attRows } = await db.prepare('SELECT student_id, attendance_date, status, note, recorded_by FROM student_attendance WHERE attendance_date = ?').bind(dateParam).all();
+            const attendanceMap = {};
+            for (const r of attRows || []) {
+              attendanceMap[r.student_id] = { status: r.status, note: r.note || '', recorded_by: r.recorded_by || '' };
+            }
+            return jsonResponse({ success: true, date: dateParam, students: stuList || [], attendance: attendanceMap });
+          }
+          return jsonResponse({ success: true, date: dateParam, students: memoryStore.students, attendance: {} });
+        }
+
+        if (pathname === '/api/student-attendance/batch-save' && request.method === 'POST') {
+          const body = await request.json();
+          const dateStr = (body.attendance_date || '').trim() || new Date().toISOString().slice(0, 10);
+          const records = Array.isArray(body.records) ? body.records : [];
+          const recordedBy = (body.recorded_by || 'Guru PIA').trim();
+
+          if (db) {
+            for (const rec of records) {
+              const studentId = Number(rec.student_id);
+              const status = (rec.status || 'Hadir').trim();
+              const note = (rec.note || '').trim();
+              if (!studentId || !['Hadir', 'Izin', 'Sakit', 'Alfa'].includes(status)) continue;
+
+              const existing = await db
+                .prepare('SELECT id FROM student_attendance WHERE student_id = ? AND attendance_date = ? LIMIT 1')
+                .bind(studentId, dateStr)
+                .first();
+
+              if (existing) {
+                await db
+                  .prepare("UPDATE student_attendance SET status = ?, note = ?, recorded_by = ?, created_at = datetime('now') WHERE id = ?")
+                  .bind(status, note, recordedBy, existing.id)
+                  .run();
+              } else {
+                await db
+                  .prepare("INSERT INTO student_attendance (student_id, attendance_date, status, note, recorded_by, created_at) VALUES (?, ?, ?, ?, ?, datetime('now'))")
+                  .bind(studentId, dateStr, status, note, recordedBy)
+                  .run();
+              }
+            }
+            return jsonResponse({ success: true, message: `Presensi siswa untuk tanggal ${dateStr} berhasil disimpan dan tersinkron ke Dashboard!` });
+          }
+          return jsonResponse({ success: true, message: 'Presensi siswa berhasil disimpan!' });
         }
 
         // Overview Absensi Guru (untuk absensi-guru.html)

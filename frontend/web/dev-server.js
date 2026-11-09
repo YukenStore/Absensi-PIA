@@ -933,6 +933,78 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ==========================================================
+  // ENDPOINT API HALAMAN 3: ABSENSI SISWA
+  // ==========================================================
+  if (pathname === '/api/student-attendance' && req.method === 'GET') {
+    const dateParam =
+      (parsedUrl.searchParams.get('date') || '').trim() ||
+      new Date().toISOString().slice(0, 10);
+
+    const students = db
+      .prepare(
+        'SELECT id, full_name, class_name, birth_date, created_by FROM students ORDER BY id ASC'
+      )
+      .all();
+
+    const attendanceRows = db
+      .prepare(
+        'SELECT student_id, attendance_date, status, note, recorded_by FROM student_attendance WHERE attendance_date = ?'
+      )
+      .all(dateParam);
+
+    const attendanceMap = {};
+    for (const row of attendanceRows) {
+      attendanceMap[row.student_id] = {
+        status: row.status,
+        note: row.note || '',
+        recorded_by: row.recorded_by || '',
+      };
+    }
+
+    return sendJson(res, 200, {
+      success: true,
+      date: dateParam,
+      students: students,
+      attendance: attendanceMap,
+    });
+  }
+
+  if (pathname === '/api/student-attendance/batch-save' && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const dateStr =
+        (body.attendance_date || '').trim() || new Date().toISOString().slice(0, 10);
+      const records = Array.isArray(body.records) ? body.records : [];
+      const recordedBy = (body.recorded_by || 'Guru PIA').trim();
+
+      const insertStmt = db.prepare(`
+        INSERT INTO student_attendance (student_id, attendance_date, status, note, recorded_by, created_at)
+        VALUES (?, ?, ?, ?, ?, datetime('now'))
+        ON CONFLICT(student_id, attendance_date) DO UPDATE SET
+          status = excluded.status,
+          note = excluded.note,
+          recorded_by = excluded.recorded_by,
+          created_at = datetime('now')
+      `);
+
+      for (const rec of records) {
+        const studentId = Number(rec.student_id);
+        const status = (rec.status || 'Hadir').trim();
+        const note = (rec.note || '').trim();
+        if (!studentId || !['Hadir', 'Izin', 'Sakit', 'Alfa'].includes(status)) continue;
+        insertStmt.run(studentId, dateStr, status, note, recordedBy);
+      }
+
+      return sendJson(res, 200, {
+        success: true,
+        message: `Presensi siswa untuk tanggal ${dateStr} berhasil disimpan dan tersinkron ke Dashboard!`,
+      });
+    } catch (err) {
+      return sendJson(res, 500, { detail: err.message });
+    }
+  }
+
+  // ==========================================================
   // ENDPOINT API HALAMAN 2: ABSENSI GURU & PANEL ACC ADMIN
   // ==========================================================
   if (pathname === '/api/teacher-attendance/data' && req.method === 'GET') {

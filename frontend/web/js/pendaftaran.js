@@ -20,7 +20,7 @@ const MONTH_NAMES_ID = [
 ];
 
 const API_BASES = window.location.hostname.includes('github.io')
-  ? ['http://localhost:5173', 'https://absensi-pia.yumenoboken.workers.dev']
+  ? ['https://absensi-pia.yumenoboken.workers.dev', 'http://localhost:5173']
   : ['', 'http://localhost:5173', 'https://absensi-pia.yumenoboken.workers.dev'];
 
 let studentsList = [];
