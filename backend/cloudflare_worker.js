@@ -519,15 +519,23 @@ export default {
           const identifier = (body.identifier || '').trim();
           const password = body.password || '';
 
+          // Login tidak case-sensitive & mendukung username, email, atau nama lengkap
+          // (identik dengan perilaku dev-server lokal)
           let user = null;
           if (db) {
             user = await db
-              .prepare('SELECT * FROM users WHERE username = ? OR email = ? LIMIT 1')
-              .bind(identifier, identifier.toLowerCase())
+              .prepare(
+                'SELECT * FROM users WHERE lower(username) = lower(?) OR lower(email) = lower(?) OR lower(full_name) = lower(?) LIMIT 1'
+              )
+              .bind(identifier, identifier, identifier)
               .first();
           } else {
+            const idLower = identifier.toLowerCase();
             user = memoryStore.users.find(
-              (u) => u.username === identifier || u.email === identifier.toLowerCase()
+              (u) =>
+                (u.username || '').toLowerCase() === idLower ||
+                (u.email || '').toLowerCase() === idLower ||
+                (u.full_name || '').toLowerCase() === idLower
             );
           }
 
