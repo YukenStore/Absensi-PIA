@@ -502,12 +502,16 @@ function renderDailyMatrix({
       }
 
       const dateKey = formatDateKey(year, monthIndex, d);
-      const status = recordsMap[`${person.id}_${dateKey}`];
+      const status =
+        recordsMap[`${person.id}_${dateKey}`] ||
+        (person.email && recordsMap[`${person.email.toLowerCase()}_${dateKey}`]);
 
       if (status === 'H') {
         bodyHtml += `<td class="td-day" title="${person.name} - Tanggal ${d}: Hadir"><span class="status-pill cell-hadir">H</span></td>`;
-      } else if (status === 'S' || status === 'I') {
-        bodyHtml += `<td class="td-day" title="${person.name} - Tanggal ${d}: Izin/Sakit"><span class="status-pill cell-sakit">${status}</span></td>`;
+      } else if (status === 'I') {
+        bodyHtml += `<td class="td-day" title="${person.name} - Tanggal ${d}: Izin"><span class="status-pill cell-izin">I</span></td>`;
+      } else if (status === 'S') {
+        bodyHtml += `<td class="td-day" title="${person.name} - Tanggal ${d}: Sakit"><span class="status-pill cell-sakit">S</span></td>`;
       } else if (status === 'A') {
         bodyHtml += `<td class="td-day" title="${person.name} - Tanggal ${d}: Alfa"><span class="status-pill cell-alfa">A</span></td>`;
       } else {
@@ -522,7 +526,7 @@ function renderDailyMatrix({
 }
 
 // =========================================================================
-// RENDER TABEL REKAP ABSENSI (TOTAL HADIR, SAKIT, ALFA, PERSENTASE)
+// RENDER TABEL REKAP ABSENSI (TOTAL HADIR, IZIN, SAKIT, ALFA, PERSENTASE)
 // =========================================================================
 function renderRecapTable({ bodyEl, peopleList, recordsMap, filterConfig, emptyMessageHtml }) {
   const tableEl = bodyEl ? bodyEl.closest('table') : null;
@@ -530,7 +534,7 @@ function renderRecapTable({ bodyEl, peopleList, recordsMap, filterConfig, emptyM
     if (tableEl) tableEl.classList.add('is-empty-table');
     bodyEl.innerHTML = `
       <tr class="empty-row">
-        <td colspan="6" class="empty-table-cell">
+        <td colspan="7" class="empty-table-cell">
           <div class="empty-sticky-banner">
             ${emptyMessageHtml || 'Belum ada data terdaftar.'}
           </div>
@@ -560,6 +564,7 @@ function renderRecapTable({ bodyEl, peopleList, recordsMap, filterConfig, emptyM
   let rowsHtml = '';
   peopleList.forEach((person, idx) => {
     let totalHadir = 0;
+    let totalIzin = 0;
     let totalSakit = 0;
     let totalAlfa = 0;
     let effectiveDays = 0;
@@ -570,9 +575,12 @@ function renderRecapTable({ bodyEl, peopleList, recordsMap, filterConfig, emptyM
         if (isHolidayDate(year, monthIndex, d)) continue;
         effectiveDays++;
         const dateKey = formatDateKey(year, monthIndex, d);
-        const st = recordsMap[`${person.id}_${dateKey}`];
+        const st =
+          recordsMap[`${person.id}_${dateKey}`] ||
+          (person.email && recordsMap[`${person.email.toLowerCase()}_${dateKey}`]);
         if (st === 'H') totalHadir++;
-        else if (st === 'S' || st === 'I') totalSakit++;
+        else if (st === 'I') totalIzin++;
+        else if (st === 'S') totalSakit++;
         else if (st === 'A') totalAlfa++;
       }
     }
@@ -585,6 +593,7 @@ function renderRecapTable({ bodyEl, peopleList, recordsMap, filterConfig, emptyM
         <td>${idx + 1}</td>
         <td style="font-weight: 700; color: var(--secondary);">${person.name}</td>
         <td><span class="badge-count badge-hadir">${totalHadir}</span></td>
+        <td><span class="badge-count badge-izin">${totalIzin}</span></td>
         <td><span class="badge-count badge-sakit">${totalSakit}</span></td>
         <td><span class="badge-count badge-alfa">${totalAlfa}</span></td>
         <td>

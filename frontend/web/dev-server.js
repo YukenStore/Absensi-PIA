@@ -678,13 +678,16 @@ const server = http.createServer(async (req, res) => {
 
     const approvedRows = db
       .prepare(
-        "SELECT user_id, attendance_date, status FROM teacher_attendance WHERE approval_status = 'Approved'"
+        "SELECT user_id, teacher_email, attendance_date, status FROM teacher_attendance WHERE approval_status != 'Rejected'"
       )
       .all();
     const teacherRecords = {};
     for (const row of approvedRows) {
       const code = row.status === 'Hadir' ? 'H' : row.status === 'Izin' ? 'I' : 'S';
       teacherRecords[`${row.user_id}_${row.attendance_date}`] = code;
+      if (row.teacher_email) {
+        teacherRecords[`${row.teacher_email.toLowerCase()}_${row.attendance_date}`] = code;
+      }
     }
 
     return sendJson(res, 200, {
@@ -1010,11 +1013,19 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 400, { detail: 'Pilih status kehadiran (Hadir / Izin / Sakit).' });
       }
 
+      if (['Izin', 'Sakit'].includes(status) && !note) {
+        return sendJson(res, 400, { detail: `Keterangan wajib diisi ketika memilih status ${status}.` });
+      }
+
       let user = db.prepare('SELECT * FROM users WHERE lower(email) = ? LIMIT 1').get(email);
       if (!user) {
-        return sendJson(res, 404, {
-          detail: 'Akun guru tidak ditemukan di database. Silakan login ulang.',
-        });
+        const fullName = (body.name || email.split('@')[0] || 'Guru PIA').trim();
+        const username = email.split('@')[0] || 'guru';
+        const role = email === 'yumenoboken@gmail.com' ? 'admin' : 'guru';
+        const info = db.prepare(
+          'INSERT INTO users (full_name, email, username, password_hash, password_salt, is_active, role) VALUES (?, ?, ?, ?, ?, 1, ?)'
+        ).run(fullName, email, username, 'auto_hash', 'auto_salt', role);
+        user = { id: Number(info.lastInsertRowid), full_name: fullName, email: email, role: role };
       }
 
       const existing = db
@@ -1024,20 +1035,27 @@ const server = http.createServer(async (req, res) => {
         .get(user.id, dateStr);
 
       if (existing) {
-        return sendJson(res, 400, {
-          detail: 'Anda sudah mengisi absensi untuk hari ini (Batas 1 kali absen per hari).',
+        db.prepare(
+          `UPDATE teacher_attendance
+           SET status = ?, note = ?, approval_status = 'Approved', approved_by = 'Sistem Otomatis'
+           WHERE id = ?`
+        ).run(status, note, existing.id);
+
+        return sendJson(res, 200, {
+          success: true,
+          message: 'Presensi berhasil diperbarui dan tersinkron ke Dashboard!',
         });
       }
 
       db.prepare(
         `INSERT INTO teacher_attendance
-         (user_id, teacher_name, teacher_email, attendance_date, status, note, approval_status)
-         VALUES (?, ?, ?, ?, ?, ?, 'Pending')`
+         (user_id, teacher_name, teacher_email, attendance_date, status, note, approval_status, approved_by)
+         VALUES (?, ?, ?, ?, ?, ?, 'Approved', 'Sistem Otomatis')`
       ).run(user.id, user.full_name, user.email, dateStr, status, note);
 
       return sendJson(res, 201, {
         success: true,
-        message: 'Absensi berhasil dikirim dan sedang menunggu ACC Admin.',
+        message: 'Presensi kehadiran berhasil dikirim dan tersinkron ke Dashboard!',
       });
     } catch (err) {
       return sendJson(res, 500, { detail: err.message });

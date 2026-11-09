@@ -691,6 +691,21 @@ export default {
               role: u.email.toLowerCase() === 'yumenoboken@gmail.com' ? 'admin' : u.role || 'guru',
               is_hidden: Boolean(u.is_hidden),
             }));
+
+            const teacherRecords = {};
+            try {
+              const { results: attRows } = await db
+                .prepare("SELECT user_id, teacher_email, attendance_date, status FROM teacher_attendance WHERE approval_status != 'Rejected'")
+                .all();
+              for (const row of attRows || []) {
+                const code = row.status === 'Hadir' ? 'H' : row.status === 'Izin' ? 'I' : 'S';
+                teacherRecords[`${row.user_id}_${row.attendance_date}`] = code;
+                if (row.teacher_email) {
+                  teacherRecords[`${row.teacher_email.toLowerCase()}_${row.attendance_date}`] = code;
+                }
+              }
+            } catch (_) {}
+
             return jsonResponse({
               success: true,
               students: (stuRows || []).map((s) => ({
@@ -703,7 +718,7 @@ export default {
               all_teachers: allTeachers,
               custom_holidays: {},
               student_records: {},
-              teacher_records: {},
+              teacher_records: teacherRecords,
             });
           }
 
@@ -717,6 +732,17 @@ export default {
               is_hidden: Boolean(u.is_hidden),
             }));
 
+          const teacherRecords = {};
+          for (const row of memoryStore.teacherAttendance) {
+            if (row.approval_status !== 'Rejected') {
+              const code = row.status === 'Hadir' ? 'H' : row.status === 'Izin' ? 'I' : 'S';
+              teacherRecords[`${row.user_id}_${row.attendance_date}`] = code;
+              if (row.teacher_email) {
+                teacherRecords[`${row.teacher_email.toLowerCase()}_${row.attendance_date}`] = code;
+              }
+            }
+          }
+
           return jsonResponse({
             success: true,
             students: memoryStore.students.map((s) => ({
@@ -729,7 +755,7 @@ export default {
             all_teachers: allTeachers,
             custom_holidays: memoryStore.customHolidays,
             student_records: {},
-            teacher_records: {},
+            teacher_records: teacherRecords,
           });
         }
 
@@ -800,6 +826,137 @@ export default {
             teachers: allTeachers.filter((t) => !t.is_hidden),
             all_teachers: allTeachers,
           });
+        }
+
+        // Overview Absensi Guru (untuk absensi-guru.html)
+        if (pathname === '/api/teacher-attendance/overview' && request.method === 'GET') {
+          const email = (url.searchParams.get('email') || '').trim().toLowerCase();
+          const today = (url.searchParams.get('date') || '').trim() || new Date().toISOString().slice(0, 10);
+          const isAdminUser = email === 'yumenoboken@gmail.com';
+
+          if (db) {
+            const { results: userRows } = await db.prepare('SELECT id, full_name, email, username, role FROM users ORDER BY id ASC').all();
+            const currUser = (userRows || []).find((u) => u.email.toLowerCase() === email) || null;
+            const isAdm = isAdminUser || (currUser && currUser.role === 'admin');
+
+            const { results: subRows } = await db.prepare('SELECT * FROM teacher_attendance ORDER BY id DESC').all();
+            const mySubmissions = (subRows || []).filter((s) => s.teacher_email.toLowerCase() === email);
+            const todayRec = mySubmissions.find((s) => s.attendance_date === today) || null;
+
+            return jsonResponse({
+              success: true,
+              is_admin: isAdm,
+              current_user: currUser,
+              today_record: todayRec,
+              my_history: mySubmissions,
+              all_submissions: isAdm ? (subRows || []) : [],
+              registered_users: (userRows || []).map((u) => ({ id: u.id, name: u.full_name, email: u.email })),
+            });
+          }
+
+          const currUser = memoryStore.users.find((u) => u.email.toLowerCase() === email) || null;
+          const isAdm = isAdminUser || (currUser && currUser.role === 'admin');
+          const mySubmissions = memoryStore.teacherAttendance.filter((s) => s.teacher_email.toLowerCase() === email);
+          const todayRec = mySubmissions.find((s) => s.attendance_date === today) || null;
+
+          return jsonResponse({
+            success: true,
+            is_admin: isAdm,
+            current_user: currUser,
+            today_record: todayRec,
+            my_history: mySubmissions,
+            all_submissions: isAdm ? memoryStore.teacherAttendance : [],
+            registered_users: memoryStore.users.map((u) => ({ id: u.id, name: u.full_name, email: u.email })),
+          });
+        }
+
+        // Submit Presensi Kehadiran Guru
+        if (pathname === '/api/teacher-attendance/submit' && request.method === 'POST') {
+          const body = await request.json();
+          const email = (body.email || '').trim().toLowerCase();
+          const status = (body.status || '').trim();
+          const note = (body.note || '').trim();
+          const dateStr = (body.attendance_date || '').trim() || new Date().toISOString().slice(0, 10);
+
+          if (!['Hadir', 'Izin', 'Sakit'].includes(status)) {
+            return jsonResponse({ detail: 'Pilih status kehadiran (Hadir / Izin / Sakit).' }, 400);
+          }
+
+          if (['Izin', 'Sakit'].includes(status) && !note) {
+            return jsonResponse({ detail: `Keterangan wajib diisi ketika memilih status ${status}.` }, 400);
+          }
+
+          if (db) {
+            let user = await db.prepare('SELECT * FROM users WHERE lower(email) = ? LIMIT 1').bind(email).first();
+            if (!user) {
+              const fullName = (body.name || email.split('@')[0] || 'Guru PIA').trim();
+              const username = email.split('@')[0] || 'guru';
+              const role = email === 'yumenoboken@gmail.com' ? 'admin' : 'guru';
+              await db
+                .prepare('INSERT INTO users (full_name, email, username, password_hash, password_salt, is_active, role) VALUES (?, ?, ?, ?, ?, 1, ?)')
+                .bind(fullName, email, username, 'auto_hash', 'auto_salt', role)
+                .run();
+              user = await db.prepare('SELECT * FROM users WHERE lower(email) = ? LIMIT 1').bind(email).first();
+            }
+
+            const existing = await db
+              .prepare('SELECT * FROM teacher_attendance WHERE user_id = ? AND attendance_date = ? LIMIT 1')
+              .bind(user.id, dateStr)
+              .first();
+
+            if (existing) {
+              await db
+                .prepare("UPDATE teacher_attendance SET status = ?, note = ?, approval_status = 'Approved', approved_by = 'Sistem Otomatis' WHERE id = ?")
+                .bind(status, note, existing.id)
+                .run();
+              return jsonResponse({ success: true, message: 'Presensi berhasil diperbarui dan tersinkron ke Dashboard!' });
+            }
+
+            await db
+              .prepare("INSERT INTO teacher_attendance (user_id, teacher_name, teacher_email, attendance_date, status, note, approval_status, approved_by) VALUES (?, ?, ?, ?, ?, ?, 'Approved', 'Sistem Otomatis')")
+              .bind(user.id, user.full_name, user.email, dateStr, status, note)
+              .run();
+
+            return jsonResponse({ success: true, message: 'Presensi kehadiran berhasil dikirim dan tersinkron ke Dashboard!' }, 201);
+          }
+
+          let user = memoryStore.users.find((u) => u.email.toLowerCase() === email);
+          if (!user) {
+            user = {
+              id: memoryStore.nextUserId++,
+              full_name: (body.name || email.split('@')[0] || 'Guru PIA').trim(),
+              email,
+              username: email.split('@')[0] || 'guru',
+              role: email === 'yumenoboken@gmail.com' ? 'admin' : 'guru',
+              is_active: 1,
+            };
+            memoryStore.users.push(user);
+          }
+
+          const existingIdx = memoryStore.teacherAttendance.findIndex(
+            (s) => s.user_id === user.id && s.attendance_date === dateStr
+          );
+
+          const record = {
+            id: memoryStore.nextAttendanceId++,
+            user_id: user.id,
+            teacher_name: user.full_name,
+            teacher_email: user.email,
+            attendance_date: dateStr,
+            status,
+            note,
+            approval_status: 'Approved',
+            approved_by: 'Sistem Otomatis',
+            created_at: new Date().toISOString(),
+          };
+
+          if (existingIdx >= 0) {
+            memoryStore.teacherAttendance[existingIdx] = record;
+          } else {
+            memoryStore.teacherAttendance.unshift(record);
+          }
+
+          return jsonResponse({ success: true, message: 'Presensi kehadiran berhasil dikirim dan tersinkron ke Dashboard!', record }, 201);
         }
       } catch (err) {
         return jsonResponse({ detail: `Worker DB Error: ${err.message}` }, 500);

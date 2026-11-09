@@ -115,51 +115,23 @@
           </div>
 
           <div class="form-field">
-            <label>Status Kehadiran</label>
-            <div class="status-choice-group">
-              <label class="status-radio-card status-hadir">
-                <input type="radio" name="teacherStatus" value="Hadir" checked />
-                <span class="radio-box">
-                  <span class="status-dot green"></span>
-                  <span class="status-text">
-                    <strong>Hadir (H)</strong>
-                    <small>Mengajar / Dinas</small>
-                  </span>
-                </span>
-              </label>
-
-              <label class="status-radio-card status-izin">
-                <input type="radio" name="teacherStatus" value="Izin" />
-                <span class="radio-box">
-                  <span class="status-dot yellow"></span>
-                  <span class="status-text">
-                    <strong>Izin (I)</strong>
-                    <small>Keperluan Pribadi</small>
-                  </span>
-                </span>
-              </label>
-
-              <label class="status-radio-card status-sakit">
-                <input type="radio" name="teacherStatus" value="Sakit" />
-                <span class="radio-box">
-                  <span class="status-dot red"></span>
-                  <span class="status-text">
-                    <strong>Sakit (S)</strong>
-                    <small>Kondisi Kurang Sehat</small>
-                  </span>
-                </span>
-              </label>
-            </div>
+            <label for="teacherStatus">Status Kehadiran</label>
+            <select id="teacherStatus" class="form-input" required>
+              <option value="Hadir" selected>Hadir</option>
+              <option value="Izin">Izin</option>
+              <option value="Sakit">Sakit</option>
+            </select>
           </div>
 
-          <div class="form-field">
-            <label for="attendanceNote">Keterangan / Catatan Tambahan</label>
+          <div class="form-field" id="attendanceNoteContainer" style="display: none;">
+            <label for="attendanceNote">Keterangan / Alasan <span style="color: #ef4444;">*</span></label>
             <textarea
               id="attendanceNote"
               class="form-input textarea-note"
               rows="3"
-              placeholder="Contoh: Mengajar kelas 7 materi Al-Qur'an Hadits, atau alasan izin/sakit."
+              placeholder="Wajib diisi untuk status Izin atau Sakit (jelaskan alasan atau surat keterangan)..."
             ></textarea>
+            <span class="field-hint">Keterangan wajib diisi ketika memilih status Izin atau Sakit.</span>
           </div>
 
           <button type="submit" id="submitAttendanceBtn" class="btn-primary-submit">

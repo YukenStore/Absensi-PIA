@@ -150,8 +150,8 @@ function handleLocalFallback(endpoint, options) {
       attendance_date: dateStr,
       status: status,
       note: note,
-      approval_status: isAdmin ? 'Approved' : 'Pending',
-      approved_by: isAdmin ? 'Admin' : '',
+      approval_status: 'Approved',
+      approved_by: isAdmin ? (currentUser ? currentUser.full_name : 'Admin') : 'Sistem Otomatis',
       created_at: new Date().toISOString(),
     };
 
@@ -538,6 +538,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     dateInput.max = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
   }
 
+  // Pengaturan dropdown status dan kontainer catatan kondisional
+  const teacherStatusSelect = document.getElementById('teacherStatus');
+  const noteContainer = document.getElementById('attendanceNoteContainer');
+  const noteInput = document.getElementById('attendanceNote');
+
+  function handleStatusChange() {
+    if (!teacherStatusSelect || !noteContainer || !noteInput) return;
+    const currentVal = teacherStatusSelect.value;
+    if (currentVal === 'Izin' || currentVal === 'Sakit') {
+      noteContainer.style.display = 'block';
+      noteInput.required = true;
+      if (currentVal === 'Izin') {
+        noteInput.placeholder = 'Wajib diisi: sebutkan keperluan atau alasan izin...';
+      } else {
+        noteInput.placeholder = 'Wajib diisi: sebutkan kondisi sakit atau surat keterangan istirahat...';
+      }
+    } else {
+      noteContainer.style.display = 'none';
+      noteInput.required = false;
+      noteInput.value = '';
+    }
+  }
+
+  if (teacherStatusSelect) {
+    teacherStatusSelect.addEventListener('change', handleStatusChange);
+    handleStatusChange();
+  }
+
   await loadTeacherAttendanceData();
 
   // Form Submit
@@ -547,8 +575,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       e.preventDefault();
       const submitBtn = document.getElementById('submitAttendanceBtn');
       const dateVal = document.getElementById('attendanceDate').value;
-      const statusVal = form.querySelector('input[name="teacherStatus"]:checked')?.value || 'Hadir';
-      const noteVal = document.getElementById('attendanceNote').value.trim();
+      const statusSelect = document.getElementById('teacherStatus');
+      const statusVal = statusSelect ? statusSelect.value : 'Hadir';
+      const noteVal = noteInput ? noteInput.value.trim() : '';
       const adminSelectEl = document.getElementById('adminSelectTeacher');
 
       let targetEmail = currentUser ? currentUser.email : '';
@@ -563,6 +592,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (!dateVal || !statusVal) {
         showBanner('Harap lengkapi tanggal dan pilihan status kehadiran.', 'error');
+        return;
+      }
+
+      // Validasi wajib isi keterangan untuk Izin dan Sakit
+      if ((statusVal === 'Izin' || statusVal === 'Sakit') && !noteVal) {
+        showBanner(`Keterangan wajib diisi ketika Anda memilih status "${statusVal}".`, 'error');
+        if (noteInput) {
+          noteInput.focus();
+        }
         return;
       }
 
@@ -581,15 +619,33 @@ document.addEventListener('DOMContentLoaded', async () => {
           }),
         });
 
+        // Langsung simpan ke localStorage pia_teacher_records agar sinkron instan di Dashboard
+        try {
+          const code = statusVal === 'Hadir' ? 'H' : statusVal === 'Izin' ? 'I' : 'S';
+          const rawTRec = localStorage.getItem('pia_teacher_records');
+          const tRecMap = rawTRec ? JSON.parse(rawTRec) : {};
+          if (currentUser && currentUser.id) {
+            tRecMap[`${currentUser.id}_${dateVal}`] = code;
+          }
+          if (targetEmail) {
+            tRecMap[`${targetEmail.toLowerCase()}_${dateVal}`] = code;
+          }
+          localStorage.setItem('pia_teacher_records', JSON.stringify(tRecMap));
+        } catch (_) {}
+
         showBanner(
-          res.message || 'Presensi kehadiran Anda berhasil dikirim!',
+          res.message || 'Presensi kehadiran berhasil dikirim dan tersinkron ke Dashboard!',
           'success'
         );
 
-        // Reset note
-        document.getElementById('attendanceNote').value = '';
+        // Reset note & reset tampilan
+        if (noteInput) noteInput.value = '';
+        if (teacherStatusSelect) {
+          teacherStatusSelect.value = 'Hadir';
+          handleStatusChange();
+        }
 
-        // Reload data
+        // Reload data tampilan
         await loadTeacherAttendanceData();
       } catch (err) {
         showBanner(`Gagal menyimpan presensi: ${err.message}`, 'error');

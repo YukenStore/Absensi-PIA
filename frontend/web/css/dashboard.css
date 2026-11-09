@@ -9,20 +9,24 @@
   --card-bg: #ffffff;
   --border-color: #e2e8f0;
 
-  /* Warna Status Presensi */
+  /* Warna Status Presensi (5 Keterangan) */
   --hadir-bg: #10b981;
   --hadir-soft: #d1fae5;
   --hadir-text: #065f46;
 
-  --sakit-bg: #f59e0b;
-  --sakit-soft: #fef3c7;
-  --sakit-text: #92400e;
+  --izin-bg: #3b82f6;
+  --izin-soft: #dbeafe;
+  --izin-text: #1e40af;
+
+  --sakit-bg: #f97316;
+  --sakit-soft: #ffedd5;
+  --sakit-text: #9a3412;
 
   --alfa-bg: #ef4444;
   --alfa-soft: #fee2e2;
   --alfa-text: #991b1b;
 
-  --libur-bg: #cbd5e1;
+  --libur-bg: #94a3b8;
   --libur-soft: #f1f5f9;
   --libur-text: #475569;
 
@@ -402,6 +406,10 @@ body {
   background: var(--hadir-bg);
 }
 
+.legend-dot.izin {
+  background: var(--izin-bg);
+}
+
 .legend-dot.sakit {
   background: var(--sakit-bg);
 }
@@ -561,6 +569,11 @@ body {
   color: #ffffff;
 }
 
+.cell-izin {
+  background-color: var(--izin-bg);
+  color: #ffffff;
+}
+
 .cell-sakit {
   background-color: var(--sakit-bg);
   color: #ffffff;
@@ -620,6 +633,11 @@ body {
 .badge-hadir {
   background: var(--hadir-soft);
   color: var(--hadir-text);
+}
+
+.badge-izin {
+  background: var(--izin-soft);
+  color: var(--izin-text);
 }
 
 .badge-sakit {

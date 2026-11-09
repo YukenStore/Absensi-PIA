@@ -208,6 +208,19 @@ def attendance_overview(db: DatabaseClient = Depends(get_db)):
             for u in user_rows
         ]
 
+        teacher_records = {}
+        try:
+            att_rows = db.execute(
+                "SELECT user_id, teacher_email, attendance_date, status FROM teacher_attendance WHERE approval_status != 'Rejected'"
+            )
+            for r in att_rows:
+                code = 'H' if r["status"] == 'Hadir' else ('I' if r["status"] == 'Izin' else 'S')
+                teacher_records[f"{r['user_id']}_{r['attendance_date']}"] = code
+                if r.get("teacher_email"):
+                    teacher_records[f"{r['teacher_email'].lower()}_{r['attendance_date']}"] = code
+        except Exception:
+            pass
+
         return {
             "success": True,
             "students": students,
@@ -215,7 +228,7 @@ def attendance_overview(db: DatabaseClient = Depends(get_db)):
             "all_teachers": all_teachers,
             "custom_holidays": {},
             "student_records": {},
-            "teacher_records": {},
+            "teacher_records": teacher_records,
         }
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
