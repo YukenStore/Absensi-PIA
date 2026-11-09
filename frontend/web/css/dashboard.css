@@ -924,6 +924,77 @@ body {
   vertical-align: middle;
 }
 
+.student-num-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 800;
+  font-size: 0.82rem;
+}
+
+.student-main-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.student-name-val {
+  font-weight: 700;
+  color: var(--secondary);
+}
+
+.student-class-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+  border-radius: 9999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+/* Pada layar desktop, sembunyikan tag kelas di samping nama karena sudah ada kolom Kelas tersendiri */
+.student-main-info .student-class-tag {
+  display: none;
+}
+
+.cell-meta {
+  display: none;
+}
+
+.btn-delete-student {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 11px;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-delete-student:hover {
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #dc2626;
+}
+
+.mobile-label {
+  display: none;
+}
+
 .btn-outline-admin {
   padding: 8px 14px;
   border-radius: 10px;
@@ -1216,10 +1287,13 @@ select.form-input {
     padding: 8px 12px;
   }
 
-  /* Responsive Card View untuk Tabel Daftar Siswa di Halaman Pendaftaran pada Layar HP */
+  /* Responsive Modern Card View untuk Tabel Daftar Siswa di Layar HP */
   #registeredStudentsTable:not(.is-empty-table) {
     min-width: 100% !important;
+    width: 100% !important;
     border: none;
+    box-shadow: none;
+    background: transparent;
   }
 
   #registeredStudentsTable:not(.is-empty-table) thead {
@@ -1229,49 +1303,99 @@ select.form-input {
   #registeredStudentsTable:not(.is-empty-table) tbody {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding: 10px;
-    background: #f8fafc;
+    gap: 10px;
+    padding: 4px 0;
+    background: transparent;
   }
 
-  #registeredStudentsTable:not(.is-empty-table) tbody tr {
-    display: block;
+  #registeredStudentsTable:not(.is-empty-table) tbody tr.student-card-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas:
+      "num name action"
+      "meta meta meta";
+    align-items: center;
+    gap: 8px 10px;
     background: #ffffff;
-    border: 1px solid var(--border-color);
+    border: 1px solid #e2e8f0;
     border-radius: 12px;
-    padding: 10px 14px;
-    box-shadow: var(--shadow-sm);
+    padding: 12px 14px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   }
 
-  #registeredStudentsTable:not(.is-empty-table) tbody td {
+  #registeredStudentsTable:not(.is-empty-table) td.cell-no {
+    grid-area: num;
+    padding: 0;
+    border: none;
+    align-self: center;
+  }
+
+  #registeredStudentsTable:not(.is-empty-table) td.cell-name {
+    grid-area: name;
+    padding: 0;
+    border: none;
+    text-align: left;
+    min-width: 0;
+  }
+
+  #registeredStudentsTable:not(.is-empty-table) .student-main-info {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 8px 0;
-    border-bottom: 1px dashed #e2e8f0;
-    text-align: right !important;
-    font-size: 0.83rem;
+    gap: 6px;
+    flex-wrap: wrap;
   }
 
-  #registeredStudentsTable:not(.is-empty-table) tbody td:last-child {
-    border-bottom: none;
-    padding-top: 10px;
-  }
-
-  #registeredStudentsTable:not(.is-empty-table) tbody td::before {
-    content: attr(data-label);
+  #registeredStudentsTable:not(.is-empty-table) .student-name-val {
+    font-size: 0.93rem;
     font-weight: 700;
-    color: var(--text-muted);
-    font-size: 0.76rem;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-    text-align: left;
-    flex-shrink: 0;
+    color: var(--secondary);
+    word-break: break-word;
   }
 
-  #registeredStudentsTable:not(.is-empty-table) .btn-danger-sm {
-    padding: 7px 14px;
-    font-size: 0.8rem;
+  #registeredStudentsTable:not(.is-empty-table) .student-main-info .student-class-tag {
+    display: inline-block;
+  }
+
+  #registeredStudentsTable:not(.is-empty-table) td.cell-action {
+    grid-area: action;
+    padding: 0;
+    border: none;
+    text-align: right;
+    align-self: center;
+  }
+
+  #registeredStudentsTable:not(.is-empty-table) td.cell-class,
+  #registeredStudentsTable:not(.is-empty-table) td.cell-birth,
+  #registeredStudentsTable:not(.is-empty-table) td.cell-creator {
+    display: none !important;
+  }
+
+  #registeredStudentsTable:not(.is-empty-table) td.cell-meta {
+    grid-area: meta;
+    display: block !important;
+    padding: 6px 0 0 0;
+    border: none;
+    border-top: 1px dashed #f1f5f9;
+    text-align: left;
+  }
+
+  .student-meta-strip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 0.77rem;
+    color: #64748b;
+  }
+
+  .student-meta-strip .meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .student-meta-strip .meta-dot {
+    color: #cbd5e1;
+    font-size: 0.7rem;
   }
 }

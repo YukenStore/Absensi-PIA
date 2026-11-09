@@ -91,9 +91,20 @@ class DatabaseClient:
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
         """
+        students_table_sql = """
+        CREATE TABLE IF NOT EXISTS students (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            full_name TEXT NOT NULL,
+            class_name TEXT NOT NULL,
+            birth_date TEXT NOT NULL,
+            created_by TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        """
         try:
             self.execute(users_table_sql)
             self.execute(otp_table_sql)
+            self.execute(students_table_sql)
         except Exception as exc:
             print(f"[Database] Peringatan inisialisasi tabel: {exc}")
 

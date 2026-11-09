@@ -574,12 +574,47 @@ export default {
         if (pathname === '/api/students/delete' && request.method === 'POST') {
           const body = await request.json();
           const studentId = Number(body.student_id);
+          const fullName = (body.full_name || body.name || '').trim();
+          const birthDate = (body.birth_date || '').trim();
+
           if (db) {
-            await db.prepare('DELETE FROM students WHERE id = ?').bind(studentId).run();
-          } else {
-            memoryStore.students = memoryStore.students.filter((s) => Number(s.id) !== studentId);
+            if (studentId) {
+              await db.prepare('DELETE FROM students WHERE id = ?').bind(studentId).run();
+              try {
+                await db.prepare('DELETE FROM student_attendance WHERE student_id = ?').bind(studentId).run();
+              } catch (_) {}
+            }
+            if (fullName) {
+              if (birthDate) {
+                await db
+                  .prepare('DELETE FROM students WHERE lower(full_name) = lower(?) AND birth_date = ?')
+                  .bind(fullName, birthDate)
+                  .run();
+              } else {
+                await db
+                  .prepare('DELETE FROM students WHERE lower(full_name) = lower(?)')
+                  .bind(fullName)
+                  .run();
+              }
+            }
+            const { results } = await db
+              .prepare('SELECT id, full_name, class_name, birth_date, created_by, created_at FROM students ORDER BY id ASC')
+              .all();
+            return jsonResponse({
+              success: true,
+              message: 'Data siswa berhasil dihapus.',
+              students: results || [],
+            });
           }
-          return jsonResponse({ success: true, message: 'Data siswa berhasil dihapus.' });
+
+          memoryStore.students = memoryStore.students.filter(
+            (s) => Number(s.id) !== studentId && (!fullName || s.full_name.toLowerCase() !== fullName.toLowerCase())
+          );
+          return jsonResponse({
+            success: true,
+            message: 'Data siswa berhasil dihapus.',
+            students: memoryStore.students,
+          });
         }
 
         if (pathname === '/api/students/sync' && request.method === 'POST') {

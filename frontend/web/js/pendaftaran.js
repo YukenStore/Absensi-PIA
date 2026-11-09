@@ -119,27 +119,17 @@ async function fetchStudentsFromServer() {
   renderStudentsTable();
 
   try {
-    // Sinkronkan siswa di browser dengan tabel SQL `students` di database
-    const syncData = await callDatabaseApi('/api/students/sync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ students: studentsList }),
-    });
-
-    if (syncData && Array.isArray(syncData.students)) {
-      studentsList = syncData.students;
-      saveLocalStudents();
-      renderStudentsTable();
-      return;
-    }
-
+    // Ambil data siswa resmi dari database backend (source of truth)
     const getData = await callDatabaseApi('/api/students');
     if (getData && Array.isArray(getData.students)) {
       studentsList = getData.students;
       saveLocalStudents();
       renderStudentsTable();
+      return;
     }
-  } catch (_) {}
+  } catch (err) {
+    console.warn('Gagal memuat siswa dari server, menggunakan cache lokal:', err);
+  }
 }
 
 function renderStudentsTable() {
@@ -166,28 +156,74 @@ function renderStudentsTable() {
   bodyEl.innerHTML = studentsList
     .map(
       (s, idx) => `
-      <tr>
-        <td data-label="No">${idx + 1}</td>
-        <td data-label="Nama Siswa" style="font-weight: 700; color: var(--secondary);">${s.full_name || s.name}</td>
-        <td data-label="Kelas"><span class="student-class-tag" style="margin-left: 0;">${s.class_name || '-'}</span></td>
-        <td data-label="Tanggal Lahir">${formatBirthDateId(s.birth_date)}</td>
-        <td data-label="Didaftarkan Oleh">${s.created_by || 'Guru PIA'}</td>
-        <td data-label="Aksi">
-          <button type="button" class="btn-danger-sm" data-delete-id="${s.id}" data-name="${s.full_name || s.name}">
+      <tr class="student-card-item">
+        <td class="cell-no" data-label="No">
+          <span class="student-num-badge">${idx + 1}</span>
+        </td>
+        <td class="cell-name" data-label="Nama Siswa">
+          <div class="student-main-info">
+            <span class="student-name-val">${s.full_name || s.name}</span>
+            <span class="student-class-tag">${s.class_name || '-'}</span>
+          </div>
+        </td>
+        <td class="cell-class" data-label="Kelas">
+          <span class="student-class-tag">${s.class_name || '-'}</span>
+        </td>
+        <td class="cell-birth" data-label="Tanggal Lahir">
+          ${formatBirthDateId(s.birth_date)}
+        </td>
+        <td class="cell-creator" data-label="Didaftarkan Oleh">
+          ${s.created_by || 'Guru PIA'}
+        </td>
+        <td class="cell-action" data-label="Aksi">
+          <button
+            type="button"
+            class="btn-delete-student"
+            data-delete-id="${s.id}"
+            data-name="${s.full_name || s.name}"
+            data-dob="${s.birth_date || ''}"
+            title="Hapus data siswa ini"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 3px;">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
             Hapus
           </button>
+        </td>
+        <td class="cell-meta">
+          <div class="student-meta-strip">
+            <span class="meta-item">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; color: #94a3b8;">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+              ${formatBirthDateId(s.birth_date)}
+            </span>
+            <span class="meta-dot">•</span>
+            <span class="meta-item">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; color: #94a3b8;">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+              ${s.created_by || 'Guru PIA'}
+            </span>
+          </div>
         </td>
       </tr>
     `
     )
     .join('');
 
-  bodyEl.querySelectorAll('[data-delete-id]').forEach((btn) => {
+  bodyEl.querySelectorAll('.btn-delete-student').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const id = parseInt(btn.getAttribute('data-delete-id'), 10);
       const name = btn.getAttribute('data-name');
-      if (!confirm(`Hapus siswa "${name}" dari database dan Dashboard?`)) return;
-      await deleteStudent(id);
+      const dob = btn.getAttribute('data-dob') || '';
+      if (!confirm(`Yakin ingin menghapus siswa "${name}" dari database dan Dashboard?`)) return;
+      await deleteStudent(id, name, dob);
     });
   });
 }
@@ -234,20 +270,40 @@ async function addStudent({ fullName, className, birthDate }) {
   renderStudentsTable();
 }
 
-async function deleteStudent(studentId) {
-  studentsList = studentsList.filter((s) => Number(s.id) !== Number(studentId));
+async function deleteStudent(studentId, fullName, birthDate) {
+  // Update state lokal & cache terlebih dahulu
+  studentsList = studentsList.filter(
+    (s) =>
+      Number(s.id) !== Number(studentId) &&
+      (!fullName || (s.full_name || s.name).toLowerCase() !== fullName.toLowerCase())
+  );
   saveLocalStudents();
   renderStudentsTable();
 
   try {
-    await callDatabaseApi('/api/students/delete', {
+    const res = await callDatabaseApi('/api/students/delete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ student_id: studentId }),
+      body: JSON.stringify({
+        student_id: studentId,
+        full_name: fullName,
+        birth_date: birthDate,
+      }),
     });
-  } catch (_) {}
 
-  showBanner('Data siswa berhasil dihapus dari database dan Dashboard.', 'success');
+    if (res && Array.isArray(res.students)) {
+      studentsList = res.students;
+      saveLocalStudents();
+      renderStudentsTable();
+    }
+  } catch (err) {
+    console.error('Error saat menghapus siswa dari database:', err);
+  }
+
+  showBanner(
+    `Data siswa "${fullName || 'tersebut'}" berhasil dihapus dari database dan Dashboard.`,
+    'success'
+  );
 }
 
 document.addEventListener('DOMContentLoaded', () => {

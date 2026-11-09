@@ -351,7 +351,10 @@ function sendJson(res, statusCode, payload) {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Private-Network': 'true',
   });
-  res.end(JSON.stringify(payload));
+  const jsonStr = JSON.stringify(payload, (key, value) =>
+    typeof value === 'bigint' ? Number(value) : value
+  );
+  res.end(jsonStr);
 }
 
 function parseBody(req) {
@@ -761,9 +764,10 @@ const server = http.createServer(async (req, res) => {
         )
         .run(fullName, className, birthDate, createdBy);
 
+      const studentId = Number(info.lastInsertRowid);
       const newStudent = db
         .prepare('SELECT * FROM students WHERE id = ?')
-        .get(info.lastInsertRowid);
+        .get(studentId);
 
       return sendJson(res, 201, {
         success: true,
@@ -779,14 +783,40 @@ const server = http.createServer(async (req, res) => {
     try {
       const body = await parseBody(req);
       const studentId = Number(body.student_id);
-      if (!studentId) {
-        return sendJson(res, 400, { detail: 'ID siswa tidak valid.' });
+      const fullName = (body.full_name || body.name || '').trim();
+      const birthDate = (body.birth_date || '').trim();
+
+      if (!studentId && !fullName) {
+        return sendJson(res, 400, { detail: 'ID atau nama siswa tidak valid.' });
       }
-      db.prepare('DELETE FROM students WHERE id = ?').run(studentId);
-      db.prepare('DELETE FROM student_attendance WHERE student_id = ?').run(studentId);
+
+      if (studentId) {
+        db.prepare('DELETE FROM students WHERE id = ?').run(studentId);
+        try {
+          db.prepare('DELETE FROM student_attendance WHERE student_id = ?').run(studentId);
+        } catch (_) {}
+      }
+
+      if (fullName) {
+        if (birthDate) {
+          db.prepare(
+            'DELETE FROM students WHERE lower(full_name) = lower(?) AND birth_date = ?'
+          ).run(fullName, birthDate);
+        } else {
+          db.prepare('DELETE FROM students WHERE lower(full_name) = lower(?)').run(fullName);
+        }
+      }
+
+      const rows = db
+        .prepare(
+          'SELECT id, full_name, class_name, birth_date, created_by, created_at FROM students ORDER BY id ASC'
+        )
+        .all();
+
       return sendJson(res, 200, {
         success: true,
-        message: 'Data siswa berhasil dihapus.',
+        message: 'Data siswa berhasil dihapus dari database.',
+        students: rows,
       });
     } catch (err) {
       return sendJson(res, 500, { detail: err.message });

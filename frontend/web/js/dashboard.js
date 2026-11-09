@@ -233,22 +233,6 @@ function loadLocalSyncedData() {
 // Ambil data dari server SQL jika tersedia dan sinkronkan dengan penyimpanan browser
 async function loadServerOverview() {
   try {
-    // Jika ada siswa yang baru diinput di browser, sinkronkan terlebih dahulu ke tabel SQL `students`
-    if (state.students.length > 0) {
-      await callDatabaseApi('/api/students/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          students: state.students.map((s) => ({
-            id: s.id,
-            full_name: s.name,
-            class_name: s.class_name,
-            birth_date: s.birth_date,
-          })),
-        }),
-      });
-    }
-
     const data = await callDatabaseApi('/api/attendance/overview');
     if (!data) return;
 

@@ -8,7 +8,7 @@ if _BACKEND_DIR not in sys.path:
 
 from app.core.config import settings
 from app.core.cpp_bridge import cpp_core
-from app.routers import auth
+from app.routers import auth, students
 
 try:
     from fastapi import FastAPI  # type: ignore
@@ -32,6 +32,7 @@ try:
     )
 
     app.include_router(auth.router)
+    app.include_router(students.router)
 
     @app.get("/api/health", tags=["System"])
     def health_check():
