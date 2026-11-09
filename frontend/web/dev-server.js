@@ -733,6 +733,89 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  // Endpoint Admin untuk mengubah peran (Admin / Guru)
+  if (pathname === '/api/teachers/set-role' && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const adminEmail = (body.admin_email || '').trim().toLowerCase();
+      const targetUserId = Number(body.target_user_id);
+      const newRole = (body.role || '').trim().toLowerCase() === 'admin' ? 'admin' : 'guru';
+
+      const adminUser = db
+        .prepare('SELECT * FROM users WHERE lower(email) = ? LIMIT 1')
+        .get(adminEmail);
+      const isAdmin =
+        adminEmail === 'yumenoboken@gmail.com' ||
+        (adminUser && adminUser.role === 'admin');
+
+      if (!isAdmin) {
+        return sendJson(res, 403, {
+          detail: 'Hanya Admin yang dapat mengubah peran akun.',
+        });
+      }
+
+      const target = db.prepare('SELECT * FROM users WHERE id = ? LIMIT 1').get(targetUserId);
+      if (!target) {
+        return sendJson(res, 404, { detail: 'Akun pengguna tidak ditemukan.' });
+      }
+
+      if (target.email && target.email.toLowerCase() === 'yumenoboken@gmail.com') {
+        return sendJson(res, 400, { detail: 'Peran akun Super Admin utama tidak dapat diubah.' });
+      }
+
+      db.prepare('UPDATE users SET role = ? WHERE id = ?').run(newRole, targetUserId);
+      return sendJson(res, 200, {
+        success: true,
+        message: `Peran akun ${target.full_name} berhasil diubah menjadi ${newRole === 'admin' ? 'Admin' : 'Guru'}.`,
+        role: newRole,
+      });
+    } catch (err) {
+      return sendJson(res, 500, { detail: err.message });
+    }
+  }
+
+  // Endpoint Admin untuk menghapus akun guru
+  if (pathname === '/api/teachers/delete' && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const adminEmail = (body.admin_email || '').trim().toLowerCase();
+      const targetUserId = Number(body.target_user_id);
+
+      const adminUser = db
+        .prepare('SELECT * FROM users WHERE lower(email) = ? LIMIT 1')
+        .get(adminEmail);
+      const isAdmin =
+        adminEmail === 'yumenoboken@gmail.com' ||
+        (adminUser && adminUser.role === 'admin');
+
+      if (!isAdmin) {
+        return sendJson(res, 403, {
+          detail: 'Hanya Admin yang dapat menghapus akun pengguna.',
+        });
+      }
+
+      const target = db.prepare('SELECT * FROM users WHERE id = ? LIMIT 1').get(targetUserId);
+      if (!target) {
+        return sendJson(res, 404, { detail: 'Akun pengguna tidak ditemukan.' });
+      }
+
+      if (target.email && target.email.toLowerCase() === 'yumenoboken@gmail.com') {
+        return sendJson(res, 400, { detail: 'Akun Super Admin utama tidak dapat dihapus.' });
+      }
+
+      // Hapus riwayat absensi dan akun pengguna
+      db.prepare('DELETE FROM teacher_attendance WHERE user_id = ?').run(targetUserId);
+      db.prepare('DELETE FROM users WHERE id = ?').run(targetUserId);
+
+      return sendJson(res, 200, {
+        success: true,
+        message: `Akun ${target.full_name} dan seluruh riwayat presensinya berhasil dihapus.`,
+      });
+    } catch (err) {
+      return sendJson(res, 500, { detail: err.message });
+    }
+  }
+
   // Endpoint Sinkronisasi Akun Guru Terdaftar
   if (pathname === '/api/teachers/sync' && req.method === 'POST') {
     try {

@@ -402,6 +402,87 @@ async function toggleTeacherVisibility(userId, hideUser) {
   renderAllViews();
 }
 
+async function changeTeacherRole(userId, newRole) {
+  state.allTeachers = state.allTeachers.map((t) =>
+    t.id === userId ? { ...t, role: newRole } : t
+  );
+  state.teachers = state.allTeachers.filter((t) => !t.is_hidden);
+
+  try {
+    const rawDb = localStorage.getItem('pia_gh_pages_db');
+    if (rawDb) {
+      const parsed = JSON.parse(rawDb);
+      if (parsed && Array.isArray(parsed.users)) {
+        const target = parsed.users.find((u) => u.id === userId);
+        if (target) target.role = newRole;
+        localStorage.setItem('pia_gh_pages_db', JSON.stringify(parsed));
+      }
+    }
+  } catch (_) {}
+
+  try {
+    const adminEmail = state.currentUser ? state.currentUser.email : 'yumenoboken@gmail.com';
+    await callDatabaseApi('/api/teachers/set-role', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        admin_email: adminEmail,
+        target_user_id: userId,
+        role: newRole,
+      }),
+    });
+  } catch (_) {}
+
+  renderAllViews();
+}
+
+async function deleteTeacherAccount(userId, teacherName) {
+  const confirmDelete = window.confirm(
+    `Apakah Anda yakin ingin menghapus akun "${teacherName}"?\n\nSeluruh riwayat presensi akun guru ini juga akan dihapus permanen.`
+  );
+  if (!confirmDelete) return;
+
+  state.allTeachers = state.allTeachers.filter((t) => t.id !== userId);
+  state.teachers = state.allTeachers.filter((t) => !t.is_hidden);
+
+  try {
+    const rawDb = localStorage.getItem('pia_gh_pages_db');
+    if (rawDb) {
+      const parsed = JSON.parse(rawDb);
+      if (parsed && Array.isArray(parsed.users)) {
+        parsed.users = parsed.users.filter((u) => u.id !== userId);
+        localStorage.setItem('pia_gh_pages_db', JSON.stringify(parsed));
+      }
+    }
+  } catch (_) {}
+
+  try {
+    const adminEmail = state.currentUser ? state.currentUser.email : 'yumenoboken@gmail.com';
+    await callDatabaseApi('/api/teachers/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        admin_email: adminEmail,
+        target_user_id: userId,
+      }),
+    });
+  } catch (_) {}
+
+  renderAllViews();
+}
+
+// Tutup menu dropdown titik tiga saat mengklik di luar menu
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.user-menu-dropdown-wrap')) {
+    document.querySelectorAll('.user-action-dropdown-menu').forEach((m) => {
+      m.style.display = 'none';
+    });
+    document.querySelectorAll('.btn-user-action-dots').forEach((b) => {
+      b.classList.remove('active');
+    });
+  }
+});
+
 function renderAdminTeacherVisibilityPanel() {
   const listEl = document.getElementById('adminTeacherVisibilityList');
   if (!listEl || !state.isAdmin) return;
@@ -413,33 +494,114 @@ function renderAdminTeacherVisibilityPanel() {
 
   listEl.innerHTML = state.allTeachers
     .map((u) => {
+      const isSuperAdmin = u.email && u.email.toLowerCase() === 'yumenoboken@gmail.com';
+      const roleBadge = u.role === 'admin'
+        ? `<span class="badge-role role-admin">Admin</span>`
+        : `<span class="badge-role role-guru">Guru</span>`;
+
       const statusBadge = u.is_hidden
         ? `<span class="vis-badge hidden">Disembunyikan</span>`
         : `<span class="vis-badge visible">Ditampilkan di Tabel</span>`;
-      const actionBtn = u.is_hidden
-        ? `<button type="button" class="btn-vis-toggle show" data-uid="${u.id}" data-hide="0">Tampilkan</button>`
-        : `<button type="button" class="btn-vis-toggle hide" data-uid="${u.id}" data-hide="1">Sembunyikan</button>`;
 
       return `
         <div class="admin-user-toggle-item">
           <div class="user-info">
             <span class="u-name">${u.name}</span>
             <span class="u-email">${u.email || ''}</span>
+            ${roleBadge}
             ${statusBadge}
           </div>
           <div class="user-actions">
-            ${actionBtn}
+            <div class="user-menu-dropdown-wrap">
+              <button type="button" class="btn-user-action-dots" aria-label="Menu Aksi" data-uid="${u.id}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="12" cy="5" r="2"></circle>
+                  <circle cx="12" cy="12" r="2"></circle>
+                  <circle cx="12" cy="19" r="2"></circle>
+                </svg>
+              </button>
+              <div class="user-action-dropdown-menu" id="menu-${u.id}" style="display: none;">
+                <!-- Opsi 1: Atur Visibility -->
+                <button type="button" class="dropdown-item action-toggle-visibility" data-uid="${u.id}" data-hide="${u.is_hidden ? 0 : 1}">
+                  ${u.is_hidden
+                    ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Tampilkan di Tabel`
+                    : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg> Sembunyikan dari Tabel`}
+                </button>
+
+                <!-- Opsi 2: Jadikan Admin / Guru -->
+                ${isSuperAdmin ? '' : `
+                  <button type="button" class="dropdown-item action-toggle-role" data-uid="${u.id}" data-target-role="${u.role === 'admin' ? 'guru' : 'admin'}">
+                    ${u.role === 'admin'
+                      ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Ubah Menjadi Guru`
+                      : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> Jadikan Admin`}
+                  </button>
+                `}
+
+                <!-- Opsi 3: Hapus Akun -->
+                ${isSuperAdmin ? '' : `
+                  <div class="dropdown-divider"></div>
+                  <button type="button" class="dropdown-item text-danger action-delete-user" data-uid="${u.id}" data-name="${u.name}">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg> Hapus Akun
+                  </button>
+                `}
+              </div>
+            </div>
           </div>
         </div>
       `;
     })
     .join('');
 
-  listEl.querySelectorAll('.btn-vis-toggle').forEach((btn) => {
-    btn.addEventListener('click', () => {
+  // Event listener tombol titik tiga
+  listEl.querySelectorAll('.btn-user-action-dots').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const uid = btn.getAttribute('data-uid');
+      const menu = document.getElementById(`menu-${uid}`);
+
+      // Tutup menu lain
+      document.querySelectorAll('.user-action-dropdown-menu').forEach((m) => {
+        if (m !== menu) m.style.display = 'none';
+      });
+      document.querySelectorAll('.btn-user-action-dots').forEach((b) => {
+        if (b !== btn) b.classList.remove('active');
+      });
+
+      if (menu) {
+        const isShown = menu.style.display === 'flex';
+        menu.style.display = isShown ? 'none' : 'flex';
+        btn.classList.toggle('active', !isShown);
+      }
+    });
+  });
+
+  // Event listener aksi: Toggle Visibility
+  listEl.querySelectorAll('.action-toggle-visibility').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
       const uid = parseInt(btn.getAttribute('data-uid'), 10);
       const shouldHide = btn.getAttribute('data-hide') === '1';
       toggleTeacherVisibility(uid, shouldHide);
+    });
+  });
+
+  // Event listener aksi: Ganti Peran Admin/Guru
+  listEl.querySelectorAll('.action-toggle-role').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const uid = parseInt(btn.getAttribute('data-uid'), 10);
+      const targetRole = btn.getAttribute('data-target-role');
+      changeTeacherRole(uid, targetRole);
+    });
+  });
+
+  // Event listener aksi: Hapus Akun
+  listEl.querySelectorAll('.action-delete-user').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const uid = parseInt(btn.getAttribute('data-uid'), 10);
+      const name = btn.getAttribute('data-name');
+      deleteTeacherAccount(uid, name);
     });
   });
 }

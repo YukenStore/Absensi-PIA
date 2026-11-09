@@ -854,6 +854,56 @@ export default {
           });
         }
 
+        // Endpoint Visibilitas, Peran Admin, dan Hapus Akun Guru
+        if (pathname === '/api/teachers/toggle-hide' && request.method === 'POST') {
+          const body = await request.json();
+          const targetUserId = Number(body.target_user_id);
+          const isHidden = body.is_hidden ? 1 : 0;
+          if (db) {
+            await db.prepare('UPDATE users SET is_hidden = ? WHERE id = ?').bind(isHidden, targetUserId).run();
+            return jsonResponse({ success: true, target_user_id: targetUserId, is_hidden: Boolean(isHidden) });
+          }
+          const target = memoryStore.users.find((u) => u.id === targetUserId);
+          if (target) target.is_hidden = isHidden;
+          return jsonResponse({ success: true, target_user_id: targetUserId, is_hidden: Boolean(isHidden) });
+        }
+
+        if (pathname === '/api/teachers/set-role' && request.method === 'POST') {
+          const body = await request.json();
+          const targetUserId = Number(body.target_user_id);
+          const newRole = (body.role || '').trim().toLowerCase() === 'admin' ? 'admin' : 'guru';
+          if (db) {
+            const target = await db.prepare('SELECT * FROM users WHERE id = ? LIMIT 1').bind(targetUserId).first();
+            if (!target) return jsonResponse({ detail: 'Akun pengguna tidak ditemukan.' }, 404);
+            if (target.email && target.email.toLowerCase() === 'yumenoboken@gmail.com') {
+              return jsonResponse({ detail: 'Peran Super Admin tidak dapat diubah.' }, 400);
+            }
+            await db.prepare('UPDATE users SET role = ? WHERE id = ?').bind(newRole, targetUserId).run();
+            return jsonResponse({ success: true, message: `Peran berhasil diubah menjadi ${newRole === 'admin' ? 'Admin' : 'Guru'}.`, role: newRole });
+          }
+          const target = memoryStore.users.find((u) => u.id === targetUserId);
+          if (target) target.role = newRole;
+          return jsonResponse({ success: true, message: `Peran berhasil diubah menjadi ${newRole === 'admin' ? 'Admin' : 'Guru'}.`, role: newRole });
+        }
+
+        if (pathname === '/api/teachers/delete' && request.method === 'POST') {
+          const body = await request.json();
+          const targetUserId = Number(body.target_user_id);
+          if (db) {
+            const target = await db.prepare('SELECT * FROM users WHERE id = ? LIMIT 1').bind(targetUserId).first();
+            if (!target) return jsonResponse({ detail: 'Akun pengguna tidak ditemukan.' }, 404);
+            if (target.email && target.email.toLowerCase() === 'yumenoboken@gmail.com') {
+              return jsonResponse({ detail: 'Akun Super Admin tidak dapat dihapus.' }, 400);
+            }
+            await db.prepare('DELETE FROM teacher_attendance WHERE user_id = ?').bind(targetUserId).run();
+            await db.prepare('DELETE FROM users WHERE id = ?').bind(targetUserId).run();
+            return jsonResponse({ success: true, message: `Akun ${target.full_name} berhasil dihapus.` });
+          }
+          memoryStore.teacherAttendance = memoryStore.teacherAttendance.filter((a) => a.user_id !== targetUserId);
+          memoryStore.users = memoryStore.users.filter((u) => u.id !== targetUserId);
+          return jsonResponse({ success: true, message: 'Akun berhasil dihapus.' });
+        }
+
         // ==========================================================
         // API HALAMAN 3: ABSENSI SISWA
         // ==========================================================

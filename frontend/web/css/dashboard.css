@@ -1135,6 +1135,111 @@ body {
   background: #d1fae5;
 }
 
+/* 3-Dots Action Menu for Admin Teacher Visibility Panel */
+.user-menu-dropdown-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.btn-user-action-dots {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: #f8fafc;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-user-action-dots:hover,
+.btn-user-action-dots.active {
+  background: #e2e8f0;
+  color: var(--secondary);
+  border-color: #cbd5e1;
+}
+
+.user-action-dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12), 0 8px 10px -6px rgba(15, 23, 42, 0.08);
+  z-index: 100;
+  min-width: 210px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.user-action-dropdown-menu .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #334155;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: all 0.15s ease;
+}
+
+.user-action-dropdown-menu .dropdown-item:hover {
+  background: #f1f5f9;
+  color: var(--secondary);
+}
+
+.user-action-dropdown-menu .dropdown-item svg {
+  flex-shrink: 0;
+}
+
+.user-action-dropdown-menu .dropdown-item.text-danger {
+  color: #ef4444;
+}
+
+.user-action-dropdown-menu .dropdown-item.text-danger:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.user-action-dropdown-menu .dropdown-divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 4px 0;
+}
+
+.badge-role {
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.badge-role.role-admin {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.badge-role.role-guru {
+  background: #f8fafc;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
 /* ========================================================================= */
 /* HALAMAN PENDAFTARAN SISWA (pendaftaran.html)                              */
 /* ========================================================================= */
@@ -1859,5 +1964,160 @@ select.form-input {
     padding: 8px 12px;
     text-align: center;
     justify-content: center;
+  }
+}
+
+/* ========================================================= */
+/* STYLING HALAMAN 3: ABSENSI SISWA                          */
+/* ========================================================= */
+.attendance-stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)) !important;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.stat-pill.stat-izin {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+.stat-pill.stat-izin .stat-num { color: #1d4ed8; }
+.stat-pill.stat-izin .stat-lbl { color: #1e40af; }
+
+.stat-pill.stat-sakit {
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+.stat-pill.stat-sakit .stat-num { color: #c2410c; }
+.stat-pill.stat-sakit .stat-lbl { color: #9a3412; }
+
+.stat-pill.stat-alfa {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+.stat-pill.stat-alfa .stat-num { color: #b91c1c; }
+.stat-pill.stat-alfa .stat-lbl { color: #991b1b; }
+
+/* Status Toggle Group for Table Rows */
+.status-btn-group {
+  display: inline-flex;
+  align-items: center;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 3px;
+  gap: 4px;
+}
+
+.status-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 30px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.status-btn:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.status-btn.active.btn-hadir {
+  background: var(--hadir-bg);
+  color: #ffffff;
+  border-color: #059669;
+  box-shadow: 0 1px 2px rgba(16, 185, 129, 0.3);
+}
+
+.status-btn.active.btn-izin {
+  background: var(--izin-bg);
+  color: #ffffff;
+  border-color: #2563eb;
+  box-shadow: 0 1px 2px rgba(59, 130, 246, 0.3);
+}
+
+.status-btn.active.btn-sakit {
+  background: var(--sakit-bg);
+  color: #ffffff;
+  border-color: #ea580c;
+  box-shadow: 0 1px 2px rgba(249, 115, 22, 0.3);
+}
+
+.status-btn.active.btn-alfa {
+  background: var(--alfa-bg);
+  color: #ffffff;
+  border-color: #dc2626;
+  box-shadow: 0 1px 2px rgba(239, 68, 68, 0.3);
+}
+
+.note-input {
+  width: 100%;
+  max-width: 260px;
+  padding: 6px 10px;
+  font-size: 0.82rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  transition: border-color 0.15s;
+}
+
+.note-input:focus {
+  border-color: var(--primary);
+  outline: none;
+  background: #ffffff;
+}
+
+@media (max-width: 768px) {
+  .student-attendance-table:not(.is-empty-table) thead {
+    display: none;
+  }
+  .student-attendance-table:not(.is-empty-table) tbody tr {
+    display: block;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow-sm);
+  }
+  .student-attendance-table:not(.is-empty-table) tbody td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 0;
+    border: none;
+    text-align: left;
+    white-space: normal;
+  }
+  .student-attendance-table:not(.is-empty-table) td.cell-no {
+    display: none;
+  }
+  .student-attendance-table:not(.is-empty-table) td.cell-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--secondary);
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f1f5f9;
+    margin-bottom: 6px;
+  }
+  .student-attendance-table:not(.is-empty-table) td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+  }
+  .student-attendance-table .note-input {
+    max-width: 100%;
+    flex: 1;
+    margin-left: 10px;
   }
 }

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Absensi Siswa - Pendidikan Islam At-Taqwa</title>
+  <link rel="icon" type="image/png" href="assets/logo-pia.png" />
+  <link rel="stylesheet" href="css/dashboard.css" />
+</head>
+<body>
+  <!-- Navigasi Utama -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="topbar-brand-row">
+        <a href="dashboard.html" class="brand">
+          <div class="brand-badge">
+            <img src="assets/logo-pia.png" alt="Logo Pendidikan Islam At-Taqwa" class="brand-logo-img" />
+          </div>
+          <div class="brand-text">
+            <h1>Pendidikan Islam At-Taqwa</h1>
+            <span>Sistem Informasi Presensi &amp; Pembelajaran</span>
+          </div>
+        </a>
+
+        <div class="user-menu mobile-user-menu">
+          <button type="button" class="btn-logout logout-trigger">Keluar</button>
+        </div>
+      </div>
+
+      <nav class="nav-links" aria-label="Menu Navigasi">
+        <a href="dashboard.html" class="nav-item">Dashboard</a>
+        <a href="pendaftaran.html" class="nav-item">Pendaftaran</a>
+        <a href="absensi-guru.html" class="nav-item">Absensi Guru</a>
+        <a href="absensi-siswa.html" class="nav-item active">Absensi Siswa</a>
+        <a href="#rekap-pembelajaran" class="nav-item" data-coming-soon="Halaman Rekap Pembelajaran Siswa akan segera kita bangun.">Rekap Pembelajaran</a>
+      </nav>
+
+      <div class="user-menu desktop-user-menu">
+        <div class="user-chip">
+          <div class="name" id="activeUserName">Pengguna PIA</div>
+          <div class="role" id="activeUserEmail">Pendidikan Islam At-Taqwa</div>
+        </div>
+        <button type="button" id="logoutBtn" class="btn-logout logout-trigger">Keluar</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="page-header">
+      <div class="page-title">
+        <h2>Presensi &amp; Kehadiran Siswa</h2>
+        <p>Pencatatan presensi harian siswa PIA per kelas. Otomatis terdata ke Tabel Harian &amp; Rekap Dashboard.</p>
+      </div>
+    </div>
+
+    <!-- Alert Notifikasi Global -->
+    <div id="attendanceAlert" class="alert-banner"></div>
+
+    <!-- Section Filter Periode, Kelas, & Statistik -->
+    <section class="section-card">
+      <div class="card-header">
+        <div class="card-title">
+          <h3>Filter &amp; Pengaturan Presensi</h3>
+          <p>Tentukan tanggal dan pilih kelas siswa yang akan dicatat kehadirannya.</p>
+        </div>
+
+        <div class="filter-controls">
+          <div class="filter-group">
+            <label class="filter-label" for="attendanceDate">Tanggal Presensi</label>
+            <input type="date" id="attendanceDate" class="select-control" style="font-weight: 600; padding: 8px 14px;" />
+          </div>
+
+          <div class="filter-group">
+            <label class="filter-label" for="classFilter">Pilih Kelas</label>
+            <select id="classFilter" class="select-control">
+              <option value="all">Semua Kelas</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ringkasan Statistik Presensi Tanggal Terpilih -->
+      <div class="attendance-stat-row" style="margin-top: 10px;">
+        <div class="stat-pill">
+          <span class="stat-num" id="statTotalStudents">0</span>
+          <span class="stat-lbl">Total Siswa</span>
+        </div>
+        <div class="stat-pill stat-hadir">
+          <span class="stat-num" id="statTotalHadir">0</span>
+          <span class="stat-lbl">Hadir (H)</span>
+        </div>
+        <div class="stat-pill stat-izin">
+          <span class="stat-num" id="statTotalIzin">0</span>
+          <span class="stat-lbl">Izin (I)</span>
+        </div>
+        <div class="stat-pill stat-sakit">
+          <span class="stat-num" id="statTotalSakit">0</span>
+          <span class="stat-lbl">Sakit (S)</span>
+        </div>
+        <div class="stat-pill stat-alfa" style="background: #fee2e2; color: #991b1b;">
+          <span class="stat-num" id="statTotalAlfa" style="color: #ef4444;">0</span>
+          <span class="stat-lbl" style="color: #991b1b;">Alfa (A)</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section Tabel Presensi Siswa -->
+    <section class="section-card">
+      <div class="card-header" style="flex-wrap: wrap; gap: 14px;">
+        <div class="card-title">
+          <h3 id="tableTitle">Daftar Presensi Siswa</h3>
+          <p id="tableSubtitle">Pilih status kehadiran (H / I / S / A) untuk masing-masing siswa di bawah ini.</p>
+        </div>
+
+        <!-- Tombol Quick Action: Tandai Semua Hadir & Simpan Presensi -->
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+          <button type="button" id="markAllHadirBtn" class="btn-outline-admin" style="background: #ecfdf5; border-color: #10b981; color: #065f46; font-weight: 700;">
+            ✓ Tandai Semua Hadir
+          </button>
+          <button type="button" id="saveTopBtn" class="btn-primary-submit" style="width: auto; padding: 10px 20px;">
+            Simpan Presensi
+          </button>
+        </div>
+      </div>
+
+      <!-- Legenda Bar 5 Status -->
+      <div class="legend-bar">
+        <div class="legend-items">
+          <div class="legend-item">
+            <span class="legend-dot hadir"></span>
+            <span>Hadir (H)</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot izin"></span>
+            <span>Izin (I)</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot sakit"></span>
+            <span>Sakit (S)</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot alfa"></span>
+            <span>Alfa (A)</span>
+          </div>
+        </div>
+        <div class="holiday-tip">
+          <span>Perubahan status akan otomatis memperbarui akumulasi rekapitulasi di Dashboard.</span>
+        </div>
+      </div>
+
+      <!-- Tabel Daftar Presensi Siswa -->
+      <div class="table-responsive">
+        <table class="recap-table student-attendance-table" id="studentAttendanceTable">
+          <thead>
+            <tr>
+              <th style="width: 48px;">No</th>
+              <th style="text-align: left; min-width: 180px;">Nama Siswa</th>
+              <th style="width: 120px;">Kelas</th>
+              <th style="min-width: 240px;">Status Kehadiran</th>
+              <th style="min-width: 200px;">Keterangan / Alasan</th>
+            </tr>
+          </thead>
+          <tbody id="studentAttendanceBody">
+            <!-- Diisi secara dinamis melalui JavaScript -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Tombol Simpan Presensi Bagian Bawah -->
+      <div style="display: flex; justify-content: flex-end; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-color);">
+        <button type="button" id="saveBottomBtn" class="btn-primary-submit" style="width: auto; min-width: 220px;">
+          Simpan Presensi Siswa
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/absensi-siswa.js"></script>
+</body>
+</html>
