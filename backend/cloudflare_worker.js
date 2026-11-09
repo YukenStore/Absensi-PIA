@@ -553,6 +553,7 @@ export default {
     // ENDPOINT DATA SISWA & ABSENSI GURU (PENDAFTARAN & SINKRONISASI DATABASE D1)
     if (
       pathname.startsWith('/api/students') ||
+      pathname.startsWith('/api/student-attendance') ||
       pathname.startsWith('/api/attendance') ||
       pathname.startsWith('/api/teachers') ||
       pathname.startsWith('/api/teacher-attendance')
