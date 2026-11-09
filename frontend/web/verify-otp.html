@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verifikasi OTP Email - Sistem Absensi PIA</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <main class="auth-wrapper">
+    <!-- Panel Kiri: Informasi Aplikasi -->
+    <section class="auth-banner">
+      <div class="brand-logo">
+        <div class="brand-icon">PIA</div>
+        <span>Absensi PIA</span>
+      </div>
+
+      <div class="banner-content">
+        <h1>Aktivasi Akun via Email</h1>
+        <p>
+          Demi keamanan akun Anda, kami telah mengirimkan 6 digit kode OTP
+          (One-Time Password) ke alamat email yang Anda daftarkan.
+        </p>
+        <div class="feature-pills">
+          <span class="pill">Cek Kotak Masuk / Spam</span>
+          <span class="pill">Kode Berlaku 5 Menit</span>
+        </div>
+      </div>
+
+      <div class="banner-footer">
+        &copy; 2026 Sistem Absensi PIA &bull; Powered by C++ Core &amp; FastAPI
+      </div>
+    </section>
+
+    <!-- Panel Kanan: Form Verifikasi OTP -->
+    <section class="auth-form-container">
+      <div class="auth-header">
+        <h2>Verifikasi Kode OTP</h2>
+        <p>Masukkan 6 digit kode aktivasi yang dikirimkan ke email:</p>
+        <div id="targetEmailBadge" class="email-badge">memuat email...</div>
+      </div>
+
+      <div id="alertBox" class="alert" role="alert"></div>
+
+      <form id="otpForm" novalidate>
+        <div class="form-group" id="manualEmailGroup" style="display: none;">
+          <label class="form-label" for="otpEmail">Alamat Email</label>
+          <div class="input-wrapper">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+            <input
+              type="email"
+              id="otpEmail"
+              class="form-control"
+              placeholder="Masukkan email yang didaftarkan"
+            />
+          </div>
+        </div>
+
+        <div class="otp-container" id="otpInputs">
+          <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]*" aria-label="Digit 1" required />
+          <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]*" aria-label="Digit 2" required />
+          <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]*" aria-label="Digit 3" required />
+          <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]*" aria-label="Digit 4" required />
+          <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]*" aria-label="Digit 5" required />
+          <input type="text" class="otp-input" maxlength="1" inputmode="numeric" pattern="[0-9]*" aria-label="Digit 6" required />
+        </div>
+
+        <button type="submit" id="submitBtn" class="btn-primary">
+          <span>Verifikasi &amp; Aktifkan Akun</span>
+        </button>
+      </form>
+
+      <div class="otp-meta">
+        <p style="margin-bottom: 10px;">
+          Belum menerima email kode OTP?
+          <span id="countdownTimer" style="font-weight: 600; color: var(--secondary);">(01:00)</span>
+        </p>
+        <button type="button" id="resendOtpBtn" class="btn-secondary" disabled>
+          Kirim Ulang OTP ke Email
+        </button>
+      </div>
+
+      <div class="auth-footer">
+        Ingin mengganti email atau kembali? <a href="register.html" class="auth-link">Registrasi Ulang</a> &bull;
+        <a href="index.html" class="auth-link">Halaman Login</a>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/auth.js"></script>
+</body>
+</html>
+

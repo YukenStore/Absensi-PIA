@@ -1,0 +1,36 @@
+# Node / Web
+node_modules/
+npm-debug.log*
+
+# Python / Backend
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.env
+*.db
+*.sqlite3
+
+# C++ Build Artifacts
+*.o
+*.obj
+*.exp
+*.lib
+*.pdb
+build/
+cmake-build-*/
+
+# Flutter / Mobile
+frontend/mobile/.dart_tool/
+frontend/mobile/.flutter-plugins
+frontend/mobile/.flutter-plugins-dependencies
+frontend/mobile/.packages
+frontend/mobile/build/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

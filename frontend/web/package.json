@@ -1,0 +1,11 @@
+{
+  "name": "absensi-pia-web",
+  "version": "1.0.0",
+  "description": "UI Web (HTML/CSS/JS) untuk Sistem Absensi PIA",
+  "private": true,
+  "scripts": {
+    "dev": "node dev-server.js",
+    "start": "node dev-server.js"
+  }
+}
+

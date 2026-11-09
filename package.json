@@ -1,0 +1,11 @@
+{
+  "name": "absensi-pia",
+  "version": "1.0.0",
+  "description": "Aplikasi Absensi Cross-Platform (Web, Flutter, Python, C++ Core)",
+  "private": true,
+  "scripts": {
+    "dev": "node frontend/web/dev-server.js",
+    "start": "node frontend/web/dev-server.js"
+  }
+}
+
