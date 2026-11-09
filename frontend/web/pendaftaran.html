@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pendaftaran Siswa - Pendidikan Islam At-Taqwa</title>
+  <link rel="icon" type="image/png" href="assets/logo-pia.png" />
   <link rel="stylesheet" href="css/dashboard.css" />
 </head>
 <body>
@@ -12,7 +13,9 @@
     <div class="topbar-inner">
       <div class="topbar-brand-row">
         <a href="dashboard.html" class="brand">
-          <div class="brand-badge">PIA</div>
+          <div class="brand-badge">
+            <img src="assets/logo-pia.png" alt="Logo Pendidikan Islam At-Taqwa" class="brand-logo-img" />
+          </div>
           <div class="brand-text">
             <h1>Pendidikan Islam At-Taqwa</h1>
             <span>Sistem Informasi Presensi &amp; Pembelajaran</span>
@@ -76,23 +79,21 @@
 
           <div class="form-field">
             <label for="studentClass">Kelas</label>
-            <input
-              type="text"
-              id="studentClass"
-              class="form-input"
-              list="classSuggestions"
-              placeholder="Contoh: Kelas 1 / Iqro / Al-Qur'an"
-              required
-            />
-            <datalist id="classSuggestions">
-              <option value="Kelas A"></option>
-              <option value="Kelas B"></option>
-              <option value="Kelas 1"></option>
-              <option value="Kelas 2"></option>
-              <option value="Kelas 3"></option>
-              <option value="Iqro"></option>
-              <option value="Al-Qur'an"></option>
-            </datalist>
+            <select id="studentClass" class="form-input" required>
+              <option value="" disabled selected>-- Pilih Kelas (Kelas 1 s/d Kelas 12) --</option>
+              <option value="Kelas 1">Kelas 1</option>
+              <option value="Kelas 2">Kelas 2</option>
+              <option value="Kelas 3">Kelas 3</option>
+              <option value="Kelas 4">Kelas 4</option>
+              <option value="Kelas 5">Kelas 5</option>
+              <option value="Kelas 6">Kelas 6</option>
+              <option value="Kelas 7">Kelas 7</option>
+              <option value="Kelas 8">Kelas 8</option>
+              <option value="Kelas 9">Kelas 9</option>
+              <option value="Kelas 10">Kelas 10</option>
+              <option value="Kelas 11">Kelas 11</option>
+              <option value="Kelas 12">Kelas 12</option>
+            </select>
           </div>
 
           <div class="form-field">
@@ -142,3 +143,4 @@
   <script src="js/pendaftaran.js"></script>
 </body>
 </html>
+

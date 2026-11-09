@@ -145,75 +145,91 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
-  // Modal Pendaftaran Siswa (Nama Siswa, Kelas, Tanggal Lahir)
+  // Modal Pendaftaran Siswa (Nama Siswa, Kelas 1-12, Tanggal Lahir)
   void _openPendaftaranDialog() {
     final nameCtrl = TextEditingController();
-    final classCtrl = TextEditingController();
+    String selectedClass = 'Kelas 1';
     final birthDateCtrl = TextEditingController();
+    final classOptions = List.generate(12, (idx) => 'Kelas ${idx + 1}');
 
     showDialog(
       context: context,
       builder: (ctx) {
-        return AlertDialog(
-          title: const Text(
-            'Pendaftaran Data Siswa',
-            style: TextStyle(fontWeight: FontWeight.w700),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Nama Lengkap Siswa',
-                    hintText: 'Contoh: Ahmad Fauzan',
-                  ),
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            return AlertDialog(
+              title: const Text(
+                'Pendaftaran Data Siswa',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Nama Lengkap Siswa',
+                        hintText: 'Contoh: Ahmad Fauzan',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedClass,
+                      decoration: const InputDecoration(
+                        labelText: 'Kelas',
+                      ),
+                      items: classOptions
+                          .map(
+                            (cls) => DropdownMenuItem(
+                              value: cls,
+                              child: Text(cls),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) {
+                        if (v != null) {
+                          setModalState(() => selectedClass = v);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: birthDateCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Tanggal Lahir (YYYY-MM-DD)',
+                        hintText: 'Contoh: 2018-05-14',
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: classCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Kelas',
-                    hintText: 'Contoh: Kelas 1 / Iqro / Al-Qur\'an',
-                  ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Batal'),
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: birthDateCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Tanggal Lahir (YYYY-MM-DD)',
-                    hintText: 'Contoh: 2018-05-14',
-                  ),
+                ElevatedButton(
+                  onPressed: () {
+                    final name = nameCtrl.text.trim();
+                    final dob = birthDateCtrl.text.trim();
+                    if (name.isEmpty || dob.isEmpty) return;
+
+                    setState(() {
+                      _students.add({
+                        'id': _students.length + 1,
+                        'name': name,
+                        'class_name': selectedClass,
+                        'birth_date': dob,
+                      });
+                    });
+                    Navigator.of(ctx).pop();
+                  },
+                  child: const Text('Simpan ke Dashboard'),
                 ),
               ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Batal'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final name = nameCtrl.text.trim();
-                final cls = classCtrl.text.trim();
-                final dob = birthDateCtrl.text.trim();
-                if (name.isEmpty || cls.isEmpty || dob.isEmpty) return;
-
-                setState(() {
-                  _students.add({
-                    'id': _students.length + 1,
-                    'name': name,
-                    'class_name': cls,
-                    'birth_date': dob,
-                  });
-                });
-                Navigator.of(ctx).pop();
-              },
-              child: const Text('Simpan ke Dashboard'),
-            ),
-          ],
+            );
+          },
         );
       },
     );
@@ -529,16 +545,32 @@ class _DashboardScreenState extends State<DashboardScreen>
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF0F172A),
         elevation: 1,
-        title: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        title: Row(
           children: [
-            Text(
-              'Pendidikan Islam At-Taqwa',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.asset(
+                'assets/logo-pia.png',
+                width: 36,
+                height: 36,
+                fit: BoxFit.contain,
+              ),
             ),
-            Text(
-              'Dashboard Monitoring & Rekapitulasi Presensi',
-              style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Pendidikan Islam At-Taqwa',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
+                  Text(
+                    'Dashboard Monitoring & Rekapitulasi Presensi',
+                    style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

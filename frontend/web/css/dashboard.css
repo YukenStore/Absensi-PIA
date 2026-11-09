@@ -83,17 +83,25 @@ body {
 }
 
 .brand-badge {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   flex-shrink: 0;
   border-radius: 10px;
-  background: linear-gradient(135deg, #1e3a8a, #2563eb);
-  color: #ffffff;
-  font-weight: 800;
-  font-size: 1.02rem;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  padding: 3px;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.brand-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 .brand-text h1 {
@@ -704,9 +712,8 @@ body {
   }
 
   .brand-badge {
-    width: 36px;
-    height: 36px;
-    font-size: 0.92rem;
+    width: 42px;
+    height: 42px;
   }
 
   .brand-text h1 {
@@ -1087,8 +1094,15 @@ body {
   font-weight: 500;
   outline: none;
   transition: all 0.2s ease;
+}
+
+input[type="date"].form-input {
   -webkit-appearance: none;
   appearance: none;
+}
+
+select.form-input {
+  cursor: pointer;
 }
 
 .form-input:focus {
