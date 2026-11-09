@@ -5,6 +5,44 @@
 
 const API_BASE_URL = '/api/auth';
 const CLOUDFLARE_API_URL = 'https://absensi-pia.yumenoboken.workers.dev/api/auth';
+const GAS_EMAIL_RELAY_URL = 'https://script.google.com/macros/s/AKfycbyXzTnpST43yHYJ_fMTGmdLp5KEifI9N0iROHrUbpJr0gpeoJbMll8kh9x7O7c502E/exec';
+
+function buildOtpHtmlEmailContent(fullName, otpCode) {
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px;">
+      <h2 style="color: #1e3a8a; margin-top: 0;">Aktivasi Akun Absensi PIA</h2>
+      <p style="color: #334155; font-size: 15px; line-height: 1.5;">
+        Halo <strong>${fullName}</strong>,<br><br>
+        Terima kasih telah melakukan registrasi di <strong>Sistem Informasi Absensi &amp; Pembelajaran PIA</strong>.
+        Masukkan 6 digit kode OTP berikut untuk mengaktifkan akun Anda:
+      </p>
+      <div style="background: #eff6ff; border: 1px dashed #2563eb; border-radius: 10px; padding: 16px; text-align: center; margin: 24px 0;">
+        <span style="font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #1d4ed8;">${otpCode}</span>
+      </div>
+      <p style="color: #64748b; font-size: 13px;">
+        Kode ini berlaku selama <strong>5 menit</strong>. Jangan berikan kode rahasia ini kepada siapa pun.
+      </p>
+    </div>
+  `.trim();
+}
+
+async function dispatchGasEmailRelay({ toEmail, fullName, otpCode }) {
+  try {
+    const subject = `[${otpCode}] Kode Aktivasi Akun Sistem Absensi PIA`;
+    const htmlBody = buildOtpHtmlEmailContent(fullName, otpCode);
+    const resp = await fetch(GAS_EMAIL_RELAY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: toEmail, subject, htmlBody }),
+    });
+    if (resp.ok) {
+      return true;
+    }
+  } catch (err) {
+    console.warn('Gagal dispatch GAS email relay:', err);
+  }
+  return false;
+}
 
 // =========================================================================
 // ENGINE DATABASE LOKAL BROWSER & SINKRONISASI AKUN (UNTUK GITHUB PAGES)
@@ -130,11 +168,18 @@ async function handleStaticAuthFallback(endpoint, payload) {
     });
     saveStaticDb(db);
 
-    return {
+    const emailSent = await dispatchGasEmailRelay({ toEmail: email, fullName, otpCode });
+
+    const respPayload = {
       success: true,
-      message: `Registrasi berhasil! Kode OTP untuk ${email} telah dibuat.`,
-      otp_preview: otpCode,
+      message: emailSent
+        ? `Kode OTP 6 digit telah dikirimkan ke kotak masuk ${email}. Silakan periksa inbox atau spam email Anda.`
+        : `Registrasi berhasil! Kode OTP untuk ${email} telah dibuat.`,
     };
+    if (!emailSent) {
+      respPayload.otp_preview = otpCode;
+    }
+    return respPayload;
   }
 
   if (endpoint === '/verify-otp') {
@@ -182,11 +227,22 @@ async function handleStaticAuthFallback(endpoint, payload) {
     });
     saveStaticDb(db);
 
-    return {
+    const emailSent = await dispatchGasEmailRelay({
+      toEmail: email,
+      fullName: user.full_name,
+      otpCode,
+    });
+
+    const respPayload = {
       success: true,
-      message: `Kode OTP baru telah dibuat untuk ${email}.`,
-      otp_preview: otpCode,
+      message: emailSent
+        ? `Kode OTP baru telah dikirimkan ke kotak masuk ${email}.`
+        : `Kode OTP baru telah dibuat untuk ${email}.`,
     };
+    if (!emailSent) {
+      respPayload.otp_preview = otpCode;
+    }
+    return respPayload;
   }
 
   if (endpoint === '/login') {

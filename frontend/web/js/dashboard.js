@@ -191,7 +191,8 @@ function loadLocalSyncedData() {
     if (rawDb) {
       const parsed = JSON.parse(rawDb);
       if (parsed && Array.isArray(parsed.users)) {
-        usersList = parsed.users.filter((u) => u.is_active);
+        // Tampilkan semua akun yang mendaftar ke Absensi
+        usersList = parsed.users;
       }
     }
     if (usersList.length === 0) {
@@ -233,6 +234,27 @@ function loadLocalSyncedData() {
 // Ambil data dari server SQL jika tersedia dan sinkronkan dengan penyimpanan browser
 async function loadServerOverview() {
   try {
+    // 1. Kumpulkan akun guru dari penyimpanan browser untuk disinkronkan ke server SQL
+    let localTeachersToSync = [];
+    try {
+      const rawDb = localStorage.getItem('pia_gh_pages_db');
+      if (rawDb) {
+        const parsed = JSON.parse(rawDb);
+        if (parsed && Array.isArray(parsed.users)) {
+          localTeachersToSync = parsed.users;
+        }
+      }
+    } catch (_) {}
+
+    // Sinkronkan akun guru lokal ke tabel SQL `users` jika ada akun terdaftar
+    if (localTeachersToSync.length > 0) {
+      await callDatabaseApi('/api/teachers/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teachers: localTeachersToSync }),
+      });
+    }
+
     const data = await callDatabaseApi('/api/attendance/overview');
     if (!data) return;
 
@@ -251,20 +273,43 @@ async function loadServerOverview() {
       );
     }
 
+    // Ambil daftar nama guru yang disembunyikan
+    let hiddenMap = {};
+    try {
+      const rawHidden = localStorage.getItem('pia_hidden_teachers');
+      if (rawHidden) hiddenMap = JSON.parse(rawHidden) || {};
+    } catch (_) {}
+
+    // Gabungkan data guru dari server SQL dan akun yang terdaftar di browser
+    const teacherMap = new Map();
     if (Array.isArray(data.all_teachers)) {
-      state.allTeachers = data.all_teachers;
-      const hiddenMap = {};
       data.all_teachers.forEach((t) => {
-        if (t.is_hidden) hiddenMap[t.id] = true;
+        const key = (t.email || t.username || '').toLowerCase();
+        if (key) {
+          teacherMap.set(key, {
+            ...t,
+            is_hidden: Boolean(hiddenMap[t.id] !== undefined ? hiddenMap[t.id] : t.is_hidden),
+          });
+        }
       });
-      localStorage.setItem('pia_hidden_teachers', JSON.stringify(hiddenMap));
     }
 
-    if (Array.isArray(data.teachers)) {
-      state.teachers = data.teachers;
-    } else {
-      state.teachers = state.allTeachers.filter((t) => !t.is_hidden);
-    }
+    localTeachersToSync.forEach((u) => {
+      const key = (u.email || u.username || '').toLowerCase();
+      if (key && !teacherMap.has(key)) {
+        teacherMap.set(key, {
+          id: u.id,
+          name: u.full_name || u.username,
+          email: u.email,
+          username: u.username,
+          role: u.role || 'guru',
+          is_hidden: Boolean(hiddenMap[u.id] || u.is_hidden),
+        });
+      }
+    });
+
+    state.allTeachers = Array.from(teacherMap.values());
+    state.teachers = state.allTeachers.filter((t) => !t.is_hidden);
 
     if (data.custom_holidays) {
       state.customHolidays = { ...state.customHolidays, ...data.custom_holidays };

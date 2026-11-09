@@ -19,9 +19,11 @@ const memoryStore = {
   ],
   otps: [],
   students: [],
+  teacherAttendance: [],
   customHolidays: {},
   nextUserId: 2,
   nextStudentId: 1,
+  nextAttendanceId: 1,
 };
 
 async function sha256Hex(message) {
@@ -75,17 +77,21 @@ function buildOtpHtmlEmail(fullName, otpCode) {
 async function sendRealEmailFromWorker(env, { toEmail, fullName, otpCode }) {
   const subject = `[${otpCode}] Kode Aktivasi Akun Sistem Absensi PIA`;
   const htmlBody = buildOtpHtmlEmail(fullName, otpCode);
+  const relayUrl =
+    (env && env.EMAIL_RELAY_URL) ||
+    'https://script.google.com/macros/s/AKfycbyXzTnpST43yHYJ_fMTGmdLp5KEifI9N0iROHrUbpJr0gpeoJbMll8kh9x7O7c502E/exec';
 
-  if (env.EMAIL_RELAY_URL) {
-    const resp = await fetch(env.EMAIL_RELAY_URL, {
+  try {
+    const resp = await fetch(relayUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ to: toEmail, subject, htmlBody }),
     });
-    if (!resp.ok) {
-      throw new Error(`Email Relay gagal (${resp.status})`);
+    if (resp.ok) {
+      return true;
     }
-    return true;
+  } catch (err) {
+    console.warn('Gagal mengirim via email relay:', err);
   }
   return false;
 }
@@ -153,6 +159,24 @@ async function ensureD1Schema(db) {
         holiday_date TEXT PRIMARY KEY,
         is_holiday INTEGER NOT NULL DEFAULT 1,
         updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )`
+    )
+    .run();
+
+  await db
+    .prepare(
+      `CREATE TABLE IF NOT EXISTS teacher_attendance (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        teacher_name TEXT NOT NULL,
+        teacher_email TEXT NOT NULL,
+        attendance_date TEXT NOT NULL,
+        status TEXT NOT NULL,
+        note TEXT NOT NULL DEFAULT '',
+        approval_status TEXT NOT NULL DEFAULT 'Pending',
+        approved_by TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE(user_id, attendance_date)
       )`
     )
     .run();
@@ -511,8 +535,13 @@ export default {
       }
     }
 
-    // ENDPOINT DATA SISWA (PENDAFTARAN & SINKRONISASI DATABASE D1)
-    if (pathname.startsWith('/api/students') || pathname.startsWith('/api/attendance') || pathname.startsWith('/api/teachers')) {
+    // ENDPOINT DATA SISWA & ABSENSI GURU (PENDAFTARAN & SINKRONISASI DATABASE D1)
+    if (
+      pathname.startsWith('/api/students') ||
+      pathname.startsWith('/api/attendance') ||
+      pathname.startsWith('/api/teachers') ||
+      pathname.startsWith('/api/teacher-attendance')
+    ) {
       try {
         const db = env.DB || null;
         if (db) {
@@ -652,7 +681,7 @@ export default {
               .prepare('SELECT id, full_name, class_name, birth_date FROM students ORDER BY id ASC')
               .all();
             const { results: usrRows } = await db
-              .prepare('SELECT id, full_name, email, username, role, is_hidden FROM users WHERE is_active = 1 ORDER BY id ASC')
+              .prepare('SELECT id, full_name, email, username, role, is_hidden, is_active FROM users ORDER BY id ASC')
               .all();
             const allTeachers = (usrRows || []).map((u) => ({
               id: u.id,
@@ -679,7 +708,6 @@ export default {
           }
 
           const allTeachers = memoryStore.users
-            .filter((u) => u.is_active)
             .map((u) => ({
               id: u.id,
               name: u.full_name,
@@ -702,6 +730,75 @@ export default {
             custom_holidays: memoryStore.customHolidays,
             student_records: {},
             teacher_records: {},
+          });
+        }
+
+        if (pathname === '/api/teachers/sync' && request.method === 'POST') {
+          const body = await request.json();
+          const incomingTeachers = Array.isArray(body.teachers) ? body.teachers : [];
+          if (db) {
+            for (const t of incomingTeachers) {
+              const email = (t.email || '').trim().toLowerCase();
+              const fullName = (t.name || t.full_name || t.username || '').trim();
+              const username = (t.username || email.split('@')[0] || 'guru').trim();
+              const role = email === 'yumenoboken@gmail.com' ? 'admin' : t.role || 'guru';
+              if (!email || !fullName) continue;
+              const exists = await db.prepare('SELECT id FROM users WHERE lower(email) = ? LIMIT 1').bind(email).first();
+              if (!exists) {
+                await db
+                  .prepare('INSERT INTO users (full_name, email, username, password_hash, password_salt, is_active, role, is_hidden) VALUES (?, ?, ?, ?, ?, 1, ?, 0)')
+                  .bind(fullName, email, username, 'synced_hash', 'synced_salt', role)
+                  .run();
+              }
+            }
+            const { results: allUsers } = await db.prepare('SELECT id, full_name, email, username, role, is_hidden, is_active FROM users ORDER BY id ASC').all();
+            const teachers = (allUsers || []).map((u) => ({
+              id: u.id,
+              name: u.full_name || u.username,
+              email: u.email,
+              username: u.username,
+              role: u.email && u.email.toLowerCase() === 'yumenoboken@gmail.com' ? 'admin' : u.role || 'guru',
+              is_hidden: Boolean(u.is_hidden),
+            }));
+            return jsonResponse({
+              success: true,
+              teachers: teachers.filter((t) => !t.is_hidden),
+              all_teachers: teachers,
+            });
+          }
+
+          for (const t of incomingTeachers) {
+            const email = (t.email || '').trim().toLowerCase();
+            const fullName = (t.name || t.full_name || t.username || '').trim();
+            const username = (t.username || email.split('@')[0] || 'guru').trim();
+            if (!email || !fullName) continue;
+            const exists = memoryStore.users.find((u) => u.email.toLowerCase() === email);
+            if (!exists) {
+              memoryStore.users.push({
+                id: memoryStore.nextUserId++,
+                full_name: fullName,
+                email,
+                username,
+                password_hash: 'synced_hash',
+                password_salt: 'synced_salt',
+                role: email === 'yumenoboken@gmail.com' ? 'admin' : t.role || 'guru',
+                is_active: 1,
+                is_hidden: 0,
+              });
+            }
+          }
+          const allTeachers = memoryStore.users.map((u) => ({
+            id: u.id,
+            name: u.full_name,
+            email: u.email,
+            username: u.username,
+            role: u.role || 'guru',
+            is_hidden: Boolean(u.is_hidden),
+          }));
+          return jsonResponse({
+            success: true,
+            teachers: allTeachers.filter((t) => !t.is_hidden),
+            all_teachers: allTeachers,
           });
         }
       } catch (err) {

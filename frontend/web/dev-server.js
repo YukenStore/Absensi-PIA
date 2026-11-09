@@ -646,16 +646,17 @@ const server = http.createServer(async (req, res) => {
 
     const allActiveUsers = db
       .prepare(
-        'SELECT id, full_name, email, username, role, is_hidden FROM users WHERE is_active = 1 ORDER BY id ASC'
+        'SELECT id, full_name, email, username, role, is_hidden, is_active FROM users ORDER BY id ASC'
       )
       .all();
     const allTeachers = allActiveUsers.map((u) => ({
       id: u.id,
-      name: u.full_name,
+      name: u.full_name || u.username,
       email: u.email,
       username: u.username,
-      role: u.email.toLowerCase() === 'yumenoboken@gmail.com' ? 'admin' : u.role || 'guru',
+      role: u.email && u.email.toLowerCase() === 'yumenoboken@gmail.com' ? 'admin' : u.role || 'guru',
       is_hidden: Boolean(u.is_hidden),
+      is_active: Boolean(u.is_active),
     }));
     const visibleTeachers = allTeachers.filter((t) => !t.is_hidden);
 
@@ -723,6 +724,55 @@ const server = http.createServer(async (req, res) => {
         success: true,
         target_user_id: targetUserId,
         is_hidden: Boolean(isHidden),
+      });
+    } catch (err) {
+      return sendJson(res, 500, { detail: err.message });
+    }
+  }
+
+  // Endpoint Sinkronisasi Akun Guru Terdaftar
+  if (pathname === '/api/teachers/sync' && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const incomingTeachers = Array.isArray(body.teachers) ? body.teachers : [];
+      for (const t of incomingTeachers) {
+        const email = (t.email || '').trim().toLowerCase();
+        const fullName = (t.name || t.full_name || t.username || '').trim();
+        const username = (t.username || email.split('@')[0] || 'guru').trim();
+        const role = email === 'yumenoboken@gmail.com' ? 'admin' : t.role || 'guru';
+        if (!email || !fullName) continue;
+
+        const exists = db
+          .prepare('SELECT id FROM users WHERE lower(email) = ? LIMIT 1')
+          .get(email);
+        if (!exists) {
+          const salt = crypto.randomBytes(16).toString('hex');
+          const pwHash = hashPassword('PiaDefault2026!', salt);
+          db.prepare(
+            'INSERT INTO users (full_name, email, username, password_hash, password_salt, is_active, role, is_hidden) VALUES (?, ?, ?, ?, ?, 1, ?, 0)'
+          ).run(fullName, email, username, pwHash, salt, role);
+        }
+      }
+
+      const allUsers = db
+        .prepare(
+          'SELECT id, full_name, email, username, role, is_hidden, is_active FROM users ORDER BY id ASC'
+        )
+        .all();
+      const teachers = allUsers.map((u) => ({
+        id: u.id,
+        name: u.full_name || u.username,
+        email: u.email,
+        username: u.username,
+        role: u.email && u.email.toLowerCase() === 'yumenoboken@gmail.com' ? 'admin' : u.role || 'guru',
+        is_hidden: Boolean(u.is_hidden),
+        is_active: Boolean(u.is_active),
+      }));
+
+      return sendJson(res, 200, {
+        success: true,
+        teachers: teachers.filter((t) => !t.is_hidden),
+        all_teachers: teachers,
       });
     } catch (err) {
       return sendJson(res, 500, { detail: err.message });

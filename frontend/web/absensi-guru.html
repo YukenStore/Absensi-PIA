@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Absensi Guru - Pendidikan Islam At-Taqwa</title>
+  <link rel="icon" type="image/png" href="assets/logo-pia.png" />
+  <link rel="stylesheet" href="css/dashboard.css" />
+</head>
+<body>
+  <!-- Navigasi Utama -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="topbar-brand-row">
+        <a href="dashboard.html" class="brand">
+          <div class="brand-badge">
+            <img src="assets/logo-pia.png" alt="Logo Pendidikan Islam At-Taqwa" class="brand-logo-img" />
+          </div>
+          <div class="brand-text">
+            <h1>Pendidikan Islam At-Taqwa</h1>
+            <span>Sistem Informasi Presensi &amp; Pembelajaran</span>
+          </div>
+        </a>
+
+        <div class="user-menu mobile-user-menu">
+          <button type="button" class="btn-logout logout-trigger">Keluar</button>
+        </div>
+      </div>
+
+      <nav class="nav-links" aria-label="Menu Navigasi">
+        <a href="dashboard.html" class="nav-item">Dashboard</a>
+        <a href="pendaftaran.html" class="nav-item">Pendaftaran</a>
+        <a href="absensi-guru.html" class="nav-item active">Absensi Guru</a>
+        <a href="#absensi-siswa" class="nav-item" data-coming-soon="Halaman Absensi Siswa akan segera kita bangun.">Absensi Siswa</a>
+        <a href="#rekap-pembelajaran" class="nav-item" data-coming-soon="Halaman Rekap Pembelajaran Siswa akan segera kita bangun.">Rekap Pembelajaran</a>
+      </nav>
+
+      <div class="user-menu desktop-user-menu">
+        <div class="user-chip">
+          <div class="name" id="activeUserName">Pengguna PIA</div>
+          <div class="role" id="activeUserEmail">Pendidikan Islam At-Taqwa</div>
+        </div>
+        <button type="button" id="logoutBtn" class="btn-logout logout-trigger">Keluar</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="page-header">
+      <div class="page-title">
+        <h2>Presensi &amp; Kehadiran Dewan Guru</h2>
+        <p>Pencatatan kehadiran harian dewan guru PIA, pemantauan riwayat presensi, dan persetujuan (ACC) kehadiran oleh Admin.</p>
+      </div>
+    </div>
+
+    <!-- Alert Notifikasi Global -->
+    <div id="attendanceAlert" class="alert-banner"></div>
+
+    <div class="pendaftaran-grid">
+      <!-- Panel Kiri: Form Input Presensi Guru -->
+      <section class="section-card">
+        <div class="card-header">
+          <div class="card-title">
+            <h3>Formulir Kehadiran Guru</h3>
+            <p>Isi formulir presensi untuk hari ini atau tanggal yang ditentukan.</p>
+          </div>
+          <span id="roleBadge" class="badge-tag role-tag">Guru</span>
+        </div>
+
+        <!-- Kartu Status Jika Sudah Mengisi Absensi Hari Ini -->
+        <div id="todayStatusCard" class="today-status-card" style="display: none;">
+          <div class="today-status-header">
+            <span class="status-indicator-dot"></span>
+            <span class="today-status-title">Status Absensi Anda Hari Ini:</span>
+          </div>
+          <div class="today-status-content">
+            <div class="today-status-row">
+              <span class="label">Tanggal:</span>
+              <span class="val font-bold" id="todayDateVal">-</span>
+            </div>
+            <div class="today-status-row">
+              <span class="label">Status:</span>
+              <span class="val font-bold" id="todayStatusVal">-</span>
+            </div>
+            <div class="today-status-row">
+              <span class="label">Catatan:</span>
+              <span class="val" id="todayNoteVal">-</span>
+            </div>
+            <div class="today-status-row">
+              <span class="label">Verifikasi Admin:</span>
+              <span class="val" id="todayApprovalVal">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Form Input Presensi -->
+        <form id="teacherAttendanceForm" class="form-stack">
+          <!-- Pilihan Input Atas Nama Guru Lain (Khusus Admin) -->
+          <div class="form-field" id="adminTeacherSelectWrap" style="display: none;">
+            <label for="adminSelectTeacher">Pilih Guru (Mode Admin)</label>
+            <select id="adminSelectTeacher" class="form-input">
+              <option value="">-- Diri Sendiri (Sesuai Akun Login) --</option>
+            </select>
+            <span class="field-hint">Sebagai Admin, Anda dapat menginput presensi atas nama guru lain.</span>
+          </div>
+
+          <div class="form-field">
+            <label for="attendanceDate">Tanggal Kehadiran</label>
+            <input
+              type="date"
+              id="attendanceDate"
+              class="form-input"
+              required
+            />
+          </div>
+
+          <div class="form-field">
+            <label>Status Kehadiran</label>
+            <div class="status-choice-group">
+              <label class="status-radio-card status-hadir">
+                <input type="radio" name="teacherStatus" value="Hadir" checked />
+                <span class="radio-box">
+                  <span class="status-dot green"></span>
+                  <span class="status-text">
+                    <strong>Hadir (H)</strong>
+                    <small>Mengajar / Dinas</small>
+                  </span>
+                </span>
+              </label>
+
+              <label class="status-radio-card status-izin">
+                <input type="radio" name="teacherStatus" value="Izin" />
+                <span class="radio-box">
+                  <span class="status-dot yellow"></span>
+                  <span class="status-text">
+                    <strong>Izin (I)</strong>
+                    <small>Keperluan Pribadi</small>
+                  </span>
+                </span>
+              </label>
+
+              <label class="status-radio-card status-sakit">
+                <input type="radio" name="teacherStatus" value="Sakit" />
+                <span class="radio-box">
+                  <span class="status-dot red"></span>
+                  <span class="status-text">
+                    <strong>Sakit (S)</strong>
+                    <small>Kondisi Kurang Sehat</small>
+                  </span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label for="attendanceNote">Keterangan / Catatan Tambahan</label>
+            <textarea
+              id="attendanceNote"
+              class="form-input textarea-note"
+              rows="3"
+              placeholder="Contoh: Mengajar kelas 7 materi Al-Qur'an Hadits, atau alasan izin/sakit."
+            ></textarea>
+          </div>
+
+          <button type="submit" id="submitAttendanceBtn" class="btn-primary-submit">
+            Kirim Presensi Kehadiran
+          </button>
+        </form>
+      </section>
+
+      <!-- Panel Kanan: Riwayat Presensi Guru Pribadi -->
+      <section class="section-card">
+        <div class="card-header">
+          <div class="card-title">
+            <h3>Riwayat Presensi Saya</h3>
+            <p>Catatan kehadiran dan status persetujuan dari Admin.</p>
+          </div>
+        </div>
+
+        <!-- Ringkasan Akumulasi Kehadiran -->
+        <div class="attendance-stat-row">
+          <div class="stat-pill stat-hadir">
+            <span class="stat-num" id="statHadirCount">0</span>
+            <span class="stat-lbl">Hadir</span>
+          </div>
+          <div class="stat-pill stat-izin">
+            <span class="stat-num" id="statIzinCount">0</span>
+            <span class="stat-lbl">Izin</span>
+          </div>
+          <div class="stat-pill stat-sakit">
+            <span class="stat-num" id="statSakitCount">0</span>
+            <span class="stat-lbl">Sakit</span>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="recap-table" id="myHistoryTable">
+            <thead>
+              <tr>
+                <th style="width: 48px;">No</th>
+                <th>Tanggal</th>
+                <th>Status</th>
+                <th>Keterangan</th>
+                <th>Status ACC</th>
+              </tr>
+            </thead>
+            <tbody id="myHistoryBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- Panel Khusus Admin: Pusat Persetujuan (ACC Admin) -->
+    <section class="section-card admin-approval-section" id="adminApprovalSection" style="display: none; margin-top: 24px;">
+      <div class="card-header">
+        <div class="card-title">
+          <h3>Pusat Persetujuan Presensi Guru (Admin Approval)</h3>
+          <p>Verifikasi pengajuan presensi dewan guru. Data yang di-ACC otomatis tersinkronisasi ke matriks Data Guru di Dashboard.</p>
+        </div>
+        <div class="admin-approval-filters">
+          <span class="badge-pending-count" id="pendingBadgeCount">0 Pengajuan Menunggu</span>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="recap-table" id="adminApprovalTable">
+          <thead>
+            <tr>
+              <th style="width: 48px;">No</th>
+              <th>Nama Guru</th>
+              <th>Tanggal</th>
+              <th>Status</th>
+              <th>Keterangan</th>
+              <th>Status ACC</th>
+              <th style="width: 170px; text-align: center;">Tindakan Admin</th>
+            </tr>
+          </thead>
+          <tbody id="adminApprovalBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/absensi-guru.js"></script>
+</body>
+</html>
+

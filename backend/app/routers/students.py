@@ -193,7 +193,7 @@ def attendance_overview(db: DatabaseClient = Depends(get_db)):
         ]
 
         user_rows = db.execute(
-            "SELECT id, full_name, email, username, role, is_hidden FROM users WHERE is_active = 1 ORDER BY id ASC"
+            "SELECT id, full_name, email, username, role, is_hidden, is_active FROM users ORDER BY id ASC"
         )
         all_teachers = [
             {
@@ -203,6 +203,7 @@ def attendance_overview(db: DatabaseClient = Depends(get_db)):
                 "username": u["username"],
                 "role": "admin" if u["email"].lower() == "yumenoboken@gmail.com" else (u.get("role") or "guru"),
                 "is_hidden": bool(u.get("is_hidden", 0)),
+                "is_active": bool(u.get("is_active", 1)),
             }
             for u in user_rows
         ]
@@ -218,3 +219,47 @@ def attendance_overview(db: DatabaseClient = Depends(get_db)):
         }
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/api/teachers/sync")
+def sync_teachers(payload: Dict[str, Any], db: DatabaseClient = Depends(get_db)):
+    try:
+        incoming_teachers = payload.get("teachers") or []
+        for t in incoming_teachers:
+            email = str(t.get("email") or "").strip().lower()
+            name = str(t.get("name") or t.get("full_name") or t.get("username") or "").strip()
+            username = str(t.get("username") or (email.split("@")[0] if "@" in email else "guru")).strip()
+            role = "admin" if email == "yumenoboken@gmail.com" else str(t.get("role") or "guru")
+            if not email or not name:
+                continue
+
+            exists = db.fetch_one("SELECT id FROM users WHERE lower(email) = ? LIMIT 1", [email])
+            if not exists:
+                db.execute(
+                    "INSERT INTO users (full_name, email, username, password_hash, password_salt, is_active, role, is_hidden) VALUES (?, ?, ?, ?, ?, 1, ?, 0)",
+                    [name, email, username, "synced_hash", "synced_salt", role],
+                )
+
+        user_rows = db.execute(
+            "SELECT id, full_name, email, username, role, is_hidden, is_active FROM users ORDER BY id ASC"
+        )
+        teachers = [
+            {
+                "id": u["id"],
+                "name": u["full_name"],
+                "email": u["email"],
+                "username": u["username"],
+                "role": "admin" if u["email"].lower() == "yumenoboken@gmail.com" else (u.get("role") or "guru"),
+                "is_hidden": bool(u.get("is_hidden", 0)),
+                "is_active": bool(u.get("is_active", 1)),
+            }
+            for u in user_rows
+        ]
+        return {
+            "success": True,
+            "teachers": [t for t in teachers if not t["is_hidden"]],
+            "all_teachers": teachers,
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
