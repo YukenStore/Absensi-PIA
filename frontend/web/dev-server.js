@@ -1182,6 +1182,40 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
+  if (pathname === '/api/student-attendance' && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const studentId = Number(body.student_id);
+      const dateStr = (body.attendance_date || '').trim() || new Date().toISOString().slice(0, 10);
+      const status = (body.status || 'Hadir').trim();
+      const note = (body.note || '').trim();
+      const recordedBy = (body.recorded_by || 'Guru PIA').trim();
+
+      if (!studentId || !['Hadir', 'Izin', 'Sakit', 'Alfa'].includes(status)) {
+        return sendJson(res, 400, {
+          detail: 'ID siswa dan status kehadiran (Hadir/Izin/Sakit/Alfa) wajib diisi.',
+        });
+      }
+
+      db.prepare(`
+        INSERT INTO student_attendance (student_id, attendance_date, status, note, recorded_by, created_at)
+        VALUES (?, ?, ?, ?, ?, datetime('now'))
+        ON CONFLICT(student_id, attendance_date) DO UPDATE SET
+          status = excluded.status,
+          note = excluded.note,
+          recorded_by = excluded.recorded_by,
+          created_at = datetime('now')
+      `).run(studentId, dateStr, status, note, recordedBy);
+
+      return sendJson(res, 200, {
+        success: true,
+        message: `Presensi siswa berhasil disimpan untuk tanggal ${dateStr}!`,
+      });
+    } catch (err) {
+      return sendJson(res, 500, { detail: `Gagal menyimpan presensi siswa: ${err.message}` });
+    }
+  }
+
   if (pathname === '/api/student-attendance/batch-save' && req.method === 'POST') {
     try {
       const body = await parseBody(req);

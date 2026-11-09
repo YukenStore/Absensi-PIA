@@ -51,15 +51,67 @@ async function callDatabaseApi(apiPath, options = {}) {
   return null;
 }
 
+function initHamburgerMenu() {
+  const hamburgerBtn = document.getElementById('hamburgerBtn');
+  const navLinks = document.getElementById('mainNavLinks');
+  if (!hamburgerBtn || !navLinks) return;
+
+  const iconHamburger = hamburgerBtn.querySelector('.icon-hamburger');
+  const iconClose = hamburgerBtn.querySelector('.icon-close');
+
+  function toggleMenu(forceClose = false) {
+    const shouldOpen = forceClose ? false : !navLinks.classList.contains('is-open');
+    if (shouldOpen) {
+      navLinks.classList.add('is-open');
+      hamburgerBtn.classList.add('active');
+      hamburgerBtn.setAttribute('aria-expanded', 'true');
+      if (iconHamburger) iconHamburger.style.display = 'none';
+      if (iconClose) iconClose.style.display = 'block';
+    } else {
+      navLinks.classList.remove('is-open');
+      hamburgerBtn.classList.remove('active');
+      hamburgerBtn.setAttribute('aria-expanded', 'false');
+      if (iconHamburger) iconHamburger.style.display = 'block';
+      if (iconClose) iconClose.style.display = 'none';
+    }
+  }
+
+  hamburgerBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleMenu();
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!navLinks.contains(e.target) && !hamburgerBtn.contains(e.target)) {
+      toggleMenu(true);
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      toggleMenu(true);
+    }
+  });
+}
+
 function initHeaderAndAuth() {
+  initHamburgerMenu();
+
   const nameEl = document.getElementById('activeUserName');
   const emailEl = document.getElementById('activeUserEmail');
+  const mobileNameEl = document.getElementById('mobileUserName');
+  const mobileEmailEl = document.getElementById('mobileUserEmail');
+
   try {
     const rawUser = localStorage.getItem('pia_user');
     if (rawUser) {
       currentUser = JSON.parse(rawUser);
-      if (currentUser.full_name && nameEl) nameEl.textContent = currentUser.full_name;
-      if (currentUser.email && emailEl) emailEl.textContent = currentUser.email;
+      const userName = currentUser.full_name || currentUser.username || 'Pengguna PIA';
+      const userEmail = currentUser.email || 'Pendidikan Islam At-Taqwa';
+      if (nameEl) nameEl.textContent = userName;
+      if (emailEl) emailEl.textContent = userEmail;
+      if (mobileNameEl) mobileNameEl.textContent = userName;
+      if (mobileEmailEl) mobileEmailEl.textContent = userEmail;
     }
   } catch (_) {}
 

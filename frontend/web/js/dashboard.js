@@ -73,16 +73,67 @@ function updateAdminUiVisibility() {
   }
 }
 
+function initHamburgerMenu() {
+  const hamburgerBtn = document.getElementById('hamburgerBtn');
+  const navLinks = document.getElementById('mainNavLinks');
+  if (!hamburgerBtn || !navLinks) return;
+
+  const iconHamburger = hamburgerBtn.querySelector('.icon-hamburger');
+  const iconClose = hamburgerBtn.querySelector('.icon-close');
+
+  function toggleMenu(forceClose = false) {
+    const shouldOpen = forceClose ? false : !navLinks.classList.contains('is-open');
+    if (shouldOpen) {
+      navLinks.classList.add('is-open');
+      hamburgerBtn.classList.add('active');
+      hamburgerBtn.setAttribute('aria-expanded', 'true');
+      if (iconHamburger) iconHamburger.style.display = 'none';
+      if (iconClose) iconClose.style.display = 'block';
+    } else {
+      navLinks.classList.remove('is-open');
+      hamburgerBtn.classList.remove('active');
+      hamburgerBtn.setAttribute('aria-expanded', 'false');
+      if (iconHamburger) iconHamburger.style.display = 'block';
+      if (iconClose) iconClose.style.display = 'none';
+    }
+  }
+
+  hamburgerBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleMenu();
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!navLinks.contains(e.target) && !hamburgerBtn.contains(e.target)) {
+      toggleMenu(true);
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      toggleMenu(true);
+    }
+  });
+}
+
 // Muat info user yang sedang login
 function initUserHeader() {
+  initHamburgerMenu();
+
   const nameEl = document.getElementById('activeUserName');
   const emailEl = document.getElementById('activeUserEmail');
+  const mobileNameEl = document.getElementById('mobileUserName');
+  const mobileEmailEl = document.getElementById('mobileUserEmail');
   const user = getCurrentUser();
   state.currentUser = user;
 
   if (user) {
-    if (user.full_name && nameEl) nameEl.textContent = user.full_name;
-    if (user.email && emailEl) emailEl.textContent = user.email;
+    const userName = user.full_name || user.username || 'Pengguna PIA';
+    const userEmail = user.email || 'Pendidikan Islam At-Taqwa';
+    if (nameEl) nameEl.textContent = userName;
+    if (emailEl) emailEl.textContent = userEmail;
+    if (mobileNameEl) mobileNameEl.textContent = userName;
+    if (mobileEmailEl) mobileEmailEl.textContent = userEmail;
     state.isAdmin = Boolean(
       (user.email && user.email.toLowerCase() === 'yumenoboken@gmail.com') ||
       user.role === 'admin'

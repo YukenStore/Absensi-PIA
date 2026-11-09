@@ -1132,6 +1132,41 @@ export default {
           return jsonResponse({ success: true, date: dateParam, students: memoryStore.students, attendance: {} });
         }
 
+        if (pathname === '/api/student-attendance' && request.method === 'POST') {
+          const body = await request.json();
+          const studentId = Number(body.student_id);
+          const dateStr = (body.attendance_date || '').trim() || new Date().toISOString().slice(0, 10);
+          const status = (body.status || 'Hadir').trim();
+          const note = (body.note || '').trim();
+          const recordedBy = (body.recorded_by || 'Guru PIA').trim();
+
+          if (!studentId || !['Hadir', 'Izin', 'Sakit', 'Alfa'].includes(status)) {
+            return jsonResponse({ detail: 'ID siswa dan status kehadiran (Hadir/Izin/Sakit/Alfa) wajib diisi.' }, 400);
+          }
+
+          if (db) {
+            const existing = await db
+              .prepare('SELECT id FROM student_attendance WHERE student_id = ? AND attendance_date = ? LIMIT 1')
+              .bind(studentId, dateStr)
+              .first();
+
+            if (existing) {
+              await db
+                .prepare("UPDATE student_attendance SET status = ?, note = ?, recorded_by = ?, created_at = datetime('now') WHERE id = ?")
+                .bind(status, note, recordedBy, existing.id)
+                .run();
+            } else {
+              await db
+                .prepare("INSERT INTO student_attendance (student_id, attendance_date, status, note, recorded_by, created_at) VALUES (?, ?, ?, ?, ?, datetime('now'))")
+                .bind(studentId, dateStr, status, note, recordedBy)
+                .run();
+            }
+            return jsonResponse({ success: true, message: `Presensi siswa untuk tanggal ${dateStr} berhasil disimpan dan tersinkron ke Dashboard!` });
+          }
+
+          return jsonResponse({ success: true, message: 'Presensi siswa berhasil disimpan!' });
+        }
+
         if (pathname === '/api/student-attendance/batch-save' && request.method === 'POST') {
           const body = await request.json();
           const dateStr = (body.attendance_date || '').trim() || new Date().toISOString().slice(0, 10);

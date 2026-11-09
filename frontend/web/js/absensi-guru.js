@@ -205,9 +205,54 @@ function showBanner(msg, type = 'success') {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+function initHamburgerMenu() {
+  const hamburgerBtn = document.getElementById('hamburgerBtn');
+  const navLinks = document.getElementById('mainNavLinks');
+  if (!hamburgerBtn || !navLinks) return;
+
+  const iconHamburger = hamburgerBtn.querySelector('.icon-hamburger');
+  const iconClose = hamburgerBtn.querySelector('.icon-close');
+
+  function toggleMenu(forceClose = false) {
+    const shouldOpen = forceClose ? false : !navLinks.classList.contains('is-open');
+    if (shouldOpen) {
+      navLinks.classList.add('is-open');
+      hamburgerBtn.classList.add('active');
+      hamburgerBtn.setAttribute('aria-expanded', 'true');
+      if (iconHamburger) iconHamburger.style.display = 'none';
+      if (iconClose) iconClose.style.display = 'block';
+    } else {
+      navLinks.classList.remove('is-open');
+      hamburgerBtn.classList.remove('active');
+      hamburgerBtn.setAttribute('aria-expanded', 'false');
+      if (iconHamburger) iconHamburger.style.display = 'block';
+      if (iconClose) iconClose.style.display = 'none';
+    }
+  }
+
+  hamburgerBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleMenu();
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!navLinks.contains(e.target) && !hamburgerBtn.contains(e.target)) {
+      toggleMenu(true);
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      toggleMenu(true);
+    }
+  });
+}
+
 function initHeaderAndAuth() {
+  initHamburgerMenu();
+
   const token = getAuthToken();
-  const rawUser = localStorage.getItem('pia_current_user');
+  const rawUser = localStorage.getItem('pia_user') || localStorage.getItem('pia_current_user');
 
   if (!token && !rawUser) {
     window.location.href = 'index.html';
@@ -219,24 +264,31 @@ function initHeaderAndAuth() {
       currentUser = JSON.parse(rawUser);
       const nameEl = document.getElementById('activeUserName');
       const emailEl = document.getElementById('activeUserEmail');
-      const roleBadge = document.getElementById('roleBadge');
+      const mobileNameEl = document.getElementById('mobileUserName');
+      const mobileEmailEl = document.getElementById('mobileUserEmail');
+      const formTeacherNameEl = document.getElementById('formTeacherName');
 
-      if (currentUser.full_name && nameEl) nameEl.textContent = currentUser.full_name;
-      if (currentUser.email && emailEl) emailEl.textContent = currentUser.email;
+      const userName = currentUser.full_name || currentUser.username || 'Pengguna PIA';
+      const userEmail = currentUser.email || 'Pendidikan Islam At-Taqwa';
 
-      const userEmail = (currentUser.email || '').toLowerCase();
-      isAdmin = userEmail === 'yumenoboken@gmail.com' || currentUser.role === 'admin';
+      if (nameEl) nameEl.textContent = userName;
+      if (emailEl) emailEl.textContent = userEmail;
+      if (mobileNameEl) mobileNameEl.textContent = userName;
+      if (mobileEmailEl) mobileEmailEl.textContent = userEmail;
 
-      if (roleBadge) {
-        roleBadge.textContent = isAdmin ? 'Admin' : 'Guru';
-        roleBadge.className = `badge-tag role-tag ${isAdmin ? 'role-admin' : 'role-guru'}`;
+      if (formTeacherNameEl) {
+        formTeacherNameEl.textContent = userName;
       }
+
+      const userEmailLower = (currentUser.email || '').toLowerCase();
+      isAdmin = userEmailLower === 'yumenoboken@gmail.com' || currentUser.role === 'admin';
     }
   } catch (_) {}
 
   document.querySelectorAll('.logout-trigger').forEach((btn) => {
     btn.addEventListener('click', () => {
       localStorage.removeItem('pia_access_token');
+      localStorage.removeItem('pia_user');
       localStorage.removeItem('pia_current_user');
       window.location.href = 'index.html';
     });
@@ -372,6 +424,20 @@ function renderAdminApprovalSection() {
         .map((t) => `<option value="${t.id}" data-name="${t.name || t.full_name}" data-email="${t.email}">${t.name || t.full_name} (${t.email})</option>`)
         .join('');
     if (currentVal) selectTeacherEl.value = currentVal;
+
+    if (!selectTeacherEl.dataset.hasNameListener) {
+      selectTeacherEl.dataset.hasNameListener = 'true';
+      selectTeacherEl.addEventListener('change', () => {
+        const formTeacherNameEl = document.getElementById('formTeacherName');
+        if (!formTeacherNameEl) return;
+        if (selectTeacherEl.value) {
+          const opt = selectTeacherEl.options[selectTeacherEl.selectedIndex];
+          formTeacherNameEl.textContent = opt.getAttribute('data-name') || opt.textContent.split('(')[0].trim();
+        } else {
+          formTeacherNameEl.textContent = currentUser ? (currentUser.full_name || currentUser.username) : 'Guru';
+        }
+      });
+    }
   }
 
   const pendingList = allSubmissions.filter((s) => (s.approval_status || 'Pending') === 'Pending');

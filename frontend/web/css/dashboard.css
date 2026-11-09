@@ -148,10 +148,51 @@ body {
   background: var(--primary-light);
 }
 
-.user-menu {
-  display: flex;
+.btn-hamburger {
+  display: none;
+  background: #f8fafc;
+  border: 1.5px solid var(--border-color);
+  color: var(--secondary);
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+.btn-hamburger:hover,
+.btn-hamburger.active {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #2563eb;
+}
+
+.mobile-user-card {
+  display: none;
+}
+
+.badge-teacher-name,
+.badge-student-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1.5px solid #bfdbfe;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.06);
+  text-transform: none;
+}
+
+.form-center-wrapper {
+  max-width: 660px;
+  margin: 0 auto;
 }
 
 .mobile-user-menu {
@@ -684,43 +725,103 @@ body {
 /* =========================================================
    OPTIMASI TAMPILAN MOBILE & TABLET (RESPONSIVE)
    ========================================================= */
-@media (max-width: 900px) {
+@media (max-width: 992px) {
   .topbar-inner {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 12px 16px;
-    gap: 10px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    position: relative;
+    min-height: 64px;
+    gap: 0;
+  }
+
+  .topbar-brand-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .btn-hamburger {
+    display: inline-flex;
   }
 
   .desktop-user-menu {
-    display: none;
+    display: none !important;
   }
 
   .mobile-user-menu {
-    display: flex;
+    display: none !important;
   }
 
   .nav-links {
-    width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    padding: 5px;
-    background: #f8fafc;
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    gap: 6px;
-    justify-content: flex-start;
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    border-bottom: 2px solid var(--border-color);
+    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.14);
+    flex-direction: column;
+    padding: 16px 20px 20px;
+    gap: 8px;
+    z-index: 999;
+    animation: slideDownNav 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  .nav-links::-webkit-scrollbar {
-    display: none;
+  .nav-links.is-open {
+    display: flex !important;
   }
 
   .nav-item {
-    flex: 0 0 auto;
-    text-align: center;
-    padding: 8px 14px;
-    font-size: 0.8rem;
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-align: left;
+    background: #f8fafc;
+    border: 1px solid transparent;
+  }
+
+  .nav-item:hover {
+    background: #eff6ff;
+    color: var(--primary);
+    border-color: #bfdbfe;
+  }
+
+  .nav-item.active {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-color: #93c5fd;
+    font-weight: 700;
+  }
+
+  .mobile-user-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-color);
+    gap: 12px;
+  }
+
+  .mobile-user-card .user-chip {
+    text-align: left;
+  }
+}
+
+@keyframes slideDownNav {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

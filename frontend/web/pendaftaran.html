@@ -22,17 +22,35 @@
           </div>
         </a>
 
-        <div class="user-menu mobile-user-menu">
-          <button type="button" class="btn-logout logout-trigger">Keluar</button>
-        </div>
+        <!-- Tombol Menu Garis 3 (Hamburger) untuk Layar Ramping / Mobile -->
+        <button type="button" class="btn-hamburger" id="hamburgerBtn" aria-label="Buka Menu Navigasi" aria-expanded="false">
+          <svg class="icon-hamburger" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+          <svg class="icon-close" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
       </div>
 
-      <nav class="nav-links" aria-label="Menu Navigasi">
+      <nav class="nav-links" id="mainNavLinks" aria-label="Menu Navigasi">
         <a href="dashboard.html" class="nav-item">Dashboard</a>
         <a href="pendaftaran.html" class="nav-item active">Pendaftaran</a>
         <a href="absensi-guru.html" class="nav-item">Absensi Guru</a>
         <a href="absensi-siswa.html" class="nav-item">Absensi Siswa</a>
         <a href="#rekap-pembelajaran" class="nav-item" data-coming-soon="Halaman Rekap Pembelajaran Siswa akan segera kita bangun.">Rekap Pembelajaran</a>
+
+        <!-- Info Akun User pada Dropdown Mobile -->
+        <div class="mobile-user-card">
+          <div class="user-chip">
+            <div class="name" id="mobileUserName">Pengguna PIA</div>
+            <div class="role" id="mobileUserEmail">Pendidikan Islam At-Taqwa</div>
+          </div>
+          <button type="button" class="btn-logout logout-trigger">Keluar</button>
+        </div>
       </nav>
 
       <div class="user-menu desktop-user-menu">
