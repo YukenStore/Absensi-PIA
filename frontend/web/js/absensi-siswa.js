@@ -412,3 +412,4 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await loadStudentsAndAttendance();
 });
+
