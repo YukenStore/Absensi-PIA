@@ -250,6 +250,16 @@ body {
   padding-right: 44px;
 }
 
+/* Matikan ikon mata / clear bawaan browser (Edge/Chromium) agar tidak double */
+input::-ms-reveal,
+input::-ms-clear,
+.form-control::-ms-reveal,
+.form-control::-ms-clear {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 .toggle-password {
   position: absolute;
   right: 12px;

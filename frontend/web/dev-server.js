@@ -1,4 +1,6 @@
 const http = require('http');
+const https = require('https');
+const tls = require('tls');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -7,6 +9,231 @@ const { DatabaseSync } = require('node:sqlite');
 const PORT = process.env.PORT || 5173;
 const PUBLIC_DIR = __dirname;
 const DB_PATH = path.resolve(__dirname, '../../backend/absensi_pia.db');
+const ENV_PATH = path.resolve(__dirname, '../../backend/.env');
+
+// Membaca file backend/.env secara real-time (tanpa perlu restart server saat .env diedit)
+function loadEnvConfig() {
+  const config = {
+    SMTP_HOST: 'smtp.gmail.com',
+    SMTP_PORT: '465',
+    SMTP_USER: '',
+    SMTP_PASSWORD: '',
+    SMTP_FROM_NAME: 'Sistem Absensi PIA',
+    EMAIL_RELAY_URL: '',
+  };
+
+  if (fs.existsSync(ENV_PATH)) {
+    const lines = fs.readFileSync(ENV_PATH, 'utf8').split(/\r?\n/);
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (!line || line.startsWith('#') || !line.includes('=')) continue;
+      const idx = line.indexOf('=');
+      const key = line.slice(0, idx).trim();
+      const val = line.slice(idx + 1).trim().replace(/^["']|["']$/g, '');
+      config[key] = val;
+    }
+  }
+  return config;
+}
+
+function buildOtpHtmlEmail(fullName, otpCode) {
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px;">
+      <h2 style="color: #1e3a8a; margin-top: 0;">Aktivasi Akun Absensi PIA</h2>
+      <p style="color: #334155; font-size: 15px; line-height: 1.5;">
+        Halo <strong>${fullName}</strong>,<br><br>
+        Terima kasih telah melakukan registrasi di <strong>Sistem Informasi Absensi &amp; Pembelajaran PIA</strong>.
+        Masukkan 6 digit kode OTP berikut untuk mengaktifkan akun Anda:
+      </p>
+      <div style="background: #eff6ff; border: 1px dashed #2563eb; border-radius: 10px; padding: 16px; text-align: center; margin: 24px 0;">
+        <span style="font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #1d4ed8;">${otpCode}</span>
+      </div>
+      <p style="color: #64748b; font-size: 13px;">
+        Kode ini berlaku selama <strong>5 menit</strong>. Jangan berikan kode rahasia ini kepada siapa pun.
+      </p>
+    </div>
+  `.trim();
+}
+
+// Pengiriman Email Asli melalui SMTP Gmail (Port 465 SSL/TLS Native Node.js)
+function sendViaGmailSmtp({ smtpUser, smtpPassword, fromName, toEmail, fullName, otpCode }) {
+  return new Promise((resolve, reject) => {
+    const cleanPass = smtpPassword.replace(/\s+/g, '');
+    const subject = `[${otpCode}] Kode Aktivasi Akun Sistem Absensi PIA`;
+    const htmlBody = buildOtpHtmlEmail(fullName, otpCode);
+
+    const socket = tls.connect(
+      {
+        host: 'smtp.gmail.com',
+        port: 465,
+        servername: 'smtp.gmail.com',
+        rejectUnauthorized: false,
+        timeout: 15000,
+      },
+      () => {}
+    );
+
+    let step = 0;
+    let buffer = '';
+
+    const sendLine = (cmd) => {
+      socket.write(cmd + '\r\n');
+    };
+
+    socket.on('data', (chunk) => {
+      buffer += chunk.toString('utf8');
+      const lines = buffer.split('\r\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (!line) continue;
+        // Tunggu baris terakhir dari multi-line response (karakter ke-4 adalah spasi, bukan '-')
+        if (line.length >= 4 && line[3] === '-') continue;
+
+        const code = parseInt(line.slice(0, 3), 10);
+        if (code >= 400) {
+          socket.destroy();
+          return reject(new Error(`SMTP Error (${code}): ${line}`));
+        }
+
+        if (step === 0 && code === 220) {
+          step = 1;
+          sendLine('EHLO absensi-pia.local');
+        } else if (step === 1 && code === 250) {
+          step = 2;
+          sendLine('AUTH LOGIN');
+        } else if (step === 2 && code === 334) {
+          step = 3;
+          sendLine(Buffer.from(smtpUser, 'utf8').toString('base64'));
+        } else if (step === 3 && code === 334) {
+          step = 4;
+          sendLine(Buffer.from(cleanPass, 'utf8').toString('base64'));
+        } else if (step === 4 && code === 235) {
+          step = 5;
+          sendLine(`MAIL FROM:<${smtpUser}>`);
+        } else if (step === 5 && code === 250) {
+          step = 6;
+          sendLine(`RCPT TO:<${toEmail}>`);
+        } else if (step === 6 && code === 250) {
+          step = 7;
+          sendLine('DATA');
+        } else if (step === 7 && code === 354) {
+          step = 8;
+          const mimeMessage = [
+            `From: "${fromName}" <${smtpUser}>`,
+            `To: <${toEmail}>`,
+            `Subject: ${subject}`,
+            'MIME-Version: 1.0',
+            'Content-Type: text/html; charset=UTF-8',
+            '',
+            htmlBody,
+            '.',
+          ].join('\r\n');
+          sendLine(mimeMessage);
+        } else if (step === 8 && code === 250) {
+          step = 9;
+          sendLine('QUIT');
+          socket.end();
+          return resolve(true);
+        }
+      }
+    });
+
+    socket.on('timeout', () => {
+      socket.destroy();
+      reject(new Error('Koneksi ke server SMTP Gmail timeout.'));
+    });
+
+    socket.on('error', (err) => {
+      reject(err);
+    });
+  });
+}
+
+// Pengiriman Email Asli melalui Google Apps Script Relay URL (HTTPS)
+function sendViaRelayWebhook(relayUrl, { toEmail, fullName, otpCode }) {
+  return new Promise((resolve, reject) => {
+    const payload = JSON.stringify({
+      to: toEmail,
+      subject: `[${otpCode}] Kode Aktivasi Akun Sistem Absensi PIA`,
+      htmlBody: buildOtpHtmlEmail(fullName, otpCode),
+    });
+
+    function postUrl(targetUrl, redirectCount = 0) {
+      if (redirectCount > 5) return reject(new Error('Terlalu banyak redirect pada Relay URL.'));
+      const u = new URL(targetUrl);
+      const req = https.request(
+        {
+          hostname: u.hostname,
+          path: u.pathname + u.search,
+          method: redirectCount > 0 ? 'GET' : 'POST',
+          headers:
+            redirectCount > 0
+              ? {}
+              : {
+                  'Content-Type': 'application/json',
+                  'Content-Length': Buffer.byteLength(payload),
+                },
+        },
+        (res) => {
+          if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+            return postUrl(res.headers.location, redirectCount + 1);
+          }
+          let data = '';
+          res.on('data', (c) => (data += c));
+          res.on('end', () => {
+            if (res.statusCode >= 200 && res.statusCode < 300) {
+              resolve(true);
+            } else {
+              reject(new Error(`Relay HTTP ${res.statusCode}: ${data}`));
+            }
+          });
+        }
+      );
+      req.on('error', reject);
+      if (redirectCount === 0) req.write(payload);
+      req.end();
+    }
+
+    postUrl(relayUrl);
+  });
+}
+
+async function dispatchOtpEmail({ toEmail, fullName, otpCode }) {
+  const env = loadEnvConfig();
+
+  console.log('\n========================================================');
+  console.log('  [OTP EMAIL SERVICE - SISTEM ABSENSI PIA]');
+  console.log(`  Penerima : ${fullName} <${toEmail}>`);
+  console.log(`  KODE OTP : ${otpCode} (Berlaku 5 menit)`);
+  console.log('========================================================');
+
+  // 1. Jika SMTP_USER & SMTP_PASSWORD diisi di backend/.env, kirim via SMTP Gmail asli
+  if (env.SMTP_USER && env.SMTP_PASSWORD) {
+    console.log(`  ➜ Mengirim email OTP asli ke ${toEmail} via SMTP Gmail (${env.SMTP_USER})...`);
+    await sendViaGmailSmtp({
+      smtpUser: env.SMTP_USER,
+      smtpPassword: env.SMTP_PASSWORD,
+      fromName: env.SMTP_FROM_NAME || 'Sistem Absensi PIA',
+      toEmail,
+      fullName,
+      otpCode,
+    });
+    console.log(`  ✓ [SUKSES] Email OTP berhasil terkirim ke kotak masuk ${toEmail}!\n`);
+    return { realEmailSent: true };
+  }
+
+  // 2. Jika EMAIL_RELAY_URL diisi di backend/.env, kirim via Google Apps Script Relay
+  if (env.EMAIL_RELAY_URL) {
+    console.log(`  ➜ Mengirim email OTP asli ke ${toEmail} via Email Relay...`);
+    await sendViaRelayWebhook(env.EMAIL_RELAY_URL, { toEmail, fullName, otpCode });
+    console.log(`  ✓ [SUKSES] Email OTP berhasil terkirim ke kotak masuk ${toEmail}!\n`);
+    return { realEmailSent: true };
+  }
+
+  console.log('  [!] SMTP_PASSWORD belum diisi di backend/.env. Menggunakan mode pratinjau OTP.\n');
+  return { realEmailSent: false };
+}
 
 // Inisialisasi Database SQLite (Skema 100% identik dengan Cloudflare D1 & Python Backend)
 const db = new DatabaseSync(DB_PATH);
@@ -31,7 +258,6 @@ db.exec(`
   );
 `);
 
-// Algoritma Hashing 1000-Putaran SHA-256 (Identik dengan C++ Core pia_hash_password)
 function hashPassword(password, salt) {
   let current = `${salt}:${password}:PIA_CORE_V1`;
   for (let i = 0; i < 1000; i++) {
@@ -107,9 +333,6 @@ const server = http.createServer(async (req, res) => {
   const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
   let pathname = decodeURIComponent(parsedUrl.pathname);
 
-  // ==========================================================
-  // ENDPOINT API AUTENTIKASI END-TO-END (/api/auth/*)
-  // ==========================================================
   if (pathname.startsWith('/api/auth/') && req.method === 'POST') {
     try {
       const body = await parseBody(req);
@@ -171,17 +394,25 @@ const server = http.createServer(async (req, res) => {
           'INSERT INTO otp_verifications (email, otp_code, expires_at, is_used) VALUES (?, ?, ?, 0)'
         ).run(email, otpCode, expiresAt);
 
-        console.log('\n========================================================');
-        console.log('  [OTP EMAIL SERVICE - SISTEM ABSENSI PIA]');
-        console.log(`  Penerima : ${fullName} <${email}>`);
-        console.log(`  KODE OTP : ${otpCode} (Berlaku 5 menit)`);
-        console.log('========================================================\n');
-
-        return sendJson(res, 201, {
-          success: true,
-          message: `Registrasi berhasil! Kode OTP telah dikirim ke ${email}.`,
-          otp_preview: otpCode,
+        const mailResult = await dispatchOtpEmail({
+          toEmail: email,
+          fullName,
+          otpCode,
         });
+
+        const responsePayload = {
+          success: true,
+          email_sent: mailResult.realEmailSent,
+          message: mailResult.realEmailSent
+            ? `Kode OTP 6 digit telah dikirimkan ke email ${email}. Silakan cek Inbox/Spam Anda.`
+            : `Registrasi berhasil! (Isi SMTP_PASSWORD di backend/.env untuk mengirim ke email asli).`,
+        };
+
+        if (!mailResult.realEmailSent) {
+          responsePayload.otp_preview = otpCode;
+        }
+
+        return sendJson(res, 201, responsePayload);
       }
 
       if (pathname === '/api/auth/verify-otp') {
@@ -254,17 +485,25 @@ const server = http.createServer(async (req, res) => {
           'INSERT INTO otp_verifications (email, otp_code, expires_at, is_used) VALUES (?, ?, ?, 0)'
         ).run(email, otpCode, expiresAt);
 
-        console.log('\n========================================================');
-        console.log('  [RESEND OTP - SISTEM ABSENSI PIA]');
-        console.log(`  Penerima : ${user.full_name} <${email}>`);
-        console.log(`  KODE OTP : ${otpCode} (Berlaku 5 menit)`);
-        console.log('========================================================\n');
-
-        return sendJson(res, 200, {
-          success: true,
-          message: `Kode OTP baru telah dikirimkan ke ${email}.`,
-          otp_preview: otpCode,
+        const mailResult = await dispatchOtpEmail({
+          toEmail: email,
+          fullName: user.full_name,
+          otpCode,
         });
+
+        const responsePayload = {
+          success: true,
+          email_sent: mailResult.realEmailSent,
+          message: mailResult.realEmailSent
+            ? `Kode OTP baru telah dikirim ke kotak masuk ${email}.`
+            : `Kode OTP baru telah dibuat untuk ${email}.`,
+        };
+
+        if (!mailResult.realEmailSent) {
+          responsePayload.otp_preview = otpCode;
+        }
+
+        return sendJson(res, 200, responsePayload);
       }
 
       if (pathname === '/api/auth/login') {
@@ -308,13 +547,10 @@ const server = http.createServer(async (req, res) => {
         });
       }
     } catch (err) {
-      return sendJson(res, 500, { detail: `Server error: ${err.message}` });
+      return sendJson(res, 500, { detail: `Gagal mengirim email OTP: ${err.message}` });
     }
   }
 
-  // ==========================================================
-  // PENYAJIAN FILE STATIS UI WEB
-  // ==========================================================
   if (pathname === '/' || pathname === '/login') {
     pathname = '/index.html';
   } else if (pathname === '/register') {
@@ -357,11 +593,11 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, '127.0.0.1', () => {
   console.log('\n======================================================');
-  console.log('  🚀 Absensi PIA - Fullstack Dev Server (UI + SQL API)');
+  console.log('  🚀 Absensi PIA - Fullstack Dev Server (UI + SQL + SMTP)');
   console.log('======================================================');
   console.log(`  ➜ Halaman Login      : http://localhost:${PORT}/`);
   console.log(`  ➜ Halaman Registrasi : http://localhost:${PORT}/register.html`);
   console.log(`  ➜ Halaman OTP Email  : http://localhost:${PORT}/verify-otp.html`);
-  console.log(`  ➜ Database SQL       : ${DB_PATH}`);
+  console.log(`  ➜ Konfigurasi SMTP   : ${ENV_PATH}`);
   console.log('======================================================\n');
 });

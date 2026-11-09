@@ -38,6 +38,43 @@ function generateSalt() {
   return Array.from(array, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+function buildOtpHtmlEmail(fullName, otpCode) {
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px;">
+      <h2 style="color: #1e3a8a; margin-top: 0;">Aktivasi Akun Absensi PIA</h2>
+      <p style="color: #334155; font-size: 15px; line-height: 1.5;">
+        Halo <strong>${fullName}</strong>,<br><br>
+        Terima kasih telah melakukan registrasi di <strong>Sistem Informasi Absensi &amp; Pembelajaran PIA</strong>.
+        Masukkan 6 digit kode OTP berikut untuk mengaktifkan akun Anda:
+      </p>
+      <div style="background: #eff6ff; border: 1px dashed #2563eb; border-radius: 10px; padding: 16px; text-align: center; margin: 24px 0;">
+        <span style="font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #1d4ed8;">${otpCode}</span>
+      </div>
+      <p style="color: #64748b; font-size: 13px;">
+        Kode ini berlaku selama <strong>5 menit</strong>. Jangan berikan kode rahasia ini kepada siapa pun.
+      </p>
+    </div>
+  `.trim();
+}
+
+async function sendRealEmailFromWorker(env, { toEmail, fullName, otpCode }) {
+  const subject = `[${otpCode}] Kode Aktivasi Akun Sistem Absensi PIA`;
+  const htmlBody = buildOtpHtmlEmail(fullName, otpCode);
+
+  if (env.EMAIL_RELAY_URL) {
+    const resp = await fetch(env.EMAIL_RELAY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: toEmail, subject, htmlBody }),
+    });
+    if (!resp.ok) {
+      throw new Error(`Email Relay gagal (${resp.status})`);
+    }
+    return true;
+  }
+  return false;
+}
+
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -222,14 +259,23 @@ export default {
             });
           }
 
-          return jsonResponse(
-            {
-              success: true,
-              message: `Registrasi berhasil! Kode OTP telah dikirim ke ${email}.`,
-              otp_preview: otpCode,
-            },
-            201
-          );
+          const emailSent = await sendRealEmailFromWorker(env, {
+            toEmail: email,
+            fullName,
+            otpCode,
+          });
+
+          const responsePayload = {
+            success: true,
+            email_sent: emailSent,
+            message: emailSent
+              ? `Kode OTP 6 digit telah dikirimkan ke kotak masuk ${email}.`
+              : `Registrasi berhasil! Kode OTP telah dibuat untuk ${email}.`,
+          };
+          if (!emailSent) {
+            responsePayload.otp_preview = otpCode;
+          }
+          return jsonResponse(responsePayload, 201);
         }
 
         // 2. VERIFY OTP
@@ -433,3 +479,4 @@ export default {
     return new Response('Sistem Absensi PIA Worker Aktif', { status: 200 });
   },
 };
+

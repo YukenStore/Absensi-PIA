@@ -9,3 +9,4 @@ binding = "ASSETS"
 # Setelah Anda membuat Database D1 di Dashboard Cloudflare (Storage & Databases -> D1),
 # Anda dapat menghubungkannya langsung melalui menu Settings -> Bindings -> Add D1 Database
 # dengan Variable name: DB
+
