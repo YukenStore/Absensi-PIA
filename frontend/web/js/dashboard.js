@@ -241,7 +241,7 @@ function renderDailyMatrix({
     for (let d = 1; d <= daysCount; d++) {
       const holiday = isHolidayDate(year, monthIndex, d);
       if (holiday) {
-        bodyHtml += `<td class="cell-status cell-libur" title="Hari Libur">L</td>`;
+        bodyHtml += `<td class="td-day is-holiday-col" title="Hari Libur"><span class="status-pill cell-libur">L</span></td>`;
         continue;
       }
 
@@ -249,11 +249,11 @@ function renderDailyMatrix({
       const status = recordsMap[`${person.id}_${dateKey}`] || 'H';
 
       if (status === 'H') {
-        bodyHtml += `<td class="cell-status cell-hadir" title="${person.name} - Tanggal ${d}: Hadir">H</td>`;
+        bodyHtml += `<td class="td-day" title="${person.name} - Tanggal ${d}: Hadir"><span class="status-pill cell-hadir">H</span></td>`;
       } else if (status === 'S' || status === 'I') {
-        bodyHtml += `<td class="cell-status cell-sakit" title="${person.name} - Tanggal ${d}: Sakit/Izin">${status}</td>`;
+        bodyHtml += `<td class="td-day" title="${person.name} - Tanggal ${d}: Izin/Sakit"><span class="status-pill cell-sakit">${status}</span></td>`;
       } else {
-        bodyHtml += `<td class="cell-status cell-alfa" title="${person.name} - Tanggal ${d}: Alfa">A</td>`;
+        bodyHtml += `<td class="td-day" title="${person.name} - Tanggal ${d}: Alfa"><span class="status-pill cell-alfa">A</span></td>`;
       }
     }
 

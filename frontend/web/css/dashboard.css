@@ -433,9 +433,9 @@ body {
 .matrix-table td {
   border-right: 1px solid var(--border-color);
   border-bottom: 1px solid var(--border-color);
-  padding: 8px 6px;
+  padding: 6px 4px;
   text-align: center;
-  background-clip: padding-box;
+  background-color: #ffffff;
 }
 
 .matrix-table tr:last-child td {
@@ -443,13 +443,14 @@ body {
 }
 
 .matrix-table thead th {
-  background: #f8fafc;
+  background-color: #f8fafc;
   color: var(--secondary);
   font-weight: 700;
   user-select: none;
+  padding: 8px 6px;
 }
 
-/* Sticky Kolom No (left: 0) & Kolom Nama (left: 44px) agar tidak bocor saat digeser */
+/* Sticky Kolom No (left: 0) & Kolom Nama (left: 44px) bebas bocor sub-pixel */
 .matrix-table th.sticky-no,
 .matrix-table td.sticky-no {
   position: sticky;
@@ -457,40 +458,43 @@ body {
   width: 44px;
   min-width: 44px;
   max-width: 44px;
-  background: #ffffff;
-  z-index: 3;
+  background-color: #ffffff;
+  z-index: 4;
   font-weight: 600;
   text-align: center;
+  box-shadow: -8px 0 0 0 #ffffff;
 }
 
 .matrix-table thead th.sticky-no {
-  background: #f1f5f9;
-  z-index: 4;
+  background-color: #f1f5f9;
+  z-index: 5;
+  box-shadow: -8px 0 0 0 #f1f5f9;
 }
 
 .matrix-table th.sticky-col,
 .matrix-table td.sticky-col {
   position: sticky;
   left: 44px;
-  background: #ffffff;
-  z-index: 3;
+  background-color: #ffffff;
+  z-index: 4;
   text-align: center;
   padding: 10px 14px;
   min-width: 185px;
   font-weight: 600;
   border-right: 2px solid #cbd5e1;
-  box-shadow: 3px 0 6px -2px rgba(15, 23, 42, 0.08);
+  box-shadow: -2px 0 0 0 #ffffff, 4px 0 8px -2px rgba(15, 23, 42, 0.08);
 }
 
 .matrix-table thead th.sticky-col {
-  background: #f1f5f9;
-  z-index: 4;
+  background-color: #f1f5f9;
+  z-index: 5;
+  box-shadow: -2px 0 0 0 #f1f5f9, 4px 0 8px -2px rgba(15, 23, 42, 0.08);
 }
 
 /* Clickable Date Column Header for Toggling Holidays */
 .th-day {
   cursor: pointer;
-  min-width: 34px;
+  min-width: 38px;
   transition: background 0.15s ease;
 }
 
@@ -522,28 +526,44 @@ body {
 }
 
 /* Status Cells Inside Daily Matrix */
-.cell-status {
+.td-day {
+  background-color: #ffffff;
+  vertical-align: middle;
+}
+
+.td-day.is-holiday-col {
+  background-color: #f8fafc;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 26px;
+  border-radius: 6px;
   font-weight: 700;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
+  line-height: 1;
 }
 
 .cell-hadir {
-  background: var(--hadir-bg);
+  background-color: var(--hadir-bg);
   color: #ffffff;
 }
 
 .cell-sakit {
-  background: var(--sakit-bg);
+  background-color: var(--sakit-bg);
   color: #ffffff;
 }
 
 .cell-alfa {
-  background: var(--alfa-bg);
+  background-color: var(--alfa-bg);
   color: #ffffff;
 }
 
 .cell-libur {
-  background: var(--libur-soft);
+  background-color: var(--libur-soft);
   color: #94a3b8;
   font-weight: 600;
 }

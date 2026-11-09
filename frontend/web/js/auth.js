@@ -1,9 +1,218 @@
 /**
  * Modul Autentikasi Web - Sistem Absensi PIA
- * Terhubung secara End-to-End dengan SQL Database (Cloudflare D1 / SQLite) & C++ Core
+ * Mendukung Server Lokal (SQLite + SMTP Gmail), Cloudflare Worker, & GitHub Pages
  */
 
 const API_BASE_URL = '/api/auth';
+const CLOUDFLARE_API_URL = 'https://absensi-pia.yumenoboken.workers.dev/api/auth';
+
+// =========================================================================
+// ENGINE DATABASE LOKAL BROWSER (FALLBACK OTOMATIS UNTUK GITHUB PAGES)
+// =========================================================================
+function getStaticDb() {
+  try {
+    const raw = localStorage.getItem('pia_gh_pages_db');
+    if (raw) return JSON.parse(raw);
+  } catch (_) {}
+  return { users: [], otps: [] };
+}
+
+function saveStaticDb(dbObj) {
+  try {
+    localStorage.setItem('pia_gh_pages_db', JSON.stringify(dbObj));
+  } catch (_) {}
+}
+
+function handleStaticAuthFallback(endpoint, payload) {
+  const db = getStaticDb();
+
+  if (endpoint === '/register') {
+    const fullName = (payload.full_name || '').trim();
+    const email = (payload.email || '').trim().toLowerCase();
+    const username = (payload.username || '').trim();
+    const password = payload.password || '';
+
+    const existingEmail = db.users.find((u) => u.email === email);
+    if (existingEmail && existingEmail.is_active) {
+      throw new Error('Alamat email sudah terdaftar dan aktif. Silakan langsung login.');
+    }
+
+    const existingUser = db.users.find(
+      (u) => u.username.toLowerCase() === username.toLowerCase()
+    );
+    if (existingUser && (!existingEmail || existingUser.email !== email)) {
+      throw new Error('Username sudah digunakan oleh pengguna lain.');
+    }
+
+    if (existingEmail) {
+      existingEmail.full_name = fullName;
+      existingEmail.username = username;
+      existingEmail.password = password;
+    } else {
+      db.users.push({
+        id: db.users.length + 1,
+        full_name: fullName,
+        email,
+        username,
+        password,
+        is_active: false,
+      });
+    }
+
+    const otpCode = String(Math.floor(100000 + Math.random() * 900000));
+    db.otps.push({
+      email,
+      otp_code: otpCode,
+      expires_at: Date.now() + 300000,
+      is_used: false,
+    });
+    saveStaticDb(db);
+
+    return {
+      success: true,
+      message: `Registrasi berhasil! Kode OTP untuk ${email} telah dibuat.`,
+      otp_preview: otpCode,
+    };
+  }
+
+  if (endpoint === '/verify-otp') {
+    const email = (payload.email || '').trim().toLowerCase();
+    const otpCode = (payload.otp_code || '').trim();
+
+    const user = db.users.find((u) => u.email === email);
+    if (!user) {
+      throw new Error('Akun dengan alamat email tersebut tidak ditemukan.');
+    }
+    const otpList = db.otps.filter((o) => o.email === email && !o.is_used);
+    const latestOtp = otpList[otpList.length - 1];
+    if (!latestOtp) {
+      throw new Error('Tidak ada kode OTP aktif untuk email ini.');
+    }
+    if (Date.now() > latestOtp.expires_at) {
+      throw new Error('Kode OTP telah kedaluwarsa. Silakan klik Kirim Ulang OTP.');
+    }
+    if (latestOtp.otp_code !== otpCode) {
+      throw new Error('Kode OTP yang dimasukkan tidak sesuai.');
+    }
+
+    latestOtp.is_used = true;
+    user.is_active = true;
+    saveStaticDb(db);
+
+    return {
+      success: true,
+      message: 'Akun berhasil diaktifkan! Silakan login menggunakan akun Anda.',
+    };
+  }
+
+  if (endpoint === '/resend-otp') {
+    const email = (payload.email || '').trim().toLowerCase();
+    const user = db.users.find((u) => u.email === email);
+    if (!user) {
+      throw new Error('Akun dengan alamat email tersebut belum terdaftar.');
+    }
+    const otpCode = String(Math.floor(100000 + Math.random() * 900000));
+    db.otps.push({
+      email,
+      otp_code: otpCode,
+      expires_at: Date.now() + 300000,
+      is_used: false,
+    });
+    saveStaticDb(db);
+
+    return {
+      success: true,
+      message: `Kode OTP baru telah dibuat untuk ${email}.`,
+      otp_preview: otpCode,
+    };
+  }
+
+  if (endpoint === '/login') {
+    const identifier = (payload.identifier || '').trim();
+    const password = payload.password || '';
+
+    const user = db.users.find(
+      (u) =>
+        u.username.toLowerCase() === identifier.toLowerCase() ||
+        u.email.toLowerCase() === identifier.toLowerCase() ||
+        u.full_name.toLowerCase() === identifier.toLowerCase()
+    );
+
+    if (!user || user.password !== password) {
+      throw new Error('Username/email atau password tidak sesuai.');
+    }
+    if (!user.is_active) {
+      throw new Error('Akun Anda belum diaktifkan. Silakan verifikasi kode OTP terlebih dahulu.');
+    }
+
+    return {
+      success: true,
+      message: 'Login berhasil!',
+      access_token: `gh_token_${user.id}_${Date.now()}`,
+      user: {
+        id: user.id,
+        full_name: user.full_name,
+        username: user.username,
+        email: user.email,
+      },
+    };
+  }
+
+  throw new Error('Endpoint tidak dikenali.');
+}
+
+async function callAuthApi(endpoint, payload) {
+  const isGitHubPages = window.location.hostname.includes('github.io');
+
+  if (!isGitHubPages) {
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || data.message || 'Permintaan gagal.');
+        }
+        return data;
+      }
+    } catch (err) {
+      if (!(err instanceof TypeError) && !String(err.message).includes('JSON')) {
+        throw err;
+      }
+    }
+  }
+
+  // Coba melalui Cloudflare Worker API, atau gunakan fallback GitHub Pages
+  try {
+    const cfResp = await fetch(`${CLOUDFLARE_API_URL}${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const cfType = cfResp.headers.get('content-type') || '';
+    if (cfType.includes('application/json')) {
+      const cfData = await cfResp.json();
+      if (!cfResp.ok) {
+        throw new Error(cfData.detail || cfData.message || 'Permintaan gagal.');
+      }
+      return cfData;
+    }
+  } catch (err) {
+    if (
+      !(err instanceof TypeError) &&
+      !String(err.message).includes('JSON') &&
+      !String(err.message).includes('Failed to fetch')
+    ) {
+      throw err;
+    }
+  }
+
+  return handleStaticAuthFallback(endpoint, payload);
+}
 
 function showAlert(message, type = 'error') {
   const alertBox = document.getElementById('alertBox');
@@ -127,21 +336,12 @@ if (registerForm) {
     submitBtn.innerHTML = '<span>Memproses &amp; Mengirim OTP...</span>';
 
     try {
-      const response = await fetch(`${API_BASE_URL}/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          full_name: fullName,
-          email: email,
-          username: username,
-          password: password,
-        }),
+      const data = await callAuthApi('/register', {
+        full_name: fullName,
+        email: email,
+        username: username,
+        password: password,
       });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.detail || data.message || 'Gagal melakukan registrasi.');
-      }
 
       sessionStorage.setItem('pending_verification_email', email);
       if (data.otp_preview) {
@@ -261,14 +461,7 @@ if (otpForm) {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/resend-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: targetEmail }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || 'Gagal mengirim ulang OTP.');
-
+      const data = await callAuthApi('/resend-otp', { email: targetEmail });
       if (data.otp_preview) {
         sessionStorage.setItem('demo_otp_preview', data.otp_preview);
         showAlert(
@@ -306,17 +499,10 @@ if (otpForm) {
     submitBtn.innerHTML = '<span>Memverifikasi OTP...</span>';
 
     try {
-      const response = await fetch(`${API_BASE_URL}/verify-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: targetEmail,
-          otp_code: otpCode,
-        }),
+      await callAuthApi('/verify-otp', {
+        email: targetEmail,
+        otp_code: otpCode,
       });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || 'Kode OTP tidak valid atau kedaluwarsa.');
 
       sessionStorage.removeItem('pending_verification_email');
       sessionStorage.removeItem('demo_otp_preview');
@@ -399,17 +585,10 @@ if (loginForm) {
     submitBtn.innerHTML = '<span>Memproses Login...</span>';
 
     try {
-      const response = await fetch(`${API_BASE_URL}/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          identifier: identifier,
-          password: password,
-        }),
+      const data = await callAuthApi('/login', {
+        identifier: identifier,
+        password: password,
       });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || 'Username/email atau password salah.');
 
       if (data.access_token) {
         localStorage.setItem('pia_access_token', data.access_token);
