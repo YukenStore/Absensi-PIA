@@ -256,6 +256,11 @@ db.exec(`
     is_used INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
+  CREATE TABLE IF NOT EXISTS custom_holidays (
+    holiday_date TEXT PRIMARY KEY,
+    is_holiday INTEGER NOT NULL DEFAULT 1,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `);
 
 function hashPassword(password, salt) {
@@ -551,12 +556,45 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  // Endpoint Data Halaman Utama (Rekap & Hari Libur)
+  if (pathname === '/api/attendance/overview' && req.method === 'GET') {
+    const rows = db.prepare('SELECT holiday_date, is_holiday FROM custom_holidays').all();
+    const customHolidays = {};
+    for (const r of rows) {
+      customHolidays[r.holiday_date] = Boolean(r.is_holiday);
+    }
+    return sendJson(res, 200, {
+      success: true,
+      custom_holidays: customHolidays,
+    });
+  }
+
+  if (pathname === '/api/attendance/toggle-holiday' && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const dateStr = (body.holiday_date || '').trim();
+      const isHol = body.is_holiday ? 1 : 0;
+      if (dateStr) {
+        db.prepare(
+          `INSERT INTO custom_holidays (holiday_date, is_holiday, updated_at)
+           VALUES (?, ?, datetime('now'))
+           ON CONFLICT(holiday_date) DO UPDATE SET is_holiday = excluded.is_holiday, updated_at = datetime('now')`
+        ).run(dateStr, isHol);
+      }
+      return sendJson(res, 200, { success: true, holiday_date: dateStr, is_holiday: Boolean(isHol) });
+    } catch (err) {
+      return sendJson(res, 500, { detail: err.message });
+    }
+  }
+
   if (pathname === '/' || pathname === '/login') {
     pathname = '/index.html';
   } else if (pathname === '/register') {
     pathname = '/register.html';
   } else if (pathname === '/verify-otp') {
     pathname = '/verify-otp.html';
+  } else if (pathname === '/dashboard') {
+    pathname = '/dashboard.html';
   }
 
   const safePath = path.normalize(pathname).replace(/^(\.\.[/\\])+/, '');

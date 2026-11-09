@@ -301,4 +301,28 @@ PIA_API int pia_evaluate_attendance_status(
     return 2; // Terlambat melebihi toleransi
 }
 
+PIA_API int pia_calculate_attendance_percentage(
+    int total_hadir,
+    int total_effective_days
+) {
+    if (total_effective_days <= 0 || total_hadir <= 0) {
+        return 0;
+    }
+    if (total_hadir >= total_effective_days) {
+        return 100;
+    }
+    return static_cast<int>((static_cast<double>(total_hadir) * 100.0) / total_effective_days + 0.5);
+}
+
+PIA_API int pia_is_saturday(int year, int month, int day) {
+    static const int t[] = {0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4};
+    int y = year;
+    if (month < 3) {
+        y -= 1;
+    }
+    int dow = (y + y / 4 - y / 100 + y / 400 + t[month - 1] + day) % 7;
+    // 0 = Minggu, 1 = Senin, ..., 6 = Sabtu
+    return dow == 6 ? 1 : 0;
+}
+
 } // extern "C"

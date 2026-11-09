@@ -88,6 +88,22 @@ PIA_API int pia_evaluate_attendance_status(
     int tolerance_minutes
 );
 
+/**
+ * Menghitung persentase kehadiran (0 - 100) di C++ Core berdasarkan jumlah hadir
+ * dan total hari efektif (tidak termasuk hari Sabtu / hari yang diliburkan).
+ */
+PIA_API int pia_calculate_attendance_percentage(
+    int total_hadir,
+    int total_effective_days
+);
+
+/**
+ * Mengecek apakah tanggal tertentu (year, month 1-12, day 1-31) jatuh pada hari Sabtu
+ * menggunakan algoritma Sakamoto di C++ Core.
+ * Mengembalikan 1 jika hari Sabtu (Libur), 0 jika bukan.
+ */
+PIA_API int pia_is_saturday(int year, int month, int day);
+
 #ifdef __cplusplus
 }
 #endif

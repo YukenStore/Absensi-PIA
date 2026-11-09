@@ -1,0 +1,843 @@
+:root {
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-light: #dbeafe;
+  --secondary: #0f172a;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  --bg-page: #f1f5f9;
+  --card-bg: #ffffff;
+  --border-color: #e2e8f0;
+
+  /* Warna Status Presensi */
+  --hadir-bg: #10b981;
+  --hadir-soft: #d1fae5;
+  --hadir-text: #065f46;
+
+  --sakit-bg: #f59e0b;
+  --sakit-soft: #fef3c7;
+  --sakit-text: #92400e;
+
+  --alfa-bg: #ef4444;
+  --alfa-soft: #fee2e2;
+  --alfa-text: #991b1b;
+
+  --libur-bg: #cbd5e1;
+  --libur-soft: #f1f5f9;
+  --libur-text: #475569;
+
+  --radius-lg: 16px;
+  --radius-md: 10px;
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 10px 15px -3px rgba(15, 23, 42, 0.06), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+body {
+  background: var(--bg-page);
+  color: var(--text-main);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Top Navbar */
+.topbar {
+  background: #ffffff;
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  box-shadow: var(--shadow-sm);
+}
+
+.topbar-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px;
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.topbar-brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: var(--secondary);
+}
+
+.brand-badge {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #1e3a8a, #2563eb);
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 1.02rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand-text h1 {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.brand-text span {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  display: block;
+}
+
+/* Main Navigation Links */
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-item {
+  padding: 9px 16px;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.nav-item:hover {
+  color: var(--primary);
+  background: #f8fafc;
+}
+
+.nav-item.active {
+  color: var(--primary);
+  background: var(--primary-light);
+}
+
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mobile-user-menu {
+  display: none;
+}
+
+.user-chip {
+  text-align: right;
+}
+
+.user-chip .name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--secondary);
+}
+
+.user-chip .role {
+  font-size: 0.73rem;
+  color: var(--text-muted);
+}
+
+.btn-logout {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-logout:hover {
+  background: #fee2e2;
+}
+
+/* Main Container */
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 28px 24px 60px;
+}
+
+/* Page Header & Main Tabs ("Data Siswa" | "Data Guru") */
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.page-title h2 {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: var(--secondary);
+  margin-bottom: 4px;
+  letter-spacing: -0.01em;
+}
+
+.page-title p {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.main-tabs {
+  display: inline-flex;
+  background: #e2e8f0;
+  padding: 5px;
+  border-radius: 12px;
+  gap: 4px;
+}
+
+.main-tab-btn {
+  padding: 10px 22px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.main-tab-btn.active {
+  background: #ffffff;
+  color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+/* Cards & Filter Bars */
+.section-card {
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-color);
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.card-title h3 {
+  font-size: 1.12rem;
+  font-weight: 700;
+  color: var(--secondary);
+  margin-bottom: 4px;
+}
+
+.card-title p {
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.filter-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.select-control {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border-color);
+  background: #f8fafc;
+  color: var(--secondary);
+  font-size: 0.86rem;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.select-control:focus {
+  border-color: var(--primary);
+  background: #ffffff;
+}
+
+/* Shared Top Filter Banner for Tab Guru */
+.guru-master-filter {
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+  color: #ffffff;
+  padding: 20px 24px;
+  border-radius: var(--radius-lg);
+  margin-bottom: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  box-shadow: var(--shadow-md);
+}
+
+.guru-master-filter h3 {
+  font-size: 1.08rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.guru-master-filter p {
+  font-size: 0.84rem;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.4;
+}
+
+.guru-master-filter .select-control {
+  background: #ffffff;
+  border-color: transparent;
+  padding: 9px 14px;
+}
+
+/* Legend & Holiday Hint Bar */
+.legend-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  font-size: 0.82rem;
+}
+
+.legend-items {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--secondary);
+}
+
+.legend-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.legend-dot.hadir {
+  background: var(--hadir-bg);
+}
+
+.legend-dot.sakit {
+  background: var(--sakit-bg);
+}
+
+.legend-dot.alfa {
+  background: var(--alfa-bg);
+}
+
+.legend-dot.libur {
+  background: var(--libur-bg);
+}
+
+.holiday-tip {
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+/* Daily Matrix Table (1 - 31) */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.matrix-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.82rem;
+  min-width: 920px;
+}
+
+.matrix-table th,
+.matrix-table td {
+  border-right: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  padding: 8px 6px;
+  text-align: center;
+  background-clip: padding-box;
+}
+
+.matrix-table tr:last-child td {
+  border-bottom: none;
+}
+
+.matrix-table thead th {
+  background: #f8fafc;
+  color: var(--secondary);
+  font-weight: 700;
+  user-select: none;
+}
+
+/* Sticky Kolom No (left: 0) & Kolom Nama (left: 44px) agar tidak bocor saat digeser */
+.matrix-table th.sticky-no,
+.matrix-table td.sticky-no {
+  position: sticky;
+  left: 0;
+  width: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  background: #ffffff;
+  z-index: 3;
+  font-weight: 600;
+  text-align: center;
+}
+
+.matrix-table thead th.sticky-no {
+  background: #f1f5f9;
+  z-index: 4;
+}
+
+.matrix-table th.sticky-col,
+.matrix-table td.sticky-col {
+  position: sticky;
+  left: 44px;
+  background: #ffffff;
+  z-index: 3;
+  text-align: center;
+  padding: 10px 14px;
+  min-width: 185px;
+  font-weight: 600;
+  border-right: 2px solid #cbd5e1;
+  box-shadow: 3px 0 6px -2px rgba(15, 23, 42, 0.08);
+}
+
+.matrix-table thead th.sticky-col {
+  background: #f1f5f9;
+  z-index: 4;
+}
+
+/* Clickable Date Column Header for Toggling Holidays */
+.th-day {
+  cursor: pointer;
+  min-width: 34px;
+  transition: background 0.15s ease;
+}
+
+.th-day:hover {
+  background: var(--primary-light) !important;
+}
+
+.th-day .day-num {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.th-day .day-name {
+  display: block;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.th-day.is-holiday {
+  background: #e2e8f0 !important;
+  color: #64748b;
+}
+
+.th-day.is-holiday .day-name {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+/* Status Cells Inside Daily Matrix */
+.cell-status {
+  font-weight: 700;
+  font-size: 0.78rem;
+}
+
+.cell-hadir {
+  background: var(--hadir-bg);
+  color: #ffffff;
+}
+
+.cell-sakit {
+  background: var(--sakit-bg);
+  color: #ffffff;
+}
+
+.cell-alfa {
+  background: var(--alfa-bg);
+  color: #ffffff;
+}
+
+.cell-libur {
+  background: var(--libur-soft);
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+/* Recap Table (Rekap Absensi) */
+.recap-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  min-width: 640px;
+}
+
+.recap-table th,
+.recap-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.recap-table thead th {
+  background: #f8fafc;
+  color: var(--secondary);
+  font-weight: 700;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.recap-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.badge-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.badge-hadir {
+  background: var(--hadir-soft);
+  color: var(--hadir-text);
+}
+
+.badge-sakit {
+  background: var(--sakit-soft);
+  color: var(--sakit-text);
+}
+
+.badge-alfa {
+  background: var(--alfa-soft);
+  color: var(--alfa-text);
+}
+
+.progress-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 140px;
+  max-width: 180px;
+  margin: 0 auto;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--hadir-bg);
+}
+
+.progress-text {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--secondary);
+  min-width: 40px;
+}
+
+/* =========================================================
+   OPTIMASI TAMPILAN MOBILE & TABLET (RESPONSIVE)
+   ========================================================= */
+@media (max-width: 900px) {
+  .topbar-inner {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px 16px;
+    gap: 10px;
+  }
+
+  .desktop-user-menu {
+    display: none;
+  }
+
+  .mobile-user-menu {
+    display: flex;
+  }
+
+  .nav-links {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 4px;
+    background: #f8fafc;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    gap: 4px;
+  }
+
+  .nav-links::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-item {
+    flex: 1;
+    text-align: center;
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding: 16px 12px 44px;
+  }
+
+  .brand-badge {
+    width: 36px;
+    height: 36px;
+    font-size: 0.92rem;
+  }
+
+  .brand-text h1 {
+    font-size: 0.92rem;
+  }
+
+  .brand-text span {
+    font-size: 0.68rem;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  .page-title h2 {
+    font-size: 1.18rem;
+  }
+
+  .page-title p {
+    font-size: 0.82rem;
+  }
+
+  .main-tabs {
+    width: 100%;
+  }
+
+  .main-tab-btn {
+    flex: 1;
+    padding: 10px 12px;
+    font-size: 0.85rem;
+  }
+
+  .section-card {
+    padding: 16px 14px;
+    border-radius: 14px;
+    margin-bottom: 18px;
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+  }
+
+  .card-title h3 {
+    font-size: 1rem;
+  }
+
+  .card-title p {
+    font-size: 0.78rem;
+  }
+
+  .filter-controls {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 8px;
+  }
+
+  .filter-group {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+
+  .select-control {
+    width: 100%;
+    padding: 9px 10px;
+    font-size: 0.82rem;
+  }
+
+  .guru-master-filter {
+    padding: 16px 14px;
+    border-radius: 14px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .legend-bar {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .legend-items {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .legend-item {
+    font-size: 0.76rem;
+  }
+
+  .holiday-tip {
+    font-size: 0.74rem;
+    padding-top: 6px;
+    border-top: 1px dashed var(--border-color);
+    width: 100%;
+  }
+
+  /* Compact Sticky Column pada Tabel Harian di Layar HP */
+  .matrix-table {
+    font-size: 0.75rem;
+    min-width: 780px;
+  }
+
+  .matrix-table th,
+  .matrix-table td {
+    padding: 6px 4px;
+  }
+
+  .matrix-table th.sticky-no,
+  .matrix-table td.sticky-no {
+    width: 34px;
+    min-width: 34px;
+    max-width: 34px;
+    padding: 6px 2px;
+  }
+
+  .matrix-table th.sticky-col,
+  .matrix-table td.sticky-col {
+    left: 34px;
+    min-width: 130px;
+    max-width: 145px;
+    padding: 8px 10px;
+    font-size: 0.76rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .th-day {
+    min-width: 28px;
+  }
+
+  .th-day .day-num {
+    font-size: 0.76rem;
+  }
+
+  .th-day .day-name {
+    font-size: 0.6rem;
+  }
+
+  .recap-table th,
+  .recap-table td {
+    padding: 10px 12px;
+    font-size: 0.8rem;
+  }
+}

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Login - Sistem Absensi PIA</title>
+  <title>Login - Pendidikan Islam At-Taqwa (PIA)</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -12,17 +12,18 @@
     <section class="auth-banner">
       <div class="brand-logo">
         <div class="brand-icon">PIA</div>
-        <span>Absensi PIA</span>
+        <span>Pendidikan Islam At-Taqwa</span>
       </div>
 
       <div class="banner-content">
         <h1>Sistem Informasi Absensi &amp; Pembelajaran</h1>
         <p>
-          Platform terintegrasi untuk manajemen kehadiran guru, absensi siswa,
-          serta rekapitulasi kegiatan pembelajaran secara akurat dan real-time.
+          Platform terintegrasi Pendidikan Islam At-Taqwa untuk manajemen
+          kehadiran guru, absensi siswa, serta rekapitulasi pembelajaran Iqro,
+          Hafalan Surat, Hafalan Doa, dan Al-Qur'an.
         </p>
         <div class="feature-pills">
-          <span class="pill">Rekap Data Absensi</span>
+          <span class="pill">Utama (Rekap Absensi)</span>
           <span class="pill">Absensi Guru</span>
           <span class="pill">Absensi Siswa</span>
           <span class="pill">Rekap Pembelajaran</span>
@@ -30,22 +31,58 @@
       </div>
 
       <div class="banner-footer">
-        &copy; 2026 Sistem Absensi PIA &bull; Powered by C++ Core &amp; FastAPI
+        &copy; 2026 Pendidikan Islam At-Taqwa (PIA) &bull; Powered by C++ Core
       </div>
     </section>
 
     <!-- Panel Kanan: Form Login -->
     <section class="auth-form-container">
       <div class="auth-header">
-        <h2>Selamat Datang Kembali</h2>
-        <p>Silakan masuk menggunakan username atau email akun Anda yang telah aktif.</p>
+        <h2 id="loginTitle">Selamat Datang Kembali</h2>
+        <p id="loginSubtitle">Silakan masuk menggunakan nama/username atau email beserta password Anda.</p>
       </div>
 
       <div id="alertBox" class="alert" role="alert"></div>
 
+      <!-- Mode Tetap Login: Info Akun Tersimpan (Login Hanya Dengan Password) -->
+      <div
+        id="rememberedUserBox"
+        style="
+          display: none;
+          background: #eff6ff;
+          border: 1.5px solid #bfdbfe;
+          border-radius: 12px;
+          padding: 12px 16px;
+          margin-bottom: 18px;
+          align-items: center;
+          justify-content: space-between;
+        "
+      >
+        <div>
+          <div style="font-size: 0.78rem; color: #1d4ed8; font-weight: 600;">Mode Tetap Login Aktif</div>
+          <div id="rememberedUserName" style="font-size: 0.95rem; font-weight: 700; color: #0f172a;"></div>
+        </div>
+        <button
+          type="button"
+          id="switchAccountBtn"
+          style="
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            color: #2563eb;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+          "
+        >
+          Ganti Akun
+        </button>
+      </div>
+
       <form id="loginForm" novalidate>
-        <div class="form-group">
-          <label class="form-label" for="identifier">Username atau Email</label>
+        <div class="form-group" id="identifierGroup">
+          <label class="form-label" for="identifier">Nama / Username atau Email</label>
           <div class="input-wrapper">
             <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -56,7 +93,7 @@
               id="identifier"
               name="identifier"
               class="form-control"
-              placeholder="Masukkan username atau email"
+              placeholder="Masukkan nama, username, atau email"
               autocomplete="username"
               required
             />
@@ -90,14 +127,14 @@
 
         <div class="form-options">
           <label class="checkbox-label">
-            <input type="checkbox" id="rememberMe" />
-            <span>Ingat saya di perangkat ini</span>
+            <input type="checkbox" id="rememberMe" checked />
+            <span>Tetap login (selanjutnya cukup password)</span>
           </label>
           <a href="verify-otp.html" class="auth-link">Aktivasi OTP?</a>
         </div>
 
         <button type="submit" id="submitBtn" class="btn-primary">
-          <span>Masuk ke Akun</span>
+          <span>Masuk ke Aplikasi</span>
         </button>
       </form>
 
@@ -110,4 +147,3 @@
   <script src="js/auth.js"></script>
 </body>
 </html>
-

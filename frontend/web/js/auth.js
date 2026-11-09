@@ -333,20 +333,65 @@ if (otpForm) {
 }
 
 // ==========================================
-// 3. LOGIKA FORM LOGIN
+// 3. LOGIKA FORM LOGIN & FITUR "TETAP LOGIN"
 // ==========================================
 const loginForm = document.getElementById('loginForm');
 if (loginForm) {
+  const identifierInput = document.getElementById('identifier');
+  const identifierGroup = document.getElementById('identifierGroup');
+  const rememberedBox = document.getElementById('rememberedUserBox');
+  const rememberedNameEl = document.getElementById('rememberedUserName');
+  const switchAccountBtn = document.getElementById('switchAccountBtn');
+  const rememberMeCheckbox = document.getElementById('rememberMe');
+  const loginSubtitle = document.getElementById('loginSubtitle');
+
+  function applyRememberedUser() {
+    try {
+      const saved = localStorage.getItem('pia_remembered_user');
+      if (!saved) return;
+      const parsed = JSON.parse(saved);
+      if (parsed && parsed.identifier) {
+        identifierInput.value = parsed.identifier;
+        if (identifierGroup) identifierGroup.style.display = 'none';
+        if (rememberedBox) rememberedBox.style.display = 'flex';
+        if (rememberedNameEl) {
+          rememberedNameEl.textContent = parsed.full_name
+            ? `${parsed.full_name} (${parsed.identifier})`
+            : parsed.identifier;
+        }
+        if (loginSubtitle) {
+          loginSubtitle.textContent = 'Cukup masukkan password Anda untuk melanjutkan.';
+        }
+      }
+    } catch (_) {}
+  }
+
+  applyRememberedUser();
+
+  if (switchAccountBtn) {
+    switchAccountBtn.addEventListener('click', () => {
+      localStorage.removeItem('pia_remembered_user');
+      identifierInput.value = '';
+      if (identifierGroup) identifierGroup.style.display = 'block';
+      if (rememberedBox) rememberedBox.style.display = 'none';
+      if (loginSubtitle) {
+        loginSubtitle.textContent =
+          'Silakan masuk menggunakan nama/username atau email beserta password Anda.';
+      }
+      identifierInput.focus();
+    });
+  }
+
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     hideAlert();
 
-    const identifier = document.getElementById('identifier').value.trim();
+    const identifier = identifierInput.value.trim();
     const password = document.getElementById('password').value;
     const submitBtn = document.getElementById('submitBtn');
 
     if (!identifier || !password) {
-      showAlert('Harap masukkan username/email beserta password Anda.');
+      showAlert('Harap masukkan nama/username/email beserta password Anda.');
       return;
     }
 
@@ -373,14 +418,29 @@ if (loginForm) {
         localStorage.setItem('pia_user', JSON.stringify(data.user));
       }
 
-      const userName = data.user ? `${data.user.full_name} (@${data.user.username})` : identifier;
-      showAlert(`Login berhasil! Selamat datang, ${userName}.`, 'success');
-      submitBtn.disabled = false;
+      if (rememberMeCheckbox && rememberMeCheckbox.checked) {
+        localStorage.setItem(
+          'pia_remembered_user',
+          JSON.stringify({
+            identifier: data.user ? data.user.username : identifier,
+            full_name: data.user ? data.user.full_name : '',
+            email: data.user ? data.user.email : '',
+          })
+        );
+      } else {
+        localStorage.removeItem('pia_remembered_user');
+      }
+
+      const userName = data.user ? `${data.user.full_name}` : identifier;
+      showAlert(`Login berhasil! Selamat datang, ${userName}. Mengalihkan...`, 'success');
       submitBtn.innerHTML = '<span>Berhasil Masuk ✓</span>';
+      setTimeout(() => {
+        window.location.href = 'dashboard.html';
+      }, 600);
     } catch (err) {
       showAlert(err.message);
       submitBtn.disabled = false;
-      submitBtn.innerHTML = '<span>Masuk ke Akun</span>';
+      submitBtn.innerHTML = '<span>Masuk ke Aplikasi</span>';
     }
   });
 }
