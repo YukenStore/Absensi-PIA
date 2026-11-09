@@ -1,35 +1,48 @@
-from datetime import datetime, timezone
-from sqlalchemy import Boolean, Column, DateTime, Integer, BigInteger, String
-from ..core.database import Base
+from dataclasses import dataclass
+from typing import Any, Dict, Optional
 
 
-class User(Base):
-    __tablename__ = "users"
+@dataclass
+class User:
+    id: int
+    full_name: str
+    email: str
+    username: str
+    password_hash: str
+    password_salt: str
+    is_active: bool
+    created_at: Optional[str] = None
 
-    id = Column(Integer, primary_key=True, index=True)
-    full_name = Column(String(150), nullable=False)
-    email = Column(String(150), unique=True, index=True, nullable=False)
-    username = Column(String(80), unique=True, index=True, nullable=False)
-    password_hash = Column(String(128), nullable=False)
-    password_salt = Column(String(64), nullable=False)
-    is_active = Column(Boolean, default=False, nullable=False)
-    created_at = Column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        nullable=False,
-    )
+    @classmethod
+    def from_row(cls, row: Dict[str, Any]) -> "User":
+        return cls(
+            id=int(row["id"]),
+            full_name=str(row["full_name"]),
+            email=str(row["email"]),
+            username=str(row["username"]),
+            password_hash=str(row["password_hash"]),
+            password_salt=str(row["password_salt"]),
+            is_active=bool(row["is_active"]),
+            created_at=str(row.get("created_at", "")),
+        )
 
 
-class OtpVerification(Base):
-    __tablename__ = "otp_verifications"
+@dataclass
+class OtpVerification:
+    id: int
+    email: str
+    otp_code: str
+    expires_at: int
+    is_used: bool
+    created_at: Optional[str] = None
 
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String(150), index=True, nullable=False)
-    otp_code = Column(String(10), nullable=False)
-    expires_at = Column(BigInteger, nullable=False)
-    is_used = Column(Boolean, default=False, nullable=False)
-    created_at = Column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        nullable=False,
-    )
+    @classmethod
+    def from_row(cls, row: Dict[str, Any]) -> "OtpVerification":
+        return cls(
+            id=int(row["id"]),
+            otp_code=str(row["otp_code"]),
+            email=str(row["email"]),
+            expires_at=int(row["expires_at"]),
+            is_used=bool(row["is_used"]),
+            created_at=str(row.get("created_at", "")),
+        )

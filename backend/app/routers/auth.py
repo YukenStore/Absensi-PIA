@@ -1,17 +1,16 @@
+import base64
+import hashlib
+import hmac
+import json
 import secrets
 import time
-from datetime import datetime, timedelta, timezone
-import jwt
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import or_
-from sqlalchemy.orm import Session
+from typing import Any, Dict
 
 from ..core.config import settings
 from ..core.cpp_bridge import cpp_core
-from ..core.database import get_db
+from ..core.database import DatabaseClient, get_db
 from ..models.user import OtpVerification, User
 from ..schemas.auth import (
-    AuthResponse,
     LoginRequest,
     RegisterRequest,
     ResendOtpRequest,
@@ -19,30 +18,69 @@ from ..schemas.auth import (
 )
 from ..services.email_service import send_otp_email
 
+try:
+    from fastapi import APIRouter, Depends, HTTPException, status  # type: ignore
+except ImportError:
+    class HTTPException(Exception):  # type: ignore
+        def __init__(self, status_code: int, detail: str) -> None:
+            self.status_code = status_code
+            self.detail = detail
+            super().__init__(detail)
+
+    class _Status:
+        HTTP_200_OK = 200
+        HTTP_201_CREATED = 201
+        HTTP_400_BAD_REQUEST = 400
+        HTTP_401_UNAUTHORIZED = 401
+        HTTP_403_FORBIDDEN = 403
+        HTTP_404_NOT_FOUND = 404
+
+    status = _Status()  # type: ignore
+
+    def Depends(dep: Any = None) -> Any:  # type: ignore
+        return dep
+
+    class APIRouter:  # type: ignore
+        def __init__(self, **kwargs: Any) -> None:
+            pass
+
+        def post(self, *args: Any, **kwargs: Any):
+            def decorator(fn: Any) -> Any:
+                return fn
+            return decorator
+
+
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
 
+def _b64url_encode(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
+
+
 def _create_jwt_token(user: User) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(
-        minutes=settings.JWT_EXPIRE_MINUTES
-    )
+    """Membuat token JWT HS256 menggunakan pustaka standar Python (hmac + hashlib)."""
+    header = {"alg": "HS256", "typ": "JWT"}
     payload = {
         "sub": str(user.id),
         "username": user.username,
         "email": user.email,
-        "exp": expire,
+        "exp": int(time.time()) + (settings.JWT_EXPIRE_MINUTES * 60),
     }
-    return jwt.encode(
-        payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
-    )
+    header_b64 = _b64url_encode(json.dumps(header, separators=(",", ":")).encode("utf-8"))
+    payload_b64 = _b64url_encode(json.dumps(payload, separators=(",", ":")).encode("utf-8"))
+    signing_input = f"{header_b64}.{payload_b64}".encode("ascii")
+    signature = hmac.new(
+        settings.JWT_SECRET_KEY.encode("utf-8"),
+        signing_input,
+        hashlib.sha256,
+    ).digest()
+    return f"{header_b64}.{payload_b64}.{_b64url_encode(signature)}"
 
 
-@router.post(
-    "/register",
-    response_model=AuthResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-def register_user(payload: RegisterRequest, db: Session = Depends(get_db)):
+@router.post("/register", status_code=status.HTTP_201_CREATED)
+def register_user(
+    payload: RegisterRequest, db: DatabaseClient = Depends(get_db)
+) -> Dict[str, Any]:
     full_name = payload.full_name.strip()
     email = payload.email.strip().lower()
     username = payload.username.strip()
@@ -68,16 +106,24 @@ def register_user(payload: RegisterRequest, db: Session = Depends(get_db)):
             detail="Password harus terdiri dari minimal 8 karakter.",
         )
 
-    # 2. Cek apakah email atau username sudah terdaftar di database SQL
-    existing_email = db.query(User).filter(User.email == email).first()
+    # 2. Cek apakah email atau username sudah terdaftar di database SQL (Cloudflare D1 / SQLite)
+    existing_email_row = db.fetch_one(
+        "SELECT * FROM users WHERE email = ? LIMIT 1", [email]
+    )
+    existing_email = (
+        User.from_row(existing_email_row) if existing_email_row else None
+    )
     if existing_email and existing_email.is_active:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Alamat email sudah terdaftar dan aktif. Silakan langsung login.",
         )
 
+    existing_username_row = db.fetch_one(
+        "SELECT * FROM users WHERE username = ? LIMIT 1", [username]
+    )
     existing_username = (
-        db.query(User).filter(User.username == username).first()
+        User.from_row(existing_username_row) if existing_username_row else None
     )
     if existing_username and (
         not existing_email or existing_username.id != existing_email.id
@@ -92,79 +138,82 @@ def register_user(payload: RegisterRequest, db: Session = Depends(get_db)):
     password_hash = cpp_core.hash_password(password, salt)
 
     if existing_email and not existing_email.is_active:
-        # Perbarui data akun yang belum sempat diaktivasi
-        existing_email.full_name = full_name
-        existing_email.username = username
-        existing_email.password_salt = salt
-        existing_email.password_hash = password_hash
-        user = existing_email
-    else:
-        user = User(
-            full_name=full_name,
-            email=email,
-            username=username,
-            password_salt=salt,
-            password_hash=password_hash,
-            is_active=False,
+        db.execute(
+            """
+            UPDATE users
+            SET full_name = ?, username = ?, password_hash = ?, password_salt = ?
+            WHERE id = ?
+            """,
+            [full_name, username, password_hash, salt, existing_email.id],
         )
-        db.add(user)
+    else:
+        db.execute(
+            """
+            INSERT INTO users (full_name, email, username, password_hash, password_salt, is_active)
+            VALUES (?, ?, ?, ?, ?, 0)
+            """,
+            [full_name, email, username, password_hash, salt],
+        )
 
     # 4. Generate 6 digit kode OTP menggunakan Shared Core C++
     otp_code = cpp_core.generate_otp(6)
     expires_at = int(time.time()) + settings.OTP_EXPIRE_SECONDS
 
-    otp_entry = OtpVerification(
-        email=email,
-        otp_code=otp_code,
-        expires_at=expires_at,
-        is_used=False,
+    db.execute(
+        """
+        INSERT INTO otp_verifications (email, otp_code, expires_at, is_used)
+        VALUES (?, ?, ?, 0)
+        """,
+        [email, otp_code, expires_at],
     )
-    db.add(otp_entry)
-    db.commit()
-    db.refresh(user)
 
     # 5. Kirim kode OTP ke email pengguna
     send_otp_email(recipient_email=email, full_name=full_name, otp_code=otp_code)
 
-    return AuthResponse(
-        success=True,
-        message=f"Registrasi berhasil! Kode OTP telah dikirim ke {email}.",
-    )
+    return {
+        "success": True,
+        "message": f"Registrasi berhasil! Kode OTP telah dikirim ke {email}.",
+    }
 
 
-@router.post("/verify-otp", response_model=AuthResponse)
-def verify_otp_code(payload: VerifyOtpRequest, db: Session = Depends(get_db)):
+@router.post("/verify-otp")
+def verify_otp_code(
+    payload: VerifyOtpRequest, db: DatabaseClient = Depends(get_db)
+) -> Dict[str, Any]:
     email = payload.email.strip().lower()
     input_otp = payload.otp_code.strip()
 
-    user = db.query(User).filter(User.email == email).first()
-    if not user:
+    user_row = db.fetch_one(
+        "SELECT * FROM users WHERE email = ? LIMIT 1", [email]
+    )
+    if not user_row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Akun dengan alamat email tersebut tidak ditemukan.",
         )
 
+    user = User.from_row(user_row)
     if user.is_active:
-        return AuthResponse(
-            success=True,
-            message="Akun Anda sudah aktif. Silakan masuk.",
-        )
+        return {
+            "success": True,
+            "message": "Akun Anda sudah aktif. Silakan masuk.",
+        }
 
-    otp_record = (
-        db.query(OtpVerification)
-        .filter(
-            OtpVerification.email == email,
-            OtpVerification.is_used == False,  # noqa: E712
-        )
-        .order_by(OtpVerification.id.desc())
-        .first()
+    otp_row = db.fetch_one(
+        """
+        SELECT * FROM otp_verifications
+        WHERE email = ? AND is_used = 0
+        ORDER BY id DESC LIMIT 1
+        """,
+        [email],
     )
-
-    if not otp_record:
+    if not otp_row:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Tidak ada kode OTP aktif untuk email ini. Silakan minta kirim ulang OTP.",
         )
+
+    otp_record = OtpVerification.from_row(otp_row)
 
     # Verifikasi OTP & waktu kedaluwarsa menggunakan Shared Core C++
     current_ts = int(time.time())
@@ -186,27 +235,34 @@ def verify_otp_code(payload: VerifyOtpRequest, db: Session = Depends(get_db)):
             detail="Kode OTP yang dimasukkan tidak sesuai.",
         )
 
-    otp_record.is_used = True
-    user.is_active = True
-    db.commit()
-
-    return AuthResponse(
-        success=True,
-        message="Akun berhasil diaktifkan! Silakan login menggunakan akun Anda.",
+    db.execute(
+        "UPDATE otp_verifications SET is_used = 1 WHERE id = ?",
+        [otp_record.id],
     )
+    db.execute("UPDATE users SET is_active = 1 WHERE id = ?", [user.id])
+
+    return {
+        "success": True,
+        "message": "Akun berhasil diaktifkan! Silakan login menggunakan akun Anda.",
+    }
 
 
-@router.post("/resend-otp", response_model=AuthResponse)
-def resend_otp_code(payload: ResendOtpRequest, db: Session = Depends(get_db)):
+@router.post("/resend-otp")
+def resend_otp_code(
+    payload: ResendOtpRequest, db: DatabaseClient = Depends(get_db)
+) -> Dict[str, Any]:
     email = payload.email.strip().lower()
 
-    user = db.query(User).filter(User.email == email).first()
-    if not user:
+    user_row = db.fetch_one(
+        "SELECT * FROM users WHERE email = ? LIMIT 1", [email]
+    )
+    if not user_row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Akun dengan alamat email tersebut belum terdaftar.",
         )
 
+    user = User.from_row(user_row)
     if user.is_active:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -216,46 +272,42 @@ def resend_otp_code(payload: ResendOtpRequest, db: Session = Depends(get_db)):
     otp_code = cpp_core.generate_otp(6)
     expires_at = int(time.time()) + settings.OTP_EXPIRE_SECONDS
 
-    otp_entry = OtpVerification(
-        email=email,
-        otp_code=otp_code,
-        expires_at=expires_at,
-        is_used=False,
+    db.execute(
+        """
+        INSERT INTO otp_verifications (email, otp_code, expires_at, is_used)
+        VALUES (?, ?, ?, 0)
+        """,
+        [email, otp_code, expires_at],
     )
-    db.add(otp_entry)
-    db.commit()
 
     send_otp_email(
         recipient_email=email, full_name=user.full_name, otp_code=otp_code
     )
 
-    return AuthResponse(
-        success=True,
-        message=f"Kode OTP baru telah dikirimkan ke {email}.",
-    )
+    return {
+        "success": True,
+        "message": f"Kode OTP baru telah dikirimkan ke {email}.",
+    }
 
 
-@router.post("/login", response_model=AuthResponse)
-def login_user(payload: LoginRequest, db: Session = Depends(get_db)):
+@router.post("/login")
+def login_user(
+    payload: LoginRequest, db: DatabaseClient = Depends(get_db)
+) -> Dict[str, Any]:
     identifier = payload.identifier.strip()
     password = payload.password
 
-    user = (
-        db.query(User)
-        .filter(
-            or_(
-                User.username == identifier,
-                User.email == identifier.lower(),
-            )
-        )
-        .first()
+    user_row = db.fetch_one(
+        "SELECT * FROM users WHERE username = ? OR email = ? LIMIT 1",
+        [identifier, identifier.lower()],
     )
-
-    if not user:
+    if not user_row:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Username/email atau password tidak sesuai.",
         )
+
+    user = User.from_row(user_row)
 
     # Verifikasi password menggunakan Shared Core C++
     is_valid_pw = cpp_core.verify_password(
@@ -276,14 +328,14 @@ def login_user(payload: LoginRequest, db: Session = Depends(get_db)):
         )
 
     token = _create_jwt_token(user)
-    return AuthResponse(
-        success=True,
-        message="Login berhasil!",
-        access_token=token,
-        user={
+    return {
+        "success": True,
+        "message": "Login berhasil!",
+        "access_token": token,
+        "user": {
             "id": user.id,
             "full_name": user.full_name,
             "username": user.username,
             "email": user.email,
         },
-    )
+    }

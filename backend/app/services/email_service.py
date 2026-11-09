@@ -57,3 +57,4 @@ def send_otp_email(recipient_email: str, full_name: str, otp_code: str) -> bool:
     except Exception as exc:
         print(f"[PERINGATAN] Gagal mengirim email via SMTP ({exc}). Gunakan kode OTP di terminal di atas.")
         return False
+

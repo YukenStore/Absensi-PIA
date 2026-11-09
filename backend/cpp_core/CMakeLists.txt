@@ -16,3 +16,4 @@ set_target_properties(pia_core PROPERTIES
     OUTPUT_NAME "pia_core"
     PREFIX ""
 )
+

@@ -1,30 +1,45 @@
-from typing import Optional
-from pydantic import BaseModel, Field
+from dataclasses import asdict, dataclass
+from typing import Any, Dict, Optional
+
+try:
+    from pydantic import BaseModel  # type: ignore
+except ImportError:
+    class BaseModel:  # type: ignore
+        def __init__(self, **kwargs: Any) -> None:
+            for k, v in kwargs.items():
+                setattr(self, k, v)
+
+        def dict(self) -> Dict[str, Any]:
+            return self.__dict__.copy()
 
 
 class RegisterRequest(BaseModel):
-    full_name: str = Field(..., min_length=2, max_length=150)
-    email: str = Field(..., min_length=5, max_length=150)
-    username: str = Field(..., min_length=4, max_length=80)
-    password: str = Field(..., min_length=8, max_length=128)
+    full_name: str = ""
+    email: str = ""
+    username: str = ""
+    password: str = ""
 
 
 class VerifyOtpRequest(BaseModel):
-    email: str = Field(..., min_length=5, max_length=150)
-    otp_code: str = Field(..., min_length=6, max_length=6)
+    email: str = ""
+    otp_code: str = ""
 
 
 class ResendOtpRequest(BaseModel):
-    email: str = Field(..., min_length=5, max_length=150)
+    email: str = ""
 
 
 class LoginRequest(BaseModel):
-    identifier: str = Field(..., min_length=3, max_length=150)
-    password: str = Field(..., min_length=1, max_length=128)
+    identifier: str = ""
+    password: str = ""
 
 
-class AuthResponse(BaseModel):
+@dataclass
+class AuthResponse:
     success: bool
     message: str
     access_token: Optional[str] = None
-    user: Optional[dict] = None
+    user: Optional[Dict[str, Any]] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)

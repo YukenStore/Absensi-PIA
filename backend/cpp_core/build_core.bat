@@ -36,3 +36,4 @@ if %ERRORLEVEL% EQU 0 (
 echo [PERINGATAN] Compiler C++ (g++ / clang++ / MSVC) belum ditemukan di PATH.
 echo Backend Python akan otomatis menggunakan fallback algoritma identik sampai pia_core.dll dikompilasi.
 exit /b 1
+
