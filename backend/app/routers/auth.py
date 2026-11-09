@@ -170,10 +170,13 @@ def register_user(
     # 5. Kirim kode OTP ke email pengguna
     send_otp_email(recipient_email=email, full_name=full_name, otp_code=otp_code)
 
-    return {
+    response_data: Dict[str, Any] = {
         "success": True,
         "message": f"Registrasi berhasil! Kode OTP telah dikirim ke {email}.",
     }
+    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+        response_data["otp_preview"] = otp_code
+    return response_data
 
 
 @router.post("/verify-otp")
@@ -284,10 +287,13 @@ def resend_otp_code(
         recipient_email=email, full_name=user.full_name, otp_code=otp_code
     )
 
-    return {
+    response_data: Dict[str, Any] = {
         "success": True,
         "message": f"Kode OTP baru telah dikirimkan ke {email}.",
     }
+    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+        response_data["otp_preview"] = otp_code
+    return response_data
 
 
 @router.post("/login")

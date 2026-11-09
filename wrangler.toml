@@ -1,0 +1,11 @@
+name = "absensi-pia"
+main = "backend/cloudflare_worker.js"
+compatibility_date = "2024-11-01"
+
+[assets]
+directory = "./frontend/web"
+binding = "ASSETS"
+
+# Setelah Anda membuat Database D1 di Dashboard Cloudflare (Storage & Databases -> D1),
+# Anda dapat menghubungkannya langsung melalui menu Settings -> Bindings -> Add D1 Database
+# dengan Variable name: DB

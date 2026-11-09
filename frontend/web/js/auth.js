@@ -1,11 +1,10 @@
 /**
  * Modul Autentikasi Web - Sistem Absensi PIA
- * Menghubungkan UI Web (HTML/CSS) dengan Backend FastAPI & C++ Core
+ * Terhubung secara End-to-End dengan SQL Database (Cloudflare D1 / SQLite) & C++ Core
  */
 
-const API_BASE_URL = 'http://localhost:8000/api/auth';
+const API_BASE_URL = '/api/auth';
 
-// Utilitas untuk menampilkan pesan alert
 function showAlert(message, type = 'error') {
   const alertBox = document.getElementById('alertBox');
   if (!alertBox) return;
@@ -106,7 +105,7 @@ if (registerForm) {
     }
 
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<span>Mengirim OTP ke Email...</span>';
+    submitBtn.innerHTML = '<span>Memproses &amp; Mengirim OTP...</span>';
 
     try {
       const response = await fetch(`${API_BASE_URL}/register`, {
@@ -122,30 +121,22 @@ if (registerForm) {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.detail || 'Gagal melakukan registrasi.');
+        throw new Error(data.detail || data.message || 'Gagal melakukan registrasi.');
       }
 
       sessionStorage.setItem('pending_verification_email', email);
+      if (data.otp_preview) {
+        sessionStorage.setItem('demo_otp_preview', data.otp_preview);
+      }
+
       showAlert('Registrasi berhasil! Mengalihkan ke halaman verifikasi OTP...', 'success');
       setTimeout(() => {
         window.location.href = `verify-otp.html?email=${encodeURIComponent(email)}`;
-      }, 1000);
+      }, 900);
     } catch (err) {
-      // Fallback simulasi jika backend belum dijalankan
-      if (err instanceof TypeError && err.message.includes('fetch')) {
-        sessionStorage.setItem('pending_verification_email', email);
-        showAlert(
-          'Mode Pratinjau UI: Kode OTP simulasi telah dikirim ke ' + email + '. Mengalihkan...',
-          'success'
-        );
-        setTimeout(() => {
-          window.location.href = `verify-otp.html?email=${encodeURIComponent(email)}`;
-        }, 1200);
-      } else {
-        showAlert(err.message);
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<span>Daftar &amp; Kirim Kode OTP</span>';
-      }
+      showAlert(err.message || 'Terjadi kesalahan saat menghubungi server.');
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<span>Daftar &amp; Kirim Kode OTP</span>';
     }
   });
 }
@@ -156,7 +147,8 @@ if (registerForm) {
 const otpForm = document.getElementById('otpForm');
 if (otpForm) {
   const urlParams = new URLSearchParams(window.location.search);
-  const emailFromUrl = urlParams.get('email') || sessionStorage.getItem('pending_verification_email') || '';
+  const emailFromUrl =
+    urlParams.get('email') || sessionStorage.getItem('pending_verification_email') || '';
   const targetEmailBadge = document.getElementById('targetEmailBadge');
   const manualEmailGroup = document.getElementById('manualEmailGroup');
   const otpEmailInput = document.getElementById('otpEmail');
@@ -169,7 +161,15 @@ if (otpForm) {
     if (manualEmailGroup) manualEmailGroup.style.display = 'block';
   }
 
-  // Pengaturan 6 kotak input OTP
+  // Tampilkan Kode OTP Simulasi/Uji Coba jika ada dari server
+  const otpPreview = sessionStorage.getItem('demo_otp_preview');
+  if (otpPreview) {
+    showAlert(
+      `[Mode Uji Coba OTP] Kode OTP untuk aktivasi akun Anda adalah: ${otpPreview}`,
+      'success'
+    );
+  }
+
   const otpInputs = Array.from(document.querySelectorAll('.otp-input'));
   otpInputs.forEach((input, index) => {
     input.addEventListener('input', (e) => {
@@ -243,15 +243,18 @@ if (otpForm) {
       const data = await response.json();
       if (!response.ok) throw new Error(data.detail || 'Gagal mengirim ulang OTP.');
 
-      showAlert(`Kode OTP baru telah dikirimkan ke ${targetEmail}.`, 'success');
+      if (data.otp_preview) {
+        sessionStorage.setItem('demo_otp_preview', data.otp_preview);
+        showAlert(
+          `Kode OTP baru telah dikirim! [Mode Uji Coba] Kode OTP baru Anda: ${data.otp_preview}`,
+          'success'
+        );
+      } else {
+        showAlert(`Kode OTP baru telah dikirimkan ke ${targetEmail}.`, 'success');
+      }
       startCountdown();
     } catch (err) {
-      if (err instanceof TypeError && err.message.includes('fetch')) {
-        showAlert(`Mode Pratinjau UI: Kode OTP baru dikirim ulang ke ${targetEmail}.`, 'success');
-        startCountdown();
-      } else {
-        showAlert(err.message);
-      }
+      showAlert(err.message);
     }
   });
 
@@ -290,22 +293,15 @@ if (otpForm) {
       if (!response.ok) throw new Error(data.detail || 'Kode OTP tidak valid atau kedaluwarsa.');
 
       sessionStorage.removeItem('pending_verification_email');
+      sessionStorage.removeItem('demo_otp_preview');
       showAlert('Akun berhasil diaktifkan! Mengalihkan ke halaman Login...', 'success');
       setTimeout(() => {
         window.location.href = 'index.html';
       }, 1200);
     } catch (err) {
-      if (err instanceof TypeError && err.message.includes('fetch')) {
-        sessionStorage.removeItem('pending_verification_email');
-        showAlert('Mode Pratinjau UI: Aktivasi OTP berhasil! Mengalihkan ke Login...', 'success');
-        setTimeout(() => {
-          window.location.href = 'index.html';
-        }, 1200);
-      } else {
-        showAlert(err.message);
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<span>Verifikasi &amp; Aktifkan Akun</span>';
-      }
+      showAlert(err.message);
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<span>Verifikasi &amp; Aktifkan Akun</span>';
     }
   });
 }
@@ -347,22 +343,18 @@ if (loginForm) {
       if (data.access_token) {
         localStorage.setItem('pia_access_token', data.access_token);
       }
-      showAlert('Login berhasil! Selamat datang di Sistem Absensi PIA.', 'success');
-      submitBtn.innerHTML = '<span>Berhasil Masuk</span>';
-    } catch (err) {
-      if (err instanceof TypeError && err.message.includes('fetch')) {
-        showAlert(
-          'Mode Pratinjau UI: Form Login valid (Backend FastAPI belum dijalankan).',
-          'success'
-        );
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<span>Masuk ke Akun</span>';
-      } else {
-        showAlert(err.message);
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<span>Masuk ke Akun</span>';
+      if (data.user) {
+        localStorage.setItem('pia_user', JSON.stringify(data.user));
       }
+
+      const userName = data.user ? `${data.user.full_name} (@${data.user.username})` : identifier;
+      showAlert(`Login berhasil! Selamat datang, ${userName}.`, 'success');
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<span>Berhasil Masuk ✓</span>';
+    } catch (err) {
+      showAlert(err.message);
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<span>Masuk ke Akun</span>';
     }
   });
 }
-

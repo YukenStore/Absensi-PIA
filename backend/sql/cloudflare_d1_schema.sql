@@ -28,3 +28,4 @@ CREATE TABLE IF NOT EXISTS otp_verifications (
 );
 
 CREATE INDEX IF NOT EXISTS idx_otp_email ON otp_verifications(email);
+
