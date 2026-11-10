@@ -315,6 +315,27 @@ function loadLocalSyncedData() {
     const rawTeacherRec = localStorage.getItem('pia_teacher_records');
     if (rawTeacherRec) state.teacherRecords = JSON.parse(rawTeacherRec) || {};
   } catch (_) {}
+
+  // Pastikan data absensi guru yang sudah disetujui (Approved) dari pia_teacher_attendance_db tersambung ke Dashboard
+  try {
+    const rawTeacherDb = localStorage.getItem('pia_teacher_attendance_db');
+    if (rawTeacherDb) {
+      const parsed = JSON.parse(rawTeacherDb);
+      if (parsed && Array.isArray(parsed.submissions)) {
+        for (const sub of parsed.submissions) {
+          if (sub.approval_status === 'Approved') {
+            const code = sub.status === 'Hadir' ? 'H' : sub.status === 'Izin' ? 'I' : 'S';
+            if (sub.user_id) state.teacherRecords[`${sub.user_id}_${sub.attendance_date}`] = code;
+            if (sub.teacher_email) state.teacherRecords[`${sub.teacher_email.toLowerCase()}_${sub.attendance_date}`] = code;
+          } else if (sub.approval_status === 'Rejected' || sub.approval_status === 'Pending') {
+            if (sub.user_id) delete state.teacherRecords[`${sub.user_id}_${sub.attendance_date}`];
+            if (sub.teacher_email) delete state.teacherRecords[`${sub.teacher_email.toLowerCase()}_${sub.attendance_date}`];
+          }
+        }
+        localStorage.setItem('pia_teacher_records', JSON.stringify(state.teacherRecords));
+      }
+    }
+  } catch (_) {}
 }
 
 // Ambil data dari server SQL jika tersedia dan sinkronkan dengan penyimpanan browser
@@ -448,10 +469,31 @@ async function loadServerOverview() {
       localStorage.setItem('pia_student_records', JSON.stringify(state.studentRecords));
     }
 
-    if (data.teacher_records) {
-      state.teacherRecords = data.teacher_records;
-      localStorage.setItem('pia_teacher_records', JSON.stringify(state.teacherRecords));
+    if (data.teacher_records && typeof data.teacher_records === 'object') {
+      state.teacherRecords = { ...state.teacherRecords, ...data.teacher_records };
     }
+
+    // Pastikan status approval dari pia_teacher_attendance_db tetap terjaga
+    try {
+      const rawTeacherDb = localStorage.getItem('pia_teacher_attendance_db');
+      if (rawTeacherDb) {
+        const parsed = JSON.parse(rawTeacherDb);
+        if (parsed && Array.isArray(parsed.submissions)) {
+          for (const sub of parsed.submissions) {
+            if (sub.approval_status === 'Approved') {
+              const code = sub.status === 'Hadir' ? 'H' : sub.status === 'Izin' ? 'I' : 'S';
+              if (sub.user_id) state.teacherRecords[`${sub.user_id}_${sub.attendance_date}`] = code;
+              if (sub.teacher_email) state.teacherRecords[`${sub.teacher_email.toLowerCase()}_${sub.attendance_date}`] = code;
+            } else if (sub.approval_status === 'Rejected' || sub.approval_status === 'Pending') {
+              if (sub.user_id) delete state.teacherRecords[`${sub.user_id}_${sub.attendance_date}`];
+              if (sub.teacher_email) delete state.teacherRecords[`${sub.teacher_email.toLowerCase()}_${sub.attendance_date}`];
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    localStorage.setItem('pia_teacher_records', JSON.stringify(state.teacherRecords));
 
     renderAllViews();
   } catch (_) {}

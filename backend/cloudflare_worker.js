@@ -1378,6 +1378,37 @@ export default {
             message: decision === 'Approved' ? 'Presensi dewan guru berhasil disetujui (ACC)!' : 'Pengajuan presensi guru telah ditolak.',
           });
         }
+
+        // Hapus Presensi Guru (Admin Delete)
+        if (pathname === '/api/teacher-attendance/delete' && request.method === 'POST') {
+          const body = await request.json();
+          const adminEmail = (body.admin_email || '').trim().toLowerCase();
+          const attendanceId = Number(body.attendance_id);
+
+          if (db) {
+            const adminUser = await db.prepare('SELECT * FROM users WHERE lower(email) = ? LIMIT 1').bind(adminEmail).first();
+            const isAdmin = adminEmail === 'yumenoboken@gmail.com' || (adminUser && adminUser.role === 'admin');
+            if (!isAdmin) {
+              return jsonResponse({ detail: 'Hanya Admin yang dapat menghapus presensi guru.' }, 403);
+            }
+            await db.prepare('DELETE FROM teacher_attendance WHERE id = ?').bind(attendanceId).run();
+            return jsonResponse({
+              success: true,
+              message: 'Data presensi dewan guru berhasil dihapus!',
+            });
+          }
+
+          const adminUser = memoryStore.users.find((u) => u.email.toLowerCase() === adminEmail);
+          const isAdmin = adminEmail === 'yumenoboken@gmail.com' || (adminUser && adminUser.role === 'admin');
+          if (!isAdmin) {
+            return jsonResponse({ detail: 'Hanya Admin yang dapat menghapus presensi guru.' }, 403);
+          }
+          memoryStore.teacherAttendance = memoryStore.teacherAttendance.filter((s) => Number(s.id) !== attendanceId);
+          return jsonResponse({
+            success: true,
+            message: 'Data presensi dewan guru berhasil dihapus!',
+          });
+        }
       } catch (err) {
         return jsonResponse({ detail: `Worker DB Error: ${err.message}` }, 500);
       }

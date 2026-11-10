@@ -82,20 +82,11 @@ async function callTeacherApi(endpoint, options = {}) {
     const cfType = cfResp.headers.get('content-type') || '';
     if (cfType.includes('application/json')) {
       const cfData = await cfResp.json();
-      if (!cfResp.ok) {
-        throw new Error(cfData.detail || cfData.message || 'Permintaan gagal.');
+      if (cfResp.ok && cfData && (cfData.success !== false || !cfData.detail)) {
+        return cfData;
       }
-      return cfData;
     }
-  } catch (err) {
-    if (
-      !(err instanceof TypeError) &&
-      !String(err.message).includes('JSON') &&
-      !String(err.message).includes('Failed to fetch')
-    ) {
-      throw err;
-    }
-  }
+  } catch (_) {}
 
   // 3. Fallback Penyimpanan Lokal Browser (Offline / Static GitHub Pages)
   return handleLocalFallback(endpoint, options);
@@ -216,6 +207,16 @@ function handleLocalFallback(endpoint, options) {
   if (endpoint === '/api/teacher-attendance/delete') {
     const body = options.body ? JSON.parse(options.body) : {};
     const attendanceId = Number(body.attendance_id);
+    const target = db.submissions.find((s) => Number(s.id) === attendanceId);
+    if (target) {
+      try {
+        const rawTRec = localStorage.getItem('pia_teacher_records');
+        const tRecMap = rawTRec ? JSON.parse(rawTRec) : {};
+        if (target.user_id) delete tRecMap[`${target.user_id}_${target.attendance_date}`];
+        if (target.teacher_email) delete tRecMap[`${target.teacher_email.toLowerCase()}_${target.attendance_date}`];
+        localStorage.setItem('pia_teacher_records', JSON.stringify(tRecMap));
+      } catch (_) {}
+    }
     db.submissions = db.submissions.filter((s) => Number(s.id) !== attendanceId);
     saveLocalTeacherDb(db);
     return { success: true, message: 'Presensi berhasil dihapus.' };
@@ -537,7 +538,7 @@ function renderAdminApprovalSection() {
                 data-id="${item.id}"
                 data-name="${item.teacher_name}"
                 title="Setujui presensi guru ini"
-                ${appStatus === 'Approved' ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}
+                ${appStatus === 'Approved' ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}
               >
                 ✓ Setujui
               </button>
@@ -547,9 +548,19 @@ function renderAdminApprovalSection() {
                 data-id="${item.id}"
                 data-name="${item.teacher_name}"
                 title="Tolak presensi guru ini"
-                ${appStatus === 'Rejected' ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}
+                ${appStatus === 'Rejected' ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}
               >
                 ✕ Tolak
+              </button>
+              <button
+                type="button"
+                class="btn-action-delete"
+                data-id="${item.id}"
+                data-name="${item.teacher_name}"
+                data-date="${item.attendance_date}"
+                title="Hapus data presensi ini (khusus admin)"
+              >
+                🗑 Hapus
               </button>
             </div>
           </td>
@@ -577,27 +588,30 @@ function renderAdminApprovalSection() {
       await handleApproveDecision(id, 'Rejected', name);
     });
   });
+
+  // Event listener tombol Hapus (Khusus Admin)
+  tbody.querySelectorAll('.btn-action-delete').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-id');
+      const name = btn.getAttribute('data-name');
+      const dateStr = btn.getAttribute('data-date');
+      await handleDeleteAttendance(id, name, dateStr);
+    });
+  });
 }
 
 async function handleApproveDecision(attendanceId, decision, teacherName) {
   try {
     const adminEmail = currentUser ? currentUser.email : 'yumenoboken@gmail.com';
-    const res = await callTeacherApi('/api/teacher-attendance/approve', {
-      method: 'POST',
-      body: JSON.stringify({
-        admin_email: adminEmail,
-        attendance_id: attendanceId,
-        decision: decision,
-      }),
-    });
+    const numId = Number(attendanceId);
 
-    // Update status di allSubmissions secara lokal agar responsif
-    const target = allSubmissions.find((s) => Number(s.id) === Number(attendanceId));
+    // Cari target di allSubmissions & update lokal terlebih dahulu
+    const target = allSubmissions.find((s) => Number(s.id) === numId);
     if (target) {
       target.approval_status = decision;
       target.approved_by = currentUser ? (currentUser.full_name || currentUser.username) : 'Admin';
 
-      // Sinkron ke pia_teacher_records untuk Dashboard jika disetujui
+      // 1. Sinkron ke pia_teacher_records untuk Dashboard
       try {
         const rawTRec = localStorage.getItem('pia_teacher_records');
         const tRecMap = rawTRec ? JSON.parse(rawTRec) : {};
@@ -612,19 +626,31 @@ async function handleApproveDecision(attendanceId, decision, teacherName) {
         localStorage.setItem('pia_teacher_records', JSON.stringify(tRecMap));
       } catch (_) {}
 
-      // Update di pia_teacher_attendance_db
-      const localDb = getLocalTeacherDb();
-      const localItem = localDb.submissions.find((s) => Number(s.id) === Number(attendanceId));
-      if (localItem) {
-        localItem.approval_status = decision;
-        localItem.approved_by = currentUser ? (currentUser.full_name || currentUser.username) : 'Admin';
-        saveLocalTeacherDb(localDb);
-      }
+      // 2. Update di pia_teacher_attendance_db
+      try {
+        const localDb = getLocalTeacherDb();
+        const localItem = localDb.submissions.find((s) => Number(s.id) === numId);
+        if (localItem) {
+          localItem.approval_status = decision;
+          localItem.approved_by = currentUser ? (currentUser.full_name || currentUser.username) : 'Admin';
+          saveLocalTeacherDb(localDb);
+        }
+      } catch (_) {}
     }
+
+    // 3. Kirim ke API server
+    await callTeacherApi('/api/teacher-attendance/approve', {
+      method: 'POST',
+      body: JSON.stringify({
+        admin_email: adminEmail,
+        attendance_id: numId,
+        decision: decision,
+      }),
+    });
 
     showBanner(
       decision === 'Approved'
-        ? `Presensi "${teacherName}" telah DISETUJUI dan langsung tersinkron ke Dashboard.`
+        ? `Presensi "${teacherName}" telah DISETUJUI dan langsung tersambung ke Dashboard.`
         : `Presensi "${teacherName}" telah DITOLAK.`,
       decision === 'Approved' ? 'success' : 'error'
     );
@@ -633,6 +659,59 @@ async function handleApproveDecision(attendanceId, decision, teacherName) {
     await loadTeacherAttendanceData();
   } catch (err) {
     showBanner(`Gagal memproses persetujuan: ${err.message}`, 'error');
+  }
+}
+
+async function handleDeleteAttendance(attendanceId, teacherName, attendanceDate) {
+  const formattedDate = formatDateIndo(attendanceDate);
+  const confirmed = window.confirm(
+    `Apakah Anda yakin ingin menghapus data presensi "${teacherName}" pada tanggal ${formattedDate}?\n\nData yang dihapus akan otomatis dibersihkan dari Dashboard.`
+  );
+  if (!confirmed) return;
+
+  try {
+    const adminEmail = currentUser ? currentUser.email : 'yumenoboken@gmail.com';
+    const numId = Number(attendanceId);
+
+    // Cari target
+    const target = allSubmissions.find((s) => Number(s.id) === numId);
+    if (target) {
+      // 1. Bersihkan dari pia_teacher_records (agar terhapus dari Dashboard!)
+      try {
+        const rawTRec = localStorage.getItem('pia_teacher_records');
+        const tRecMap = rawTRec ? JSON.parse(rawTRec) : {};
+        if (target.user_id) delete tRecMap[`${target.user_id}_${target.attendance_date}`];
+        if (target.teacher_email) delete tRecMap[`${target.teacher_email.toLowerCase()}_${target.attendance_date}`];
+        localStorage.setItem('pia_teacher_records', JSON.stringify(tRecMap));
+      } catch (_) {}
+
+      // 2. Hapus dari pia_teacher_attendance_db
+      try {
+        const localDb = getLocalTeacherDb();
+        localDb.submissions = localDb.submissions.filter((s) => Number(s.id) !== numId);
+        saveLocalTeacherDb(localDb);
+      } catch (_) {}
+    }
+
+    // 3. Kirim ke API server
+    await callTeacherApi('/api/teacher-attendance/delete', {
+      method: 'POST',
+      body: JSON.stringify({
+        admin_email: adminEmail,
+        attendance_id: numId,
+      }),
+    });
+
+    // 4. Update memory list lokal
+    allSubmissions = allSubmissions.filter((s) => Number(s.id) !== numId);
+    myHistory = myHistory.filter((s) => Number(s.id) !== numId);
+
+    showBanner(`Data presensi "${teacherName}" berhasil dihapus dan disinkronkan ke Dashboard.`, 'success');
+
+    // Refresh tampilan
+    await loadTeacherAttendanceData();
+  } catch (err) {
+    showBanner(`Gagal menghapus data presensi: ${err.message}`, 'error');
   }
 }
 

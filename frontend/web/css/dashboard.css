@@ -1965,6 +1965,28 @@ select.form-input {
   color: #ffffff;
 }
 
+.btn-action-delete {
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
+.btn-action-delete:hover {
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #b91c1c;
+}
+
 @media (max-width: 920px) {
   .pendaftaran-grid {
     grid-template-columns: 1fr;

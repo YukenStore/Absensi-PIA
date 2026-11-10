@@ -1419,6 +1419,34 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  if (pathname === '/api/teacher-attendance/delete' && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const adminEmail = (body.admin_email || '').trim().toLowerCase();
+      const attendanceId = Number(body.attendance_id);
+
+      const adminUser = db
+        .prepare('SELECT * FROM users WHERE lower(email) = ? LIMIT 1')
+        .get(adminEmail);
+      const isAdmin =
+        adminEmail === 'yumenoboken@gmail.com' ||
+        (adminUser && adminUser.role === 'admin');
+
+      if (!isAdmin) {
+        return sendJson(res, 403, { detail: 'Hanya Admin yang dapat menghapus presensi guru.' });
+      }
+
+      db.prepare('DELETE FROM teacher_attendance WHERE id = ?').run(attendanceId);
+
+      return sendJson(res, 200, {
+        success: true,
+        message: 'Data presensi guru berhasil dihapus!',
+      });
+    } catch (err) {
+      return sendJson(res, 500, { detail: err.message });
+    }
+  }
+
   if (pathname === '/api/teacher-attendance/set-role' && req.method === 'POST') {
     try {
       const body = await parseBody(req);
