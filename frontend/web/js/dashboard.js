@@ -866,13 +866,11 @@ function renderRecapTable({ bodyEl, peopleList, recordsMap, filterConfig, emptyM
     let totalIzin = 0;
     let totalSakit = 0;
     let totalAlfa = 0;
-    let effectiveDays = 0;
 
     for (const { year, monthIndex } of targetMonths) {
       const daysCount = getDaysInMonth(year, monthIndex);
       for (let d = 1; d <= daysCount; d++) {
         if (isHolidayDate(year, monthIndex, d)) continue;
-        effectiveDays++;
         const dateKey = formatDateKey(year, monthIndex, d);
         const st =
           recordsMap[`${person.id}_${dateKey}`] ||
@@ -884,8 +882,10 @@ function renderRecapTable({ bodyEl, peopleList, recordsMap, filterConfig, emptyM
       }
     }
 
+    // Persentase kehadiran dihitung berdasarkan total pertemuan/kehadiran yang telah tercatat
+    const totalPertemuan = totalHadir + totalIzin + totalSakit + totalAlfa;
     const percentage =
-      effectiveDays > 0 ? Math.round((totalHadir * 100) / effectiveDays) : 0;
+      totalPertemuan > 0 ? Math.round((totalHadir * 100) / totalPertemuan) : 0;
 
     rowsHtml += `
       <tr>
