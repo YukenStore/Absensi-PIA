@@ -2614,3 +2614,211 @@ select.form-input {
     margin-left: 10px;
   }
 }
+
+/* ========================================================= */
+/* STYLING HALAMAN 4: REKAP PEMBELAJARAN                    */
+/* ========================================================= */
+.learning-category-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 4px;
+}
+
+@media (min-width: 540px) {
+  .learning-category-tabs {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.btn-category-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1.5px solid var(--border-color);
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-category-tab:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.btn-category-tab.active {
+  background: #eff6ff;
+  border-color: var(--primary);
+  color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+.form-row-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 480px) {
+  .form-row-2col {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
+.learning-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.stat-cat-total {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+.stat-cat-total .stat-num { color: #0f172a; }
+.stat-cat-total .stat-lbl { color: #475569; }
+
+.stat-cat-iqro {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+.stat-cat-iqro .stat-num { color: #2563eb; }
+.stat-cat-iqro .stat-lbl { color: #1d4ed8; }
+
+.stat-cat-quran {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+.stat-cat-quran .stat-num { color: #16a34a; }
+.stat-cat-quran .stat-lbl { color: #15803d; }
+
+.stat-cat-hafalan {
+  background: #faf5ff;
+  border-color: #e9d5ff;
+}
+.stat-cat-hafalan .stat-num { color: #9333ea; }
+.stat-cat-hafalan .stat-lbl { color: #7e22ce; }
+
+/* Category Badges */
+.badge-cat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.badge-cat-iqro {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.badge-cat-quran {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.badge-cat-surat {
+  background: #faf5ff;
+  color: #7e22ce;
+  border: 1px solid #e9d5ff;
+}
+
+.badge-cat-doa {
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+}
+
+/* Predicate Badges */
+.badge-pred {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.badge-pred-sangat-lancar {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+
+.badge-pred-lancar {
+  background: #e0e7ff;
+  color: #3730a3;
+  border: 1px solid #c7d2fe;
+}
+
+.badge-pred-cukup {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.badge-pred-mengulang {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.learning-table-wrap {
+  overflow: visible !important;
+}
+
+@media (max-width: 920px) {
+  #learningRecordsTable:not(.is-empty-table) thead {
+    display: none;
+  }
+  #learningRecordsTable:not(.is-empty-table) tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 2px 0;
+    background: transparent;
+  }
+  #learningRecordsTable:not(.is-empty-table) tbody tr {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px 14px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+  #learningRecordsTable:not(.is-empty-table) tbody tr td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0;
+    border: none;
+    font-size: 0.83rem;
+  }
+  #learningRecordsTable:not(.is-empty-table) td.cell-no {
+    display: none !important;
+  }
+  #learningRecordsTable:not(.is-empty-table) tbody tr td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+  }
+}

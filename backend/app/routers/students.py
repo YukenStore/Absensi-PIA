@@ -276,3 +276,75 @@ def sync_teachers(payload: Dict[str, Any], db: DatabaseClient = Depends(get_db))
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
+
+@router.get("/api/learning-records")
+def get_learning_records(db: DatabaseClient = Depends(get_db)):
+    try:
+        db.execute(
+            """CREATE TABLE IF NOT EXISTS learning_records (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                student_id INTEGER,
+                student_name TEXT NOT NULL,
+                teacher_name TEXT NOT NULL DEFAULT '',
+                category TEXT NOT NULL,
+                materi TEXT NOT NULL,
+                jilid TEXT NOT NULL DEFAULT '',
+                halaman TEXT NOT NULL DEFAULT '',
+                surat TEXT NOT NULL DEFAULT '',
+                ayat TEXT NOT NULL DEFAULT '',
+                doa TEXT NOT NULL DEFAULT '',
+                predicate TEXT NOT NULL,
+                note TEXT NOT NULL DEFAULT '',
+                record_date TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )"""
+        )
+        rows = db.execute("SELECT * FROM learning_records ORDER BY record_date DESC, id DESC LIMIT 500")
+        return {"success": True, "records": rows}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/api/learning-records", status_code=201)
+def add_learning_record(payload: Dict[str, Any], db: DatabaseClient = Depends(get_db)):
+    student_id = payload.get("student_id")
+    student_name = str(payload.get("student_name") or "").strip()
+    teacher_name = str(payload.get("teacher_name") or "Guru PIA").strip()
+    category = str(payload.get("category") or "Iqro").strip()
+    materi = str(payload.get("materi") or "-").strip()
+    jilid = str(payload.get("jilid") or "").strip()
+    halaman = str(payload.get("halaman") or "").strip()
+    surat = str(payload.get("surat") or "").strip()
+    ayat = str(payload.get("ayat") or "").strip()
+    doa = str(payload.get("doa") or "").strip()
+    predicate = str(payload.get("predicate") or "Lancar").strip()
+    note = str(payload.get("note") or "").strip()
+    record_date = str(payload.get("record_date") or "").strip()
+
+    if not student_name or not category or not materi:
+        raise HTTPException(status_code=400, detail="Data santri, kategori, dan materi wajib diisi.")
+
+    try:
+        db.execute(
+            """INSERT INTO learning_records (
+                student_id, student_name, teacher_name, category, materi, jilid, halaman, surat, ayat, doa, predicate, note, record_date
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            [student_id, student_name, teacher_name, category, materi, jilid, halaman, surat, ayat, doa, predicate, note, record_date],
+        )
+        return {"success": True, "message": f"Capaian belajar {student_name} ({materi}) berhasil disimpan!"}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/api/learning-records/delete")
+def delete_learning_record(payload: Dict[str, Any], db: DatabaseClient = Depends(get_db)):
+    record_id = payload.get("record_id")
+    if not record_id:
+        raise HTTPException(status_code=400, detail="ID catatan tidak valid.")
+    try:
+        db.execute("DELETE FROM learning_records WHERE id = ?", [int(record_id)])
+        return {"success": True, "message": "Catatan pembelajaran berhasil dihapus."}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+

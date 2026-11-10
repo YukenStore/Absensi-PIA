@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>Rekap Pembelajaran - Pendidikan Islam At-Taqwa</title>
+  <link rel="icon" type="image/png" href="assets/logo-pia.png" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261110_13" />
+</head>
+<body>
+  <!-- Navigasi Utama -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <!-- Kiri: Brand / Identitas -->
+      <a href="dashboard.html" class="brand">
+        <div class="brand-badge">
+          <img src="assets/logo-pia.png" alt="Logo Pendidikan Islam At-Taqwa" class="brand-logo-img" />
+        </div>
+        <div class="brand-text">
+          <h1>Pendidikan Islam At-Taqwa</h1>
+          <span>Sistem Informasi Presensi &amp; Pembelajaran</span>
+        </div>
+      </a>
+
+      <!-- Pojok Kanan: Info Akun + Tombol Menu Garis 3 (☰) -->
+      <div class="topbar-right">
+        <div class="user-chip header-user-chip">
+          <div class="name" id="activeUserName">Pengguna PIA</div>
+          <div class="role" id="activeUserEmail">Pendidikan Islam At-Taqwa</div>
+        </div>
+
+        <button type="button" class="btn-hamburger" id="hamburgerBtn" aria-label="Buka Menu Navigasi" aria-expanded="false" title="Menu Navigasi">
+          <svg class="icon-hamburger" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+          <svg class="icon-close" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+
+        <!-- Dropdown Menu Navigasi & Akun Pojok Kanan -->
+        <nav class="nav-dropdown-menu" id="mainNavLinks" aria-label="Menu Navigasi">
+          <div class="dropdown-user-header">
+            <div class="dropdown-user-avatar" id="dropdownUserAvatar">P</div>
+            <div class="dropdown-user-info">
+              <div class="dropdown-user-name" id="dropdownUserName">Pengguna PIA</div>
+              <div class="dropdown-user-email" id="dropdownUserEmail">Pendidikan Islam At-Taqwa</div>
+              <span class="dropdown-user-badge" id="dropdownUserRole">Guru</span>
+            </div>
+          </div>
+
+          <div class="dropdown-divider"></div>
+
+          <div class="dropdown-nav-list">
+            <a href="dashboard.html" class="dropdown-nav-item nav-item">
+              <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="9"></rect>
+                <rect x="14" y="3" width="7" height="5"></rect>
+                <rect x="14" y="12" width="7" height="9"></rect>
+                <rect x="3" y="16" width="7" height="5"></rect>
+              </svg>
+              <span>Dashboard</span>
+            </a>
+            <a href="pendaftaran.html" class="dropdown-nav-item nav-item">
+              <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <line x1="19" y1="8" x2="19" y2="14"></line>
+                <line x1="22" y1="11" x2="16" y2="11"></line>
+              </svg>
+              <span>Pendaftaran</span>
+            </a>
+            <a href="absensi-guru.html" class="dropdown-nav-item nav-item">
+              <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+              <span>Absensi Guru</span>
+            </a>
+            <a href="absensi-siswa.html" class="dropdown-nav-item nav-item">
+              <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+              </svg>
+              <span>Absensi Siswa</span>
+            </a>
+            <a href="rekap-pembelajaran.html" class="dropdown-nav-item nav-item active">
+              <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                <polyline points="2 17 12 22 22 17"></polyline>
+                <polyline points="2 12 12 17 22 12"></polyline>
+              </svg>
+              <span>Rekap Pembelajaran</span>
+            </a>
+          </div>
+
+          <div class="dropdown-divider"></div>
+
+          <button type="button" class="dropdown-logout-btn logout-trigger" id="logoutBtn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            <span>Keluar</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="page-header">
+      <div class="page-title">
+        <h2>Rekapitulasi Pembelajaran Santri / Siswa</h2>
+        <p>Pencatatan perkembangan belajar Iqro, Al-Qur'an, Hafalan Surat Pendek, dan Hafalan Doa Harian.</p>
+      </div>
+    </div>
+
+    <!-- Alert Notifikasi Global -->
+    <div id="learningAlert" class="alert-banner"></div>
+
+    <div class="pendaftaran-grid">
+      <!-- Panel Kiri: Form Input Setoran Pembelajaran -->
+      <section class="section-card">
+        <div class="card-header">
+          <div class="card-title">
+            <h3>Catat Capaian Pembelajaran</h3>
+            <p>Pilih santri, kategori materi, dan simpan penilaian perkembangan.</p>
+          </div>
+          <span id="teacherBadge" class="badge-teacher-name">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            <span id="activeTeacherName">Guru PIA</span>
+          </span>
+        </div>
+
+        <form id="learningRecordForm" class="form-stack">
+          <!-- Pilih Siswa -->
+          <div class="form-field">
+            <label for="studentSelect">Pilih Nama Siswa <span style="color: #ef4444;">*</span></label>
+            <select id="studentSelect" class="form-input" required>
+              <option value="">-- Pilih Nama Siswa --</option>
+            </select>
+          </div>
+
+          <!-- Tanggal Pembelajaran -->
+          <div class="form-field">
+            <label for="recordDate">Tanggal Pembelajaran <span style="color: #ef4444;">*</span></label>
+            <input type="date" id="recordDate" class="form-input" required />
+          </div>
+
+          <!-- Kategori Pembelajaran (Tabs) -->
+          <div class="form-field">
+            <label>Kategori Materi <span style="color: #ef4444;">*</span></label>
+            <div class="learning-category-tabs" id="categoryTabs">
+              <button type="button" class="btn-category-tab active" data-category="Iqro">
+                📖 Iqro
+              </button>
+              <button type="button" class="btn-category-tab" data-category="Quran">
+                📗 Al-Qur'an
+              </button>
+              <button type="button" class="btn-category-tab" data-category="Hafalan Surat">
+                🕌 Hafalan Surat
+              </button>
+              <button type="button" class="btn-category-tab" data-category="Hafalan Doa">
+                🤲 Hafalan Doa
+              </button>
+            </div>
+            <input type="hidden" id="selectedCategory" value="Iqro" />
+          </div>
+
+          <!-- Form Fields Dinamis: IQRO -->
+          <div id="fieldsIqro" class="category-field-group">
+            <div class="form-row-2col">
+              <div class="form-field">
+                <label for="iqroJilid">Jilid Iqro <span style="color: #ef4444;">*</span></label>
+                <select id="iqroJilid" class="form-input">
+                  <option value="Iqro 1" selected>Iqro 1</option>
+                  <option value="Iqro 2">Iqro 2</option>
+                  <option value="Iqro 3">Iqro 3</option>
+                  <option value="Iqro 4">Iqro 4</option>
+                  <option value="Iqro 5">Iqro 5</option>
+                  <option value="Iqro 6">Iqro 6</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label for="iqroHalaman">Halaman <span style="color: #ef4444;">*</span></label>
+                <input type="number" id="iqroHalaman" class="form-input" min="1" max="50" placeholder="Contoh: 15" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Form Fields Dinamis: AL-QUR'AN -->
+          <div id="fieldsQuran" class="category-field-group" style="display: none;">
+            <div class="form-row-2col">
+              <div class="form-field">
+                <label for="quranSurat">Nama Surat <span style="color: #ef4444;">*</span></label>
+                <input type="text" id="quranSurat" class="form-input" list="quranSuratList" placeholder="Ketik atau pilih surat..." />
+                <datalist id="quranSuratList">
+                  <option value="Al-Fatihah"></option>
+                  <option value="Al-Baqarah"></option>
+                  <option value="Ali 'Imran"></option>
+                  <option value="An-Nisa'"></option>
+                  <option value="Al-Ma'idah"></option>
+                  <option value="Al-An'am"></option>
+                  <option value="Al-A'raf"></option>
+                  <option value="Yasin"></option>
+                  <option value="Al-Waqi'ah"></option>
+                  <option value="Al-Mulk"></option>
+                  <option value="An-Naba'"></option>
+                </datalist>
+              </div>
+              <div class="form-field">
+                <label for="quranAyat">Ayat <span style="color: #ef4444;">*</span></label>
+                <input type="text" id="quranAyat" class="form-input" placeholder="Contoh: Ayat 1 - 15" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Form Fields Dinamis: HAFALAN SURAT -->
+          <div id="fieldsSurat" class="category-field-group" style="display: none;">
+            <div class="form-row-2col">
+              <div class="form-field">
+                <label for="hafalanSurat">Nama Surat (Juz 30) <span style="color: #ef4444;">*</span></label>
+                <select id="hafalanSurat" class="form-input">
+                  <option value="An-Nas" selected>An-Nas</option>
+                  <option value="Al-Falaq">Al-Falaq</option>
+                  <option value="Al-Ikhlas">Al-Ikhlas</option>
+                  <option value="Al-Lahab">Al-Lahab</option>
+                  <option value="An-Nasr">An-Nasr</option>
+                  <option value="Al-Kafirun">Al-Kafirun</option>
+                  <option value="Al-Kautsar">Al-Kautsar</option>
+                  <option value="Al-Ma'un">Al-Ma'un</option>
+                  <option value="Quraisy">Quraisy</option>
+                  <option value="Al-Fil">Al-Fil</option>
+                  <option value="Al-Humazah">Al-Humazah</option>
+                  <option value="Al-'Asr">Al-'Asr</option>
+                  <option value="At-Takatsur">At-Takatsur</option>
+                  <option value="Al-Qari'ah">Al-Qari'ah</option>
+                  <option value="Al-'Adiyat">Al-'Adiyat</option>
+                  <option value="Az-Zalzalah">Az-Zalzalah</option>
+                  <option value="Al-Bayyinah">Al-Bayyinah</option>
+                  <option value="Al-Qadr">Al-Qadr</option>
+                  <option value="Al-'Alaq">Al-'Alaq</option>
+                  <option value="At-Tin">At-Tin</option>
+                  <option value="Al-Insyirah">Al-Insyirah</option>
+                  <option value="Ad-Duha">Ad-Duha</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label for="hafalanSuratAyat">Capaian Ayat</label>
+                <input type="text" id="hafalanSuratAyat" class="form-input" placeholder="Contoh: Full Surat atau Ayat 1-5" value="Full Surat" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Form Fields Dinamis: HAFALAN DOA -->
+          <div id="fieldsDoa" class="category-field-group" style="display: none;">
+            <div class="form-field">
+              <label for="hafalanDoa">Nama Doa / Hadits <span style="color: #ef4444;">*</span></label>
+              <select id="hafalanDoa" class="form-input">
+                <option value="Doa Sebelum Makan" selected>Doa Sebelum Makan</option>
+                <option value="Doa Sesudah Makan">Doa Sesudah Makan</option>
+                <option value="Doa Masuk Kamar Mandi">Doa Masuk Kamar Mandi</option>
+                <option value="Doa Keluar Kamar Mandi">Doa Keluar Kamar Mandi</option>
+                <option value="Doa Sebelum Tidur">Doa Sebelum Tidur</option>
+                <option value="Doa Bangun Tidur">Doa Bangun Tidur</option>
+                <option value="Doa Untuk Kedua Orang Tua">Doa Untuk Kedua Orang Tua</option>
+                <option value="Doa Kebaikan Dunia & Akhirat">Doa Kebaikan Dunia &amp; Akhirat</option>
+                <option value="Doa Masuk Masjid">Doa Masuk Masjid</option>
+                <option value="Doa Keluar Masjid">Doa Keluar Masjid</option>
+                <option value="Doa Belajar">Doa Belajar</option>
+                <option value="Doa Memakai Pakaian">Doa Memakai Pakaian</option>
+                <option value="Doa Naik Kendaraan">Doa Naik Kendaraan</option>
+                <option value="Doa Bercermin">Doa Bercermin</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Predikat / Kelancaran -->
+          <div class="form-field">
+            <label for="predicateSelect">Predikat / Tingkat Kelancaran <span style="color: #ef4444;">*</span></label>
+            <select id="predicateSelect" class="form-input" required>
+              <option value="Sangat Lancar" selected>Sangat Lancar (A - Mutqin)</option>
+              <option value="Lancar">Lancar (B - Baik)</option>
+              <option value="Cukup">Cukup (C - Masih Terbata)</option>
+              <option value="Mengulang">Mengulang (Perlu Pengulangan Materi)</option>
+            </select>
+          </div>
+
+          <!-- Catatan / Keterangan Evaluasi -->
+          <div class="form-field">
+            <label for="learningNote">Catatan / Evaluasi Guru</label>
+            <textarea
+              id="learningNote"
+              class="form-input textarea-note"
+              rows="3"
+              placeholder="Catatan tajwid, makharijul huruf, atau pesan untuk orang tua..."
+            ></textarea>
+          </div>
+
+          <button type="submit" id="submitLearningBtn" class="btn-primary-submit">
+            Simpan Rekap Pembelajaran
+          </button>
+        </form>
+      </section>
+
+      <!-- Panel Kanan: Riwayat & Rekapitulasi Pembelajaran -->
+      <section class="section-card">
+        <div class="card-header">
+          <div class="card-title">
+            <h3>Riwayat &amp; Perkembangan Belajar</h3>
+            <p>Daftar mutaba'ah hafalan dan bacaan santri yang telah tercatat.</p>
+          </div>
+        </div>
+
+        <!-- Ringkasan Statistik Pembelajaran -->
+        <div class="learning-stat-grid">
+          <div class="stat-pill stat-cat-total">
+            <span class="stat-num" id="statTotalSetoran">0</span>
+            <span class="stat-lbl">Total Setoran</span>
+          </div>
+          <div class="stat-pill stat-cat-iqro">
+            <span class="stat-num" id="statIqroCount">0</span>
+            <span class="stat-lbl">Iqro</span>
+          </div>
+          <div class="stat-pill stat-cat-quran">
+            <span class="stat-num" id="statQuranCount">0</span>
+            <span class="stat-lbl">Al-Qur'an</span>
+          </div>
+          <div class="stat-pill stat-cat-hafalan">
+            <span class="stat-num" id="statHafalanCount">0</span>
+            <span class="stat-lbl">Hafalan</span>
+          </div>
+        </div>
+
+        <!-- Toolbar Filter Rekap Pembelajaran -->
+        <div class="approval-toolbar" id="learningToolbar" style="margin-top: 14px;">
+          <div class="toolbar-left">
+            <!-- Filter Kategori -->
+            <div class="filter-item">
+              <label for="filterCategory">Kategori:</label>
+              <select id="filterCategory" class="form-input filter-status-select">
+                <option value="all">Semua Kategori</option>
+                <option value="Iqro">📖 Iqro</option>
+                <option value="Quran">📗 Al-Qur'an</option>
+                <option value="Hafalan Surat">🕌 Hafalan Surat</option>
+                <option value="Hafalan Doa">🤲 Hafalan Doa</option>
+              </select>
+            </div>
+
+            <!-- Filter Siswa -->
+            <div class="filter-item">
+              <label for="filterStudent">Siswa:</label>
+              <select id="filterStudent" class="form-input filter-status-select">
+                <option value="all">Semua Siswa</option>
+              </select>
+            </div>
+
+            <!-- Filter Tanggal -->
+            <div class="filter-item">
+              <label for="filterDate">Tanggal:</label>
+              <div class="date-input-group">
+                <input type="date" id="filterDate" class="form-input filter-date-input" />
+                <button type="button" id="btnFilterToday" class="btn-filter-pill active">Hari Ini</button>
+                <button type="button" id="btnFilterAllDates" class="btn-filter-pill">Semua Tanggal</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="toolbar-right">
+            <span class="filter-status-info" id="learningFilterInfo">Memuat data...</span>
+          </div>
+        </div>
+
+        <!-- Tabel Riwayat Pembelajaran -->
+        <div class="table-responsive learning-table-wrap">
+          <table class="recap-table" id="learningRecordsTable">
+            <thead>
+              <tr>
+                <th style="width: 44px;">No</th>
+                <th>Siswa</th>
+                <th>Tanggal</th>
+                <th>Kategori</th>
+                <th>Capaian / Materi</th>
+                <th>Kelancaran</th>
+                <th>Catatan Guru</th>
+                <th style="width: 50px; text-align: center;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="learningRecordsBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="js/rekap-pembelajaran.js?v=20261110_13"></script>
+</body>
+</html>

@@ -319,6 +319,23 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE(student_id, attendance_date)
   );
+  CREATE TABLE IF NOT EXISTS learning_records (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id INTEGER,
+    student_name TEXT NOT NULL,
+    teacher_name TEXT NOT NULL DEFAULT '',
+    category TEXT NOT NULL,
+    materi TEXT NOT NULL,
+    jilid TEXT NOT NULL DEFAULT '',
+    halaman TEXT NOT NULL DEFAULT '',
+    surat TEXT NOT NULL DEFAULT '',
+    ayat TEXT NOT NULL DEFAULT '',
+    doa TEXT NOT NULL DEFAULT '',
+    predicate TEXT NOT NULL,
+    note TEXT NOT NULL DEFAULT '',
+    record_date TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `);
 
 // Pastikan kolom role & is_hidden tersedia pada tabel users dan akun yumenoboken@gmail.com menjadi Admin utama
@@ -1249,6 +1266,71 @@ const server = http.createServer(async (req, res) => {
         success: true,
         message: `Presensi siswa untuk tanggal ${dateStr} berhasil disimpan dan tersinkron ke Dashboard!`,
       });
+    } catch (err) {
+      return sendJson(res, 500, { detail: err.message });
+    }
+  }
+
+  // ==========================================================
+  // ENDPOINT API HALAMAN 4: REKAP PEMBELAJARAN
+  // ==========================================================
+  if (pathname === '/api/learning-records' && req.method === 'GET') {
+    try {
+      const records = db
+        .prepare('SELECT * FROM learning_records ORDER BY record_date DESC, id DESC LIMIT 500')
+        .all();
+      return sendJson(res, 200, { success: true, records: records || [] });
+    } catch (err) {
+      return sendJson(res, 500, { detail: err.message });
+    }
+  }
+
+  if (pathname === '/api/learning-records' && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const studentId = body.student_id ? Number(body.student_id) : null;
+      const studentName = (body.student_name || '').trim();
+      const teacherName = (body.teacher_name || '').trim();
+      const category = (body.category || 'Iqro').trim();
+      const materi = (body.materi || '-').trim();
+      const jilid = (body.jilid || '').trim();
+      const halaman = (body.halaman || '').trim();
+      const surat = (body.surat || '').trim();
+      const ayat = (body.ayat || '').trim();
+      const doa = (body.doa || '').trim();
+      const predicate = (body.predicate || 'Lancar').trim();
+      const note = (body.note || '').trim();
+      const recordDate = (body.record_date || new Date().toISOString().slice(0, 10)).trim();
+
+      if (!studentName || !category || !materi) {
+        return sendJson(res, 400, { detail: 'Data santri, kategori, dan materi wajib diisi.' });
+      }
+
+      const stmt = db.prepare(`
+        INSERT INTO learning_records (
+          student_id, student_name, teacher_name, category, materi, jilid, halaman, surat, ayat, doa, predicate, note, record_date
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      const info = stmt.run(
+        studentId, studentName, teacherName, category, materi, jilid, halaman, surat, ayat, doa, predicate, note, recordDate
+      );
+
+      return sendJson(res, 201, {
+        success: true,
+        message: `Capaian belajar ${studentName} (${materi}) berhasil disimpan!`,
+        id: info.lastInsertRowid,
+      });
+    } catch (err) {
+      return sendJson(res, 500, { detail: err.message });
+    }
+  }
+
+  if (pathname === '/api/learning-records/delete' && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const recordId = Number(body.record_id);
+      db.prepare('DELETE FROM learning_records WHERE id = ?').run(recordId);
+      return sendJson(res, 200, { success: true, message: 'Catatan pembelajaran berhasil dihapus.' });
     } catch (err) {
       return sendJson(res, 500, { detail: err.message });
     }

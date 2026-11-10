@@ -21,6 +21,7 @@ const memoryStore = {
   students: [],
   teacherAttendance: [],
   customHolidays: {},
+  learningRecords: [],
   nextUserId: 2,
   nextStudentId: 1,
   nextAttendanceId: 1,
@@ -219,6 +220,28 @@ async function ensureD1Schema(db) {
         recorded_by TEXT NOT NULL DEFAULT '',
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         UNIQUE(student_id, attendance_date)
+      )`
+    )
+    .run();
+
+  await db
+    .prepare(
+      `CREATE TABLE IF NOT EXISTS learning_records (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER,
+        student_name TEXT NOT NULL,
+        teacher_name TEXT NOT NULL DEFAULT '',
+        category TEXT NOT NULL,
+        materi TEXT NOT NULL,
+        jilid TEXT NOT NULL DEFAULT '',
+        halaman TEXT NOT NULL DEFAULT '',
+        surat TEXT NOT NULL DEFAULT '',
+        ayat TEXT NOT NULL DEFAULT '',
+        doa TEXT NOT NULL DEFAULT '',
+        predicate TEXT NOT NULL,
+        note TEXT NOT NULL DEFAULT '',
+        record_date TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
       )`
     )
     .run();
@@ -1228,6 +1251,96 @@ export default {
             return jsonResponse({ success: true, message: `Presensi siswa untuk tanggal ${dateStr} berhasil disimpan dan tersinkron ke Dashboard!` });
           }
           return jsonResponse({ success: true, message: 'Presensi siswa berhasil disimpan!' });
+        }
+
+        // ==========================================================
+        // ENDPOINT API HALAMAN 4: REKAP PEMBELAJARAN
+        // ==========================================================
+        if (pathname === '/api/learning-records' && request.method === 'GET') {
+          if (db) {
+            const { results } = await db
+              .prepare('SELECT * FROM learning_records ORDER BY record_date DESC, id DESC LIMIT 500')
+              .all();
+            return jsonResponse({ success: true, records: results || [] });
+          }
+          return jsonResponse({ success: true, records: memoryStore.learningRecords || [] });
+        }
+
+        if (pathname === '/api/learning-records' && request.method === 'POST') {
+          const body = await request.json();
+          const studentId = body.student_id ? Number(body.student_id) : null;
+          const studentName = (body.student_name || '').trim();
+          const teacherName = (body.teacher_name || '').trim();
+          const category = (body.category || 'Iqro').trim();
+          const materi = (body.materi || '-').trim();
+          const jilid = (body.jilid || '').trim();
+          const halaman = (body.halaman || '').trim();
+          const surat = (body.surat || '').trim();
+          const ayat = (body.ayat || '').trim();
+          const doa = (body.doa || '').trim();
+          const predicate = (body.predicate || 'Lancar').trim();
+          const note = (body.note || '').trim();
+          const recordDate = (body.record_date || new Date().toISOString().slice(0, 10)).trim();
+
+          if (!studentName || !category || !materi) {
+            return jsonResponse({ detail: 'Data santri, kategori, dan materi wajib diisi.' }, 400);
+          }
+
+          if (db) {
+            const res = await db
+              .prepare(
+                `INSERT INTO learning_records (
+                  student_id, student_name, teacher_name, category, materi, jilid, halaman, surat, ayat, doa, predicate, note, record_date
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+              )
+              .bind(studentId, studentName, teacherName, category, materi, jilid, halaman, surat, ayat, doa, predicate, note, recordDate)
+              .run();
+
+            return jsonResponse({
+              success: true,
+              message: `Capaian belajar ${studentName} (${materi}) berhasil disimpan!`,
+              id: res.meta?.last_row_id,
+            });
+          }
+
+          const newRec = {
+            id: Date.now(),
+            student_id: studentId,
+            student_name: studentName,
+            teacher_name: teacherName,
+            category,
+            materi,
+            jilid,
+            halaman,
+            surat,
+            ayat,
+            doa,
+            predicate,
+            note,
+            record_date: recordDate,
+            created_at: new Date().toISOString(),
+          };
+          if (!memoryStore.learningRecords) memoryStore.learningRecords = [];
+          memoryStore.learningRecords.unshift(newRec);
+
+          return jsonResponse({
+            success: true,
+            message: `Capaian belajar ${studentName} (${materi}) berhasil disimpan!`,
+            record: newRec,
+          });
+        }
+
+        if (pathname === '/api/learning-records/delete' && request.method === 'POST') {
+          const body = await request.json();
+          const recordId = Number(body.record_id);
+          if (db) {
+            await db.prepare('DELETE FROM learning_records WHERE id = ?').bind(recordId).run();
+            return jsonResponse({ success: true, message: 'Catatan pembelajaran berhasil dihapus.' });
+          }
+          if (memoryStore.learningRecords) {
+            memoryStore.learningRecords = memoryStore.learningRecords.filter((r) => Number(r.id) !== recordId);
+          }
+          return jsonResponse({ success: true, message: 'Catatan pembelajaran berhasil dihapus.' });
         }
 
         // Overview Absensi Guru (untuk absensi-guru.html)
