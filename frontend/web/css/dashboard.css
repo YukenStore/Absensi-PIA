@@ -1987,6 +1987,133 @@ select.form-input {
   border-color: #b91c1c;
 }
 
+/* Teacher Identity Stack */
+.teacher-meta-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  line-height: 1.35;
+}
+
+.teacher-meta-stack .teacher-name-strong {
+  font-weight: 700;
+  color: var(--secondary);
+  font-size: 0.88rem;
+}
+
+.teacher-meta-stack .meta-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* 3-Dots Action Menu for Admin Approval Table */
+.admin-approval-table-wrap {
+  overflow: visible !important;
+}
+
+.approval-action-menu-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-approval-action-dots {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: #ffffff;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.btn-approval-action-dots:hover,
+.btn-approval-action-dots.active {
+  background: #f1f5f9;
+  color: var(--secondary);
+  border-color: #94a3b8;
+}
+
+.approval-action-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15), 0 8px 10px -6px rgba(15, 23, 42, 0.1);
+  z-index: 150;
+  min-width: 150px;
+  padding: 5px;
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.approval-action-dropdown .dropdown-action-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #334155;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.approval-action-dropdown .dropdown-action-item svg {
+  flex-shrink: 0;
+}
+
+.approval-action-dropdown .dropdown-action-item:hover:not([disabled]) {
+  background: #f1f5f9;
+  color: var(--secondary);
+}
+
+.approval-action-dropdown .dropdown-action-item.item-approve {
+  color: #15803d;
+}
+.approval-action-dropdown .dropdown-action-item.item-approve:hover:not([disabled]) {
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.approval-action-dropdown .dropdown-action-item.item-reject {
+  color: #b91c1c;
+}
+.approval-action-dropdown .dropdown-action-item.item-reject:hover:not([disabled]) {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.approval-action-dropdown .dropdown-action-item.item-delete {
+  color: #dc2626;
+}
+.approval-action-dropdown .dropdown-action-item.item-delete:hover {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.approval-action-dropdown .approval-menu-divider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 3px 0;
+}
+
 /* Approval Toolbar & Date Filter */
 .approval-toolbar {
   display: flex;
@@ -2312,18 +2439,20 @@ select.form-input {
     text-transform: uppercase;
   }
 
-  #adminApprovalTable .action-btn-group {
-    width: 100%;
-    margin-top: 6px;
-    display: flex;
-    gap: 8px;
+  #myHistoryTable:not(.is-empty-table) tbody tr.attendance-card-item td.cell-name,
+  #adminApprovalTable:not(.is-empty-table) tbody tr.attendance-card-item td.cell-name {
+    align-items: flex-start;
   }
 
-  #adminApprovalTable .action-btn-group button {
-    flex: 1;
-    padding: 8px 12px;
-    text-align: center;
-    justify-content: center;
+  .teacher-meta-stack {
+    align-items: flex-end;
+    text-align: right;
+  }
+
+  #adminApprovalTable .cell-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
 }
 

@@ -460,25 +460,67 @@ function renderAdminApprovalSection() {
   if (section) section.style.display = 'block';
   if (selectTeacherWrap) selectTeacherWrap.style.display = 'block';
 
-  // Isi dropdown guru untuk mode admin
-  if (selectTeacherEl && registeredTeachers.length > 0) {
+  // Isi dropdown guru untuk mode admin (tanpa duplikasi akun)
+  if (selectTeacherEl) {
     const currentVal = selectTeacherEl.value;
-    selectTeacherEl.innerHTML = `<option value="">-- Diri Sendiri (${currentUser ? currentUser.full_name : 'Admin'}) --</option>` +
-      registeredTeachers
-        .map((t) => `<option value="${t.id}" data-name="${t.name || t.full_name}" data-email="${t.email}">${t.name || t.full_name} (${t.email})</option>`)
-        .join('');
-    if (currentVal) selectTeacherEl.value = currentVal;
+    const currentEmail = (currentUser && currentUser.email ? currentUser.email : '').toLowerCase();
+
+    // Satukan daftar guru tanpa duplikasi (unique by email)
+    const teachersList = [];
+    const seenEmails = new Set();
+
+    // 1. Akun pengguna yang login (Admin) ditaruh pertama
+    if (currentUser && currentUser.email) {
+      teachersList.push({
+        id: currentUser.id || 'admin',
+        name: currentUser.full_name || currentUser.username || 'Admin',
+        email: currentUser.email,
+      });
+      seenEmails.add(currentEmail);
+    }
+
+    // 2. Tambahkan guru terdaftar lainnya tanpa memasukkan kembali akun yang sama
+    for (const t of registeredTeachers) {
+      const emailLower = (t.email || '').toLowerCase();
+      if (emailLower && !seenEmails.has(emailLower)) {
+        seenEmails.add(emailLower);
+        teachersList.push({
+          id: t.id,
+          name: t.name || t.full_name || t.username || 'Guru',
+          email: t.email,
+        });
+      }
+    }
+
+    // Bangun HTML options: Nama (email)
+    selectTeacherEl.innerHTML = teachersList
+      .map((t) => `<option value="${t.email}" data-id="${t.id}" data-name="${t.name}" data-email="${t.email}">${t.name} (${t.email})</option>`)
+      .join('');
+
+    // Pertahankan nilai yang sedang dipilih sebelumnya, atau default ke akun login
+    if (currentVal && seenEmails.has(currentVal.toLowerCase())) {
+      selectTeacherEl.value = currentVal;
+    } else if (currentUser && currentUser.email) {
+      selectTeacherEl.value = currentUser.email;
+    }
+
+    // Sinkronkan nama di badge form
+    const formTeacherNameEl = document.getElementById('formTeacherName');
+    if (formTeacherNameEl && selectTeacherEl.selectedIndex >= 0) {
+      const opt = selectTeacherEl.options[selectTeacherEl.selectedIndex];
+      if (opt) {
+        formTeacherNameEl.textContent = opt.getAttribute('data-name') || opt.textContent.split('(')[0].trim();
+      }
+    }
 
     if (!selectTeacherEl.dataset.hasNameListener) {
       selectTeacherEl.dataset.hasNameListener = 'true';
       selectTeacherEl.addEventListener('change', () => {
-        const formTeacherNameEl = document.getElementById('formTeacherName');
-        if (!formTeacherNameEl) return;
-        if (selectTeacherEl.value) {
-          const opt = selectTeacherEl.options[selectTeacherEl.selectedIndex];
-          formTeacherNameEl.textContent = opt.getAttribute('data-name') || opt.textContent.split('(')[0].trim();
-        } else {
-          formTeacherNameEl.textContent = currentUser ? (currentUser.full_name || currentUser.username) : 'Guru';
+        const nameEl = document.getElementById('formTeacherName');
+        if (!nameEl) return;
+        const opt = selectTeacherEl.options[selectTeacherEl.selectedIndex];
+        if (opt) {
+          nameEl.textContent = opt.getAttribute('data-name') || opt.textContent.split('(')[0].trim();
         }
       });
     }
@@ -627,8 +669,10 @@ function renderAdminApprovalSection() {
             <span class="student-num-badge">${idx + 1}</span>
           </td>
           <td class="cell-name" data-label="Nama Guru">
-            <strong>${item.teacher_name || '-'}</strong>
-            <small class="meta-sub">${item.teacher_email || ''}</small>
+            <div class="teacher-meta-stack">
+              <strong class="teacher-name-strong">${item.teacher_name || '-'}</strong>
+              <small class="meta-sub">${item.teacher_email || ''}</small>
+            </div>
           </td>
           <td class="cell-date" data-label="Tanggal">
             ${formatDateIndo(item.attendance_date)}
@@ -642,38 +686,64 @@ function renderAdminApprovalSection() {
           <td class="cell-approval" data-label="Status ACC">
             <span class="${appClass}">${appLabel}</span>
           </td>
-          <td class="cell-actions" data-label="Tindakan Admin">
-            <div class="action-btn-group">
+          <td class="cell-actions" data-label="Tindakan">
+            <div class="approval-action-menu-wrap">
               <button
                 type="button"
-                class="btn-action-approve"
+                class="btn-approval-action-dots"
                 data-id="${item.id}"
-                data-name="${item.teacher_name}"
-                title="Setujui presensi guru ini"
-                ${appStatus === 'Approved' ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}
+                aria-label="Menu Tindakan Admin"
+                title="Pilihan tindakan admin"
               >
-                ✓ Setujui
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="12" cy="5" r="2"></circle>
+                  <circle cx="12" cy="12" r="2"></circle>
+                  <circle cx="12" cy="19" r="2"></circle>
+                </svg>
               </button>
-              <button
-                type="button"
-                class="btn-action-reject"
-                data-id="${item.id}"
-                data-name="${item.teacher_name}"
-                title="Tolak presensi guru ini"
-                ${appStatus === 'Rejected' ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}
-              >
-                ✕ Tolak
-              </button>
-              <button
-                type="button"
-                class="btn-action-delete"
-                data-id="${item.id}"
-                data-name="${item.teacher_name}"
-                data-date="${item.attendance_date}"
-                title="Hapus data presensi ini (khusus admin)"
-              >
-                🗑 Hapus
-              </button>
+              <div class="approval-action-dropdown" id="approval-menu-${item.id}" style="display: none;">
+                <button
+                  type="button"
+                  class="dropdown-action-item item-approve"
+                  data-id="${item.id}"
+                  data-name="${item.teacher_name}"
+                  ${appStatus === 'Approved' ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                  <span>Setujui</span>
+                </button>
+                <button
+                  type="button"
+                  class="dropdown-action-item item-reject"
+                  data-id="${item.id}"
+                  data-name="${item.teacher_name}"
+                  ${appStatus === 'Rejected' ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                  <span>Tolak</span>
+                </button>
+                <div class="approval-menu-divider"></div>
+                <button
+                  type="button"
+                  class="dropdown-action-item item-delete text-danger"
+                  data-id="${item.id}"
+                  data-name="${item.teacher_name}"
+                  data-date="${item.attendance_date}"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                  </svg>
+                  <span>Hapus</span>
+                </button>
+              </div>
             </div>
           </td>
         </tr>
@@ -681,32 +751,94 @@ function renderAdminApprovalSection() {
     })
     .join('');
 
-  // Event listener tombol Setujui
-  tbody.querySelectorAll('.btn-action-approve').forEach((btn) => {
-    btn.addEventListener('click', async () => {
+  // Event listener tombol titik tiga untuk toggle dropdown menu
+  tbody.querySelectorAll('.btn-approval-action-dots').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.getAttribute('data-id');
+      const menu = document.getElementById(`approval-menu-${id}`);
+
+      // Tutup semua menu lainnya terlebih dahulu
+      document.querySelectorAll('.approval-action-dropdown').forEach((m) => {
+        if (m !== menu) m.style.display = 'none';
+      });
+      document.querySelectorAll('.btn-approval-action-dots').forEach((b) => {
+        if (b !== btn) b.classList.remove('active');
+      });
+
+      if (!menu) return;
+
+      const isShown = menu.style.display === 'flex';
+      if (isShown) {
+        menu.style.display = 'none';
+        btn.classList.remove('active');
+      } else {
+        menu.style.display = 'flex';
+        btn.classList.add('active');
+
+        // Deteksi posisi jika terlalu dekat dengan batas bawah viewport
+        const rect = menu.getBoundingClientRect();
+        if (rect.bottom > window.innerHeight - 20) {
+          menu.style.top = 'auto';
+          menu.style.bottom = 'calc(100% + 4px)';
+        } else {
+          menu.style.top = 'calc(100% + 4px)';
+          menu.style.bottom = 'auto';
+        }
+      }
+    });
+  });
+
+  // Tutup menu dropdown jika user mengklik di luar area menu
+  if (!window._hasApprovalMenuOutsideListener) {
+    window._hasApprovalMenuOutsideListener = true;
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.approval-action-menu-wrap')) {
+        document.querySelectorAll('.approval-action-dropdown').forEach((m) => {
+          m.style.display = 'none';
+        });
+        document.querySelectorAll('.btn-approval-action-dots').forEach((b) => {
+          b.classList.remove('active');
+        });
+      }
+    });
+  }
+
+  // Event listener tombol Setujui di dalam dropdown
+  tbody.querySelectorAll('.item-approve').forEach((btn) => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
       if (btn.disabled) return;
       const id = btn.getAttribute('data-id');
       const name = btn.getAttribute('data-name');
+      const menu = document.getElementById(`approval-menu-${id}`);
+      if (menu) menu.style.display = 'none';
       await handleApproveDecision(id, 'Approved', name);
     });
   });
 
-  // Event listener tombol Tolak
-  tbody.querySelectorAll('.btn-action-reject').forEach((btn) => {
-    btn.addEventListener('click', async () => {
+  // Event listener tombol Tolak di dalam dropdown
+  tbody.querySelectorAll('.item-reject').forEach((btn) => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
       if (btn.disabled) return;
       const id = btn.getAttribute('data-id');
       const name = btn.getAttribute('data-name');
+      const menu = document.getElementById(`approval-menu-${id}`);
+      if (menu) menu.style.display = 'none';
       await handleApproveDecision(id, 'Rejected', name);
     });
   });
 
-  // Event listener tombol Hapus (Khusus Admin)
-  tbody.querySelectorAll('.btn-action-delete').forEach((btn) => {
-    btn.addEventListener('click', async () => {
+  // Event listener tombol Hapus (Khusus Admin) di dalam dropdown
+  tbody.querySelectorAll('.item-delete').forEach((btn) => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
       const id = btn.getAttribute('data-id');
       const name = btn.getAttribute('data-name');
       const dateStr = btn.getAttribute('data-date');
+      const menu = document.getElementById(`approval-menu-${id}`);
+      if (menu) menu.style.display = 'none';
       await handleDeleteAttendance(id, name, dateStr);
     });
   });

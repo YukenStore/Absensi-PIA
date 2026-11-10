@@ -8,7 +8,7 @@
   <meta http-equiv="Expires" content="0" />
   <title>Absensi Guru - Pendidikan Islam At-Taqwa</title>
   <link rel="icon" type="image/png" href="assets/logo-pia.png" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261110_10" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261110_11" />
 </head>
 <body>
   <!-- Navigasi Utama -->
@@ -177,7 +177,7 @@
           <div class="form-field" id="adminTeacherSelectWrap" style="display: none;">
             <label for="adminSelectTeacher">Pilih Guru (Mode Admin)</label>
             <select id="adminSelectTeacher" class="form-input">
-              <option value="">-- Diri Sendiri (Sesuai Akun Login) --</option>
+              <option value="">Pilih Akun Guru...</option>
             </select>
             <span class="field-hint">Sebagai Admin, Anda dapat menginput presensi atas nama guru lain.</span>
           </div>
@@ -298,7 +298,7 @@
         </div>
       </div>
 
-      <div class="table-responsive">
+      <div class="table-responsive admin-approval-table-wrap">
         <table class="recap-table" id="adminApprovalTable">
           <thead>
             <tr>
@@ -308,7 +308,7 @@
               <th>Status</th>
               <th>Keterangan</th>
               <th>Status ACC</th>
-              <th style="width: 230px; text-align: center;">Tindakan Admin</th>
+              <th style="width: 72px; text-align: center;">Aksi</th>
             </tr>
           </thead>
           <tbody id="adminApprovalBody"></tbody>
@@ -317,7 +317,7 @@
     </section>
   </main>
 
-  <script src="js/absensi-guru.js?v=20261110_10"></script>
+  <script src="js/absensi-guru.js?v=20261110_11"></script>
 </body>
 </html>
 
