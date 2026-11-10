@@ -8,7 +8,7 @@
   <meta http-equiv="Expires" content="0" />
   <title>Absensi Guru - Pendidikan Islam At-Taqwa</title>
   <link rel="icon" type="image/png" href="assets/logo-pia.png" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261110_9" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261110_10" />
 </head>
 <body>
   <!-- Navigasi Utama -->
@@ -268,7 +268,33 @@
           <p>Verifikasi pengajuan presensi dewan guru. Data yang di-ACC otomatis tersinkronisasi ke matriks Data Guru di Dashboard.</p>
         </div>
         <div class="admin-approval-filters">
-          <span class="badge-pending-count" id="pendingBadgeCount">0 Pengajuan Menunggu</span>
+          <span class="badge-pending-count" id="pendingBadgeCount">0 Pengajuan Menunggu ACC</span>
+        </div>
+      </div>
+
+      <!-- Toolbar Filter Tanggal & Status ACC -->
+      <div class="approval-toolbar" id="approvalToolbar">
+        <div class="toolbar-left">
+          <div class="filter-item">
+            <label for="approvalFilterDate">Pilih Tanggal:</label>
+            <div class="date-input-group">
+              <input type="date" id="approvalFilterDate" class="form-input filter-date-input" />
+              <button type="button" id="btnFilterToday" class="btn-filter-pill">Hari Ini</button>
+              <button type="button" id="btnFilterAllDates" class="btn-filter-pill active">Semua Tanggal</button>
+            </div>
+          </div>
+          <div class="filter-item">
+            <label for="approvalFilterStatus">Status ACC:</label>
+            <select id="approvalFilterStatus" class="form-input filter-status-select">
+              <option value="all">Semua Status</option>
+              <option value="Pending">⏳ Menunggu ACC</option>
+              <option value="Approved">✓ Disetujui</option>
+              <option value="Rejected">✕ Ditolak</option>
+            </select>
+          </div>
+        </div>
+        <div class="toolbar-right">
+          <span class="filter-status-info" id="filterStatusInfo">Menampilkan semua data</span>
         </div>
       </div>
 
@@ -291,7 +317,7 @@
     </section>
   </main>
 
-  <script src="js/absensi-guru.js?v=20261110_9"></script>
+  <script src="js/absensi-guru.js?v=20261110_10"></script>
 </body>
 </html>
 

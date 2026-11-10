@@ -12,6 +12,8 @@ let myHistory = [];
 let allSubmissions = [];
 let registeredTeachers = [];
 let todayRecord = null;
+let approvalFilterDate = '';
+let approvalFilterStatus = 'all';
 
 const MONTH_NAMES_ID = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -488,6 +490,94 @@ function renderAdminApprovalSection() {
     pendingCountEl.className = `badge-pending-count ${pendingList.length > 0 ? 'has-pending' : ''}`;
   }
 
+  // Pasang listener & sinkronisasi Toolbar Filter Tanggal & Status
+  const filterDateInput = document.getElementById('approvalFilterDate');
+  const btnFilterToday = document.getElementById('btnFilterToday');
+  const btnFilterAllDates = document.getElementById('btnFilterAllDates');
+  const filterStatusSelect = document.getElementById('approvalFilterStatus');
+  const filterStatusInfo = document.getElementById('filterStatusInfo');
+  const approvalToolbar = document.getElementById('approvalToolbar');
+
+  if (approvalToolbar && !approvalToolbar.dataset.hasFilterListeners) {
+    approvalToolbar.dataset.hasFilterListeners = 'true';
+
+    if (filterDateInput) {
+      filterDateInput.addEventListener('change', () => {
+        approvalFilterDate = filterDateInput.value;
+        renderAdminApprovalSection();
+      });
+    }
+
+    if (btnFilterToday) {
+      btnFilterToday.addEventListener('click', () => {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        approvalFilterDate = todayStr;
+        if (filterDateInput) filterDateInput.value = todayStr;
+        renderAdminApprovalSection();
+      });
+    }
+
+    if (btnFilterAllDates) {
+      btnFilterAllDates.addEventListener('click', () => {
+        approvalFilterDate = '';
+        if (filterDateInput) filterDateInput.value = '';
+        renderAdminApprovalSection();
+      });
+    }
+
+    if (filterStatusSelect) {
+      filterStatusSelect.addEventListener('change', () => {
+        approvalFilterStatus = filterStatusSelect.value;
+        renderAdminApprovalSection();
+      });
+    }
+  }
+
+  // Sinkronkan nilai kontrol toolbar dengan state terkini
+  if (filterDateInput) filterDateInput.value = approvalFilterDate;
+  if (filterStatusSelect) filterStatusSelect.value = approvalFilterStatus;
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  if (btnFilterToday) {
+    if (approvalFilterDate === todayStr) {
+      btnFilterToday.classList.add('active');
+    } else {
+      btnFilterToday.classList.remove('active');
+    }
+  }
+  if (btnFilterAllDates) {
+    if (!approvalFilterDate) {
+      btnFilterAllDates.classList.add('active');
+    } else {
+      btnFilterAllDates.classList.remove('active');
+    }
+  }
+
+  // Terapkan filter tanggal & status pada allSubmissions
+  let filteredSubmissions = [...allSubmissions];
+
+  if (approvalFilterDate) {
+    filteredSubmissions = filteredSubmissions.filter((s) => s.attendance_date === approvalFilterDate);
+  }
+
+  if (approvalFilterStatus !== 'all') {
+    filteredSubmissions = filteredSubmissions.filter((s) => (s.approval_status || 'Pending') === approvalFilterStatus);
+  }
+
+  // Update ringkasan informasi pada toolbar
+  if (filterStatusInfo) {
+    const dateLabel = approvalFilterDate ? formatDateIndo(approvalFilterDate) : 'Semua Tanggal';
+    const statusLabel =
+      approvalFilterStatus === 'Pending'
+        ? ' (Menunggu ACC)'
+        : approvalFilterStatus === 'Approved'
+        ? ' (Disetujui)'
+        : approvalFilterStatus === 'Rejected'
+        ? ' (Ditolak)'
+        : '';
+    filterStatusInfo.textContent = `Menampilkan: ${dateLabel}${statusLabel} • Total ${filteredSubmissions.length} data`;
+  }
+
   if (!tbody) return;
 
   if (allSubmissions.length === 0) {
@@ -501,7 +591,29 @@ function renderAdminApprovalSection() {
     return;
   }
 
-  tbody.innerHTML = allSubmissions
+  if (filteredSubmissions.length === 0) {
+    let emptyMsg = 'Tidak ada data presensi yang sesuai dengan filter yang dipilih.';
+    if (approvalFilterDate && approvalFilterStatus !== 'all') {
+      const statusText = approvalFilterStatus === 'Pending' ? 'Menunggu ACC' : approvalFilterStatus === 'Approved' ? 'Disetujui' : 'Ditolak';
+      emptyMsg = `Tidak ada presensi berstatus <strong>${statusText}</strong> pada tanggal <strong>${formatDateIndo(approvalFilterDate)}</strong>.`;
+    } else if (approvalFilterDate) {
+      emptyMsg = `Tidak ada data presensi pada tanggal <strong>${formatDateIndo(approvalFilterDate)}</strong>. Silakan pilih tanggal lain atau klik <strong>Semua Tanggal</strong>.`;
+    } else if (approvalFilterStatus !== 'all') {
+      const statusText = approvalFilterStatus === 'Pending' ? 'Menunggu ACC' : approvalFilterStatus === 'Approved' ? 'Disetujui' : 'Ditolak';
+      emptyMsg = `Tidak ada pengajuan presensi dengan status <strong>${statusText}</strong>.`;
+    }
+
+    tbody.innerHTML = `
+      <tr class="empty-row">
+        <td colspan="7" class="empty-table-cell" style="padding: 32px 16px; color: var(--color-slate-500);">
+          ${emptyMsg}
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filteredSubmissions
     .map((item, idx) => {
       const code = item.status;
       const pillClass = code === 'Hadir' ? 'status-pill-hadir' : code === 'Izin' ? 'status-pill-izin' : 'status-pill-sakit';
