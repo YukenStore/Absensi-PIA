@@ -428,20 +428,25 @@ function renderLearningTable() {
 
   if (!tbody) return;
 
+  const tableEl = document.getElementById('learningRecordsTable');
+
   if (filtered.length === 0) {
+    if (tableEl) tableEl.classList.add('is-empty-table');
     let emptyMsg = 'Belum ada data capaian pembelajaran.';
     if (filterSelectedDate) {
       emptyMsg = `Tidak ada catatan pembelajaran pada tanggal <strong>${formatDateIndo(filterSelectedDate)}</strong>. Silakan pilih tanggal lain atau klik <strong>Semua Tanggal</strong>.`;
     }
     tbody.innerHTML = `
       <tr class="empty-row">
-        <td colspan="8" class="empty-table-cell" style="padding: 32px 16px; color: var(--color-slate-500);">
+        <td colspan="8" class="empty-table-cell" style="padding: 32px 16px; color: var(--color-slate-500); text-align: center;">
           ${emptyMsg}
         </td>
       </tr>
     `;
     return;
   }
+
+  if (tableEl) tableEl.classList.remove('is-empty-table');
 
   tbody.innerHTML = filtered
     .map((item, idx) => {
@@ -475,8 +480,12 @@ function renderLearningTable() {
           ? 'badge-pred-cukup'
           : 'badge-pred-mengulang';
 
+      const teacherLabel = item.teacher_name || 'Ustadz/ah';
+      const formattedDate = formatDateIndo(item.record_date);
+
       return `
         <tr class="learning-record-item">
+          <!-- Kolom Desktop -->
           <td class="cell-no" data-label="No">
             <span class="student-num-badge">${idx + 1}</span>
           </td>
@@ -484,24 +493,27 @@ function renderLearningTable() {
             <strong class="student-name-text">${item.student_name}</strong>
           </td>
           <td class="cell-date" data-label="Tanggal">
-            ${formatDateIndo(item.record_date)}
+            <span class="date-chip">${formattedDate}</span>
           </td>
           <td class="cell-cat" data-label="Kategori">
             <span class="badge-cat ${catClass}">${catIcon}</span>
           </td>
           <td class="cell-materi" data-label="Capaian / Materi">
-            <strong>${item.materi}</strong>
+            <strong class="materi-title">${item.materi}</strong>
           </td>
           <td class="cell-predicate" data-label="Kelancaran">
             <span class="badge-pred ${predClass}">${pred}</span>
           </td>
           <td class="cell-note" data-label="Catatan Guru">
-            <span class="note-text">${item.note || '-'}</span>
-            <small class="meta-sub" style="display:block; color:var(--text-muted); font-size:0.73rem; margin-top:2px;">
-              Guru: ${item.teacher_name || 'Ustadz/ah'}
-            </small>
+            <div class="note-cell-wrap">
+              ${item.note ? `<span class="note-text">${item.note}</span>` : '<span class="note-empty">-</span>'}
+              <small class="meta-sub">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                <span>Guru: ${teacherLabel}</span>
+              </small>
+            </div>
           </td>
-          <td class="cell-action" data-label="Aksi" style="text-align: center;">
+          <td class="cell-action" data-label="Aksi">
             <button
               type="button"
               class="btn-action-delete btn-delete-learning"
@@ -509,10 +521,74 @@ function renderLearningTable() {
               data-name="${item.student_name}"
               data-materi="${item.materi}"
               title="Hapus catatan ini"
-              style="padding: 6px 10px; font-size: 0.76rem;"
             >
-              🗑 Hapus
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+              <span>Hapus</span>
             </button>
+          </td>
+
+          <!-- Kartu Modern Khusus Tampilan Layar HP / Mobile -->
+          <td class="cell-mobile-card">
+            <div class="learning-mobile-card">
+              <div class="lmc-header">
+                <div class="lmc-student">
+                  <span class="student-num-badge">${idx + 1}</span>
+                  <div class="lmc-student-info">
+                    <strong class="lmc-student-name">${item.student_name}</strong>
+                    <span class="lmc-date">${formattedDate}</span>
+                  </div>
+                </div>
+                <div class="lmc-badge-wrap">
+                  <span class="badge-cat ${catClass}">${catIcon}</span>
+                </div>
+              </div>
+
+              <div class="lmc-body">
+                <div class="lmc-materi-row">
+                  <div class="lmc-materi-content">
+                    <span class="lmc-label">Capaian / Materi:</span>
+                    <div class="lmc-materi-val">${item.materi}</div>
+                  </div>
+                  <span class="badge-pred ${predClass}">${pred}</span>
+                </div>
+
+                ${item.note ? `
+                <div class="lmc-note-box">
+                  <svg class="lmc-note-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                  <div class="lmc-note-val">${item.note}</div>
+                </div>
+                ` : ''}
+              </div>
+
+              <div class="lmc-footer">
+                <div class="lmc-teacher-info">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                  <span>Guru: ${teacherLabel}</span>
+                </div>
+                <button
+                  type="button"
+                  class="btn-action-delete btn-delete-learning"
+                  data-id="${item.id}"
+                  data-name="${item.student_name}"
+                  data-materi="${item.materi}"
+                  title="Hapus catatan ini"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                  <span>Hapus</span>
+                </button>
+              </div>
+            </div>
           </td>
         </tr>
       `;

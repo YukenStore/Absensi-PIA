@@ -2778,47 +2778,424 @@ select.form-input {
   border: 1px solid #fca5a5;
 }
 
+/* ========================================================================= */
+/* TABEL & KARTU MUTABA'AH RIWAYAT PEMBELAJARAN                              */
+/* ========================================================================= */
+
 .learning-table-wrap {
-  overflow: visible !important;
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
-@media (max-width: 920px) {
-  #learningRecordsTable:not(.is-empty-table) thead {
-    display: none;
+#learningRecordsTable {
+  width: 100%;
+  min-width: 820px;
+  border-collapse: collapse;
+}
+
+#learningRecordsTable thead th {
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.77rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 12px 14px;
+  border-bottom: 1.5px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+#learningRecordsTable tbody tr td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.86rem;
+  vertical-align: middle;
+}
+
+#learningRecordsTable tbody tr:last-child td {
+  border-bottom: none;
+}
+
+#learningRecordsTable tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+/* Kolom Desktop Spesifik */
+#learningRecordsTable .col-no,
+#learningRecordsTable .cell-no {
+  text-align: center;
+  width: 48px;
+}
+
+#learningRecordsTable .col-name,
+#learningRecordsTable .cell-name {
+  text-align: left;
+  min-width: 130px;
+}
+#learningRecordsTable .student-name-text {
+  font-weight: 700;
+  color: var(--secondary);
+}
+
+#learningRecordsTable .col-date,
+#learningRecordsTable .cell-date {
+  text-align: center;
+  white-space: nowrap;
+  color: #64748b;
+  font-size: 0.82rem;
+  min-width: 120px;
+}
+#learningRecordsTable .date-chip {
+  display: inline-block;
+  padding: 3px 8px;
+  background: #f8fafc;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+#learningRecordsTable .col-cat,
+#learningRecordsTable .cell-cat {
+  text-align: center;
+  min-width: 110px;
+}
+
+#learningRecordsTable .col-materi,
+#learningRecordsTable .cell-materi {
+  text-align: left;
+  min-width: 160px;
+}
+#learningRecordsTable .materi-title {
+  color: #0f172a;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+#learningRecordsTable .col-predicate,
+#learningRecordsTable .cell-predicate {
+  text-align: center;
+  min-width: 110px;
+}
+
+#learningRecordsTable .col-note,
+#learningRecordsTable .cell-note {
+  text-align: left;
+  min-width: 170px;
+  max-width: 250px;
+  white-space: normal;
+}
+#learningRecordsTable .note-cell-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+#learningRecordsTable .note-text {
+  color: #334155;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  word-break: break-word;
+}
+#learningRecordsTable .note-empty {
+  color: #94a3b8;
+  font-size: 0.82rem;
+}
+#learningRecordsTable .meta-sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 0.73rem;
+}
+
+#learningRecordsTable .col-action,
+#learningRecordsTable .cell-action {
+  text-align: center;
+  width: 75px;
+  white-space: nowrap;
+}
+
+.btn-action-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 11px;
+  border-radius: 8px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 0.77rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.btn-action-delete:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #ffffff;
+  box-shadow: 0 2px 5px rgba(220, 38, 38, 0.25);
+}
+
+/* Sembunyikan sel kartu mobile di layar desktop */
+#learningRecordsTable .cell-mobile-card {
+  display: none;
+}
+
+/* Penyesuaian grid statistik di layar mobile */
+@media (max-width: 640px) {
+  .learning-stat-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
   }
-  #learningRecordsTable:not(.is-empty-table) tbody {
+  .learning-stat-grid .stat-pill {
+    padding: 10px 8px;
+  }
+  .learning-stat-grid .stat-num {
+    font-size: 1.35rem;
+  }
+  .learning-stat-grid .stat-lbl {
+    font-size: 0.72rem;
+  }
+}
+
+/* Penyesuaian Toolbar Rekap di Layar Mobile */
+@media (max-width: 640px) {
+  #learningToolbar {
+    padding: 12px;
+  }
+  #learningToolbar .date-input-group {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+  #learningToolbar .date-input-group #filterDate {
+    grid-column: span 2;
+    width: 100% !important;
+  }
+  #learningToolbar .btn-filter-pill {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+    padding: 8px 10px;
+    font-size: 0.8rem;
+  }
+  #learningFilterInfo {
+    font-size: 0.78rem;
+    line-height: 1.4;
+    display: block;
+    padding-top: 4px;
+  }
+}
+
+/* ========================================================================= */
+/* RESPONSIVE MODERN CARD VIEW DI LAYAR HP (<= 768px)                        */
+/* ========================================================================= */
+@media (max-width: 768px) {
+  .learning-table-wrap {
+    overflow: visible !important;
+    border: none !important;
+    background: transparent !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+  #learningRecordsTable {
+    min-width: 0 !important;
+    width: 100% !important;
+    display: block !important;
+    border: none !important;
+    background: transparent !important;
+  }
+
+  #learningRecordsTable thead {
+    display: none !important;
+  }
+
+  #learningRecordsTable tbody {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    width: 100% !important;
+    background: transparent !important;
+    padding: 0 !important;
+  }
+
+  #learningRecordsTable tbody tr.learning-record-item {
+    display: block !important;
+    width: 100% !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+
+  /* Sembunyikan semua sel kolom tabel desktop */
+  #learningRecordsTable tbody tr.learning-record-item td:not(.cell-mobile-card) {
+    display: none !important;
+  }
+
+  /* Tampilkan kartu mobile mutaba'ah */
+  #learningRecordsTable tbody tr.learning-record-item td.cell-mobile-card {
+    display: block !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    padding: 14px 15px !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05) !important;
+  }
+
+  /* Komponen Desain Kartu Mobile Mutaba'ah */
+  .learning-mobile-card {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    padding: 2px 0;
-    background: transparent;
+    width: 100%;
   }
-  #learningRecordsTable:not(.is-empty-table) tbody tr {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 12px 14px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  }
-  #learningRecordsTable:not(.is-empty-table) tbody tr td {
+
+  .lmc-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0;
-    border: none;
-    font-size: 0.83rem;
+    gap: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f1f5f9;
   }
-  #learningRecordsTable:not(.is-empty-table) td.cell-no {
-    display: none !important;
+
+  .lmc-student {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
   }
-  #learningRecordsTable:not(.is-empty-table) tbody tr td::before {
-    content: attr(data-label);
+
+  .lmc-student-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .lmc-student-name {
+    font-size: 0.95rem;
     font-weight: 700;
+    color: var(--secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .lmc-date {
+    font-size: 0.74rem;
     color: var(--text-muted);
-    font-size: 0.75rem;
+  }
+
+  .lmc-badge-wrap {
+    flex-shrink: 0;
+  }
+
+  .lmc-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .lmc-materi-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .lmc-materi-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .lmc-label {
+    font-size: 0.72rem;
+    font-weight: 700;
     text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #94a3b8;
+  }
+
+  .lmc-materi-val {
+    font-size: 0.93rem;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.35;
+    word-break: break-word;
+  }
+
+  .lmc-note-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 0.79rem;
+    color: #334155;
+    line-height: 1.4;
+  }
+
+  .lmc-note-icon {
+    flex-shrink: 0;
+    color: #64748b;
+    margin-top: 2px;
+  }
+
+  .lmc-note-val {
+    word-break: break-word;
+  }
+
+  .lmc-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-top: 6px;
+    border-top: 1px dashed #f1f5f9;
+  }
+
+  .lmc-teacher-info {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.75rem;
+    color: #64748b;
+  }
+
+  .lmc-footer .btn-action-delete {
+    padding: 6px 12px;
+    font-size: 0.78rem;
+  }
+
+  /* Empty state di layar HP */
+  #learningRecordsTable tbody tr.empty-row {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  #learningRecordsTable tbody tr.empty-row td.empty-table-cell {
+    display: block !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    background: #ffffff !important;
+    border: 1px dashed #cbd5e1 !important;
+    border-radius: 12px !important;
+    padding: 24px 16px !important;
+    text-align: center !important;
   }
 }
