@@ -728,14 +728,18 @@ body {
   box-shadow: -2px 0 0 0 #f1f5f9, 4px 0 8px -2px rgba(15, 23, 42, 0.08);
 }
 
-/* Clickable Date Column Header for Toggling Holidays */
+/* Date Column Header (Toggling Holidays for Admin Only) */
 .th-day {
-  cursor: pointer;
+  cursor: default;
   min-width: 38px;
   transition: background 0.15s ease;
 }
 
-.th-day:hover {
+.th-day.is-clickable-holiday {
+  cursor: pointer;
+}
+
+.th-day.is-clickable-holiday:hover {
   background: var(--primary-light) !important;
 }
 

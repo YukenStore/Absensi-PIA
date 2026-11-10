@@ -947,6 +947,14 @@ export default {
               }
             } catch (_) {}
 
+            const customHolidays = {};
+            try {
+              const { results: hRows } = await db.prepare('SELECT holiday_date, is_holiday FROM custom_holidays').all();
+              for (const row of hRows || []) {
+                customHolidays[row.holiday_date] = Boolean(row.is_holiday);
+              }
+            } catch (_) {}
+
             return jsonResponse({
               success: true,
               students: (stuRows || []).map((s) => ({
@@ -957,7 +965,7 @@ export default {
               })),
               teachers: allTeachers.filter((t) => !t.is_hidden),
               all_teachers: allTeachers,
-              custom_holidays: {},
+              custom_holidays: customHolidays,
               student_records: studentRecords,
               teacher_records: teacherRecords,
             });
@@ -1067,6 +1075,22 @@ export default {
             teachers: allTeachers.filter((t) => !t.is_hidden),
             all_teachers: allTeachers,
           });
+        }
+
+        if (pathname === '/api/attendance/toggle-holiday' && request.method === 'POST') {
+          const body = await request.json();
+          const dateStr = (body.holiday_date || '').trim();
+          const isHol = body.is_holiday ? 1 : 0;
+          if (db && dateStr) {
+            await db.prepare(
+              `INSERT INTO custom_holidays (holiday_date, is_holiday, updated_at)
+               VALUES (?, ?, datetime('now'))
+               ON CONFLICT(holiday_date) DO UPDATE SET is_holiday = excluded.is_holiday, updated_at = datetime('now')`
+            ).bind(dateStr, isHol).run();
+          } else if (dateStr) {
+            memoryStore.customHolidays[dateStr] = Boolean(isHol);
+          }
+          return jsonResponse({ success: true, holiday_date: dateStr, is_holiday: Boolean(isHol) });
         }
 
         // Endpoint Visibilitas, Peran Admin, dan Hapus Akun Guru

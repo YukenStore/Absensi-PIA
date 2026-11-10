@@ -71,6 +71,9 @@ function updateAdminUiVisibility() {
   if (visibilityPanel && !state.isAdmin) {
     visibilityPanel.style.display = 'none';
   }
+  document.querySelectorAll('.holiday-tip-admin').forEach((el) => {
+    el.style.display = state.isAdmin ? 'block' : 'none';
+  });
 }
 
 function initHamburgerMenu() {
@@ -217,8 +220,9 @@ function isHolidayDate(year, monthIndex, day) {
   return dayOfWeek === 6; // 6 = Hari Sabtu otomatis libur
 }
 
-// Toggle meliburkan / mengaktifkan tanggal tertentu saat header tanggal diklik
+// Toggle meliburkan / mengaktifkan tanggal tertentu saat header tanggal diklik (Khusus Admin)
 async function toggleHolidayDate(year, monthIndex, day) {
+  if (!state.isAdmin) return;
   const dateKey = formatDateKey(year, monthIndex, day);
   const currentlyHoliday = isHolidayDate(year, monthIndex, day);
   state.customHolidays[dateKey] = !currentlyHoliday;
@@ -791,12 +795,14 @@ function renderDailyMatrix({
     const dayName = DAY_SHORT_NAMES[dow];
     const holiday = isHolidayDate(year, monthIndex, d);
     const holidayClass = holiday ? 'is-holiday' : '';
-    const titleTip = holiday
-      ? `Tanggal ${d} ${MONTH_NAMES[monthIndex]} ${year} (Libur) - Klik untuk mengaktifkan`
-      : `Tanggal ${d} ${MONTH_NAMES[monthIndex]} ${year} - Klik untuk meliburkan`;
+    let titleTip = `Tanggal ${d} ${MONTH_NAMES[monthIndex]} ${year}${holiday ? ' (Libur)' : ''}`;
+    if (state.isAdmin) {
+      titleTip += holiday ? ' - Klik untuk mengaktifkan' : ' - Klik untuk meliburkan';
+    }
+    const clickableClass = state.isAdmin ? 'is-clickable-holiday' : '';
 
     headHtml += `
-      <th class="th-day ${holidayClass}" data-year="${year}" data-month="${monthIndex}" data-day="${d}" title="${titleTip}">
+      <th class="th-day ${holidayClass} ${clickableClass}" data-year="${year}" data-month="${monthIndex}" data-day="${d}" title="${titleTip}">
         <span class="day-num">${d}</span>
         <span class="day-name">${holiday ? 'Libur' : dayName}</span>
       </th>`;
@@ -804,15 +810,17 @@ function renderDailyMatrix({
   headHtml += `</tr>`;
   headEl.innerHTML = headHtml;
 
-  // Pasang event klik pada setiap tanggal di header untuk fitur meliburkan hari
-  headEl.querySelectorAll('.th-day').forEach((th) => {
-    th.addEventListener('click', () => {
-      const y = parseInt(th.getAttribute('data-year'), 10);
-      const m = parseInt(th.getAttribute('data-month'), 10);
-      const d = parseInt(th.getAttribute('data-day'), 10);
-      toggleHolidayDate(y, m, d);
+  // Pasang event klik pada setiap tanggal di header untuk fitur meliburkan hari (Khusus Admin)
+  if (state.isAdmin) {
+    headEl.querySelectorAll('.th-day').forEach((th) => {
+      th.addEventListener('click', () => {
+        const y = parseInt(th.getAttribute('data-year'), 10);
+        const m = parseInt(th.getAttribute('data-month'), 10);
+        const d = parseInt(th.getAttribute('data-day'), 10);
+        toggleHolidayDate(y, m, d);
+      });
     });
-  });
+  }
 
   // Jika belum ada data siswa / guru
   if (!peopleList || peopleList.length === 0) {
