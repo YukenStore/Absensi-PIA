@@ -7,12 +7,20 @@ const API_BASE = '';
 const CF_WORKER_API = 'https://absensi-pia.yumenoboken.workers.dev';
 
 let currentUser = null;
+function getLocalTodayIso() {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 let isAdmin = false;
 let myHistory = [];
 let allSubmissions = [];
 let registeredTeachers = [];
 let todayRecord = null;
-let approvalFilterDate = '';
+let approvalFilterDate = getLocalTodayIso();
 let approvalFilterStatus = 'all';
 
 const MONTH_NAMES_ID = [
@@ -552,7 +560,7 @@ function renderAdminApprovalSection() {
 
     if (btnFilterToday) {
       btnFilterToday.addEventListener('click', () => {
-        const todayStr = new Date().toISOString().slice(0, 10);
+        const todayStr = getLocalTodayIso();
         approvalFilterDate = todayStr;
         if (filterDateInput) filterDateInput.value = todayStr;
         renderAdminApprovalSection();
@@ -579,7 +587,7 @@ function renderAdminApprovalSection() {
   if (filterDateInput) filterDateInput.value = approvalFilterDate;
   if (filterStatusSelect) filterStatusSelect.value = approvalFilterStatus;
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = getLocalTodayIso();
   if (btnFilterToday) {
     if (approvalFilterDate === todayStr) {
       btnFilterToday.classList.add('active');
