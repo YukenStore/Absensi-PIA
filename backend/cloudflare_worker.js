@@ -196,13 +196,17 @@ async function ensureD1Schema(db) {
         attendance_date TEXT NOT NULL,
         status TEXT NOT NULL,
         note TEXT NOT NULL DEFAULT '',
-        approval_status TEXT NOT NULL DEFAULT 'Approved',
+        approval_status TEXT NOT NULL DEFAULT 'Pending',
         approved_by TEXT NOT NULL DEFAULT '',
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         UNIQUE(user_id, attendance_date)
       )`
     )
     .run();
+
+  try {
+    await db.prepare("UPDATE teacher_attendance SET approval_status = 'Pending', approved_by = '' WHERE approved_by = 'Sistem Otomatis'").run();
+  } catch (_) {}
 
   await db
     .prepare(
@@ -921,7 +925,7 @@ export default {
             const teacherRecords = {};
             try {
               const { results: attRows } = await db
-                .prepare("SELECT user_id, teacher_email, attendance_date, status FROM teacher_attendance WHERE approval_status != 'Rejected'")
+                .prepare("SELECT user_id, teacher_email, attendance_date, status FROM teacher_attendance WHERE approval_status = 'Approved'")
                 .all();
               for (const row of attRows || []) {
                 const code = row.status === 'Hadir' ? 'H' : row.status === 'Izin' ? 'I' : 'S';
@@ -971,7 +975,7 @@ export default {
 
           const teacherRecords = {};
           for (const row of memoryStore.teacherAttendance) {
-            if (row.approval_status !== 'Rejected') {
+            if (row.approval_status === 'Approved') {
               const code = row.status === 'Hadir' ? 'H' : row.status === 'Izin' ? 'I' : 'S';
               teacherRecords[`${row.user_id}_${row.attendance_date}`] = code;
               if (row.teacher_email) {
@@ -1280,18 +1284,18 @@ export default {
 
             if (existing) {
               await db
-                .prepare("UPDATE teacher_attendance SET status = ?, note = ?, approval_status = 'Approved', approved_by = 'Sistem Otomatis' WHERE id = ?")
+                .prepare("UPDATE teacher_attendance SET status = ?, note = ?, approval_status = 'Pending', approved_by = '' WHERE id = ?")
                 .bind(status, note, existing.id)
                 .run();
-              return jsonResponse({ success: true, message: 'Presensi berhasil diperbarui dan tersinkron ke Dashboard!' });
+              return jsonResponse({ success: true, message: 'Presensi berhasil diperbarui! Menunggu persetujuan (ACC) Admin.' });
             }
 
             await db
-              .prepare("INSERT INTO teacher_attendance (user_id, teacher_name, teacher_email, attendance_date, status, note, approval_status, approved_by) VALUES (?, ?, ?, ?, ?, ?, 'Approved', 'Sistem Otomatis')")
+              .prepare("INSERT INTO teacher_attendance (user_id, teacher_name, teacher_email, attendance_date, status, note, approval_status, approved_by) VALUES (?, ?, ?, ?, ?, ?, 'Pending', '')")
               .bind(user.id, user.full_name, user.email, dateStr, status, note)
               .run();
 
-            return jsonResponse({ success: true, message: 'Presensi kehadiran berhasil dikirim dan tersinkron ke Dashboard!' }, 201);
+            return jsonResponse({ success: true, message: 'Presensi kehadiran berhasil dikirim! Menunggu persetujuan (ACC) Admin.' }, 201);
           }
 
           let user = memoryStore.users.find((u) => u.email.toLowerCase() === email);
@@ -1319,8 +1323,8 @@ export default {
             attendance_date: dateStr,
             status,
             note,
-            approval_status: 'Approved',
-            approved_by: 'Sistem Otomatis',
+            approval_status: 'Pending',
+            approved_by: '',
             created_at: new Date().toISOString(),
           };
 
@@ -1330,7 +1334,49 @@ export default {
             memoryStore.teacherAttendance.unshift(record);
           }
 
-          return jsonResponse({ success: true, message: 'Presensi kehadiran berhasil dikirim dan tersinkron ke Dashboard!', record }, 201);
+          return jsonResponse({ success: true, message: 'Presensi kehadiran berhasil dikirim! Menunggu persetujuan (ACC) Admin.', record }, 201);
+        }
+
+        // ACC / Tolak Presensi Guru (Admin Approval)
+        if (pathname === '/api/teacher-attendance/approve' && request.method === 'POST') {
+          const body = await request.json();
+          const adminEmail = (body.admin_email || '').trim().toLowerCase();
+          const attendanceId = Number(body.attendance_id);
+          const decision = body.decision === 'Rejected' ? 'Rejected' : 'Approved';
+
+          if (db) {
+            const adminUser = await db.prepare('SELECT * FROM users WHERE lower(email) = ? LIMIT 1').bind(adminEmail).first();
+            const isAdmin = adminEmail === 'yumenoboken@gmail.com' || (adminUser && adminUser.role === 'admin');
+            if (!isAdmin) {
+              return jsonResponse({ detail: 'Hanya Admin yang dapat melakukan ACC absensi guru.' }, 403);
+            }
+            const adminName = adminUser ? (adminUser.full_name || adminUser.username) : 'Admin';
+            await db
+              .prepare('UPDATE teacher_attendance SET approval_status = ?, approved_by = ? WHERE id = ?')
+              .bind(decision, adminName, attendanceId)
+              .run();
+
+            return jsonResponse({
+              success: true,
+              message: decision === 'Approved' ? 'Presensi dewan guru berhasil disetujui (ACC)!' : 'Pengajuan presensi guru telah ditolak.',
+            });
+          }
+
+          const adminUser = memoryStore.users.find((u) => u.email.toLowerCase() === adminEmail);
+          const isAdmin = adminEmail === 'yumenoboken@gmail.com' || (adminUser && adminUser.role === 'admin');
+          if (!isAdmin) {
+            return jsonResponse({ detail: 'Hanya Admin yang dapat melakukan ACC absensi guru.' }, 403);
+          }
+          const adminName = adminUser ? (adminUser.full_name || adminUser.username) : 'Admin';
+          const rec = memoryStore.teacherAttendance.find((s) => Number(s.id) === attendanceId);
+          if (rec) {
+            rec.approval_status = decision;
+            rec.approved_by = adminName;
+          }
+          return jsonResponse({
+            success: true,
+            message: decision === 'Approved' ? 'Presensi dewan guru berhasil disetujui (ACC)!' : 'Pengajuan presensi guru telah ditolak.',
+          });
         }
       } catch (err) {
         return jsonResponse({ detail: `Worker DB Error: ${err.message}` }, 500);

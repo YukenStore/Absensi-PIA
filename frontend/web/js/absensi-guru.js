@@ -33,6 +33,17 @@ function formatDateIndo(dateStr) {
   return `${day} ${MONTH_NAMES_ID[monthIdx]} ${year}`;
 }
 
+function normalizeRecord(item) {
+  if (!item) return item;
+  const isAuto = item.approved_by === 'Sistem Otomatis';
+  const isPending = isAuto || !item.approval_status || item.approval_status === 'Pending';
+  return {
+    ...item,
+    approval_status: isPending ? 'Pending' : item.approval_status,
+    approved_by: isPending ? '' : (item.approved_by || ''),
+  };
+}
+
 async function callTeacherApi(endpoint, options = {}) {
   const isGitHubPages = window.location.hostname.includes('github.io');
   const token = getAuthToken();
@@ -96,6 +107,7 @@ function getLocalTeacherDb() {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && Array.isArray(parsed.submissions)) {
+        parsed.submissions = parsed.submissions.map(normalizeRecord);
         return parsed;
       }
     }
@@ -115,9 +127,9 @@ function handleLocalFallback(endpoint, options) {
 
   if (endpoint.startsWith('/api/teacher-attendance/overview')) {
     const today = new Date().toISOString().slice(0, 10);
-    const mySubmissions = db.submissions.filter(
-      (s) => s.teacher_email.toLowerCase() === email
-    );
+    const mySubmissions = db.submissions
+      .filter((s) => s.teacher_email.toLowerCase() === email)
+      .map(normalizeRecord);
     const todayRec = mySubmissions.find((s) => s.attendance_date === today) || null;
 
     return {
@@ -126,7 +138,7 @@ function handleLocalFallback(endpoint, options) {
       current_user: currentUser,
       today_record: todayRec,
       my_history: mySubmissions,
-      all_submissions: isAdmin ? db.submissions : [],
+      all_submissions: isAdmin ? db.submissions.map(normalizeRecord) : [],
       registered_users: [],
     };
   }
@@ -150,8 +162,8 @@ function handleLocalFallback(endpoint, options) {
       attendance_date: dateStr,
       status: status,
       note: note,
-      approval_status: 'Approved',
-      approved_by: isAdmin ? (currentUser ? currentUser.full_name : 'Admin') : 'Sistem Otomatis',
+      approval_status: 'Pending',
+      approved_by: '',
       created_at: new Date().toISOString(),
     };
 
@@ -164,7 +176,7 @@ function handleLocalFallback(endpoint, options) {
 
     return {
       success: true,
-      message: 'Absensi berhasil disimpan!',
+      message: 'Presensi kehadiran berhasil dikirim! Menunggu persetujuan (ACC) Admin.',
       record: newRecord,
     };
   }
@@ -177,12 +189,27 @@ function handleLocalFallback(endpoint, options) {
     const target = db.submissions.find((s) => Number(s.id) === attendanceId);
     if (target) {
       target.approval_status = decision;
-      target.approved_by = currentUser ? currentUser.full_name : 'Admin';
+      target.approved_by = currentUser ? (currentUser.full_name || currentUser.username) : 'Admin';
       saveLocalTeacherDb(db);
+
+      // Sinkron ke pia_teacher_records jika Approved
+      try {
+        const rawTRec = localStorage.getItem('pia_teacher_records');
+        const tRecMap = rawTRec ? JSON.parse(rawTRec) : {};
+        const code = target.status === 'Hadir' ? 'H' : target.status === 'Izin' ? 'I' : 'S';
+        if (decision === 'Approved') {
+          if (target.user_id) tRecMap[`${target.user_id}_${target.attendance_date}`] = code;
+          if (target.teacher_email) tRecMap[`${target.teacher_email.toLowerCase()}_${target.attendance_date}`] = code;
+        } else {
+          if (target.user_id) delete tRecMap[`${target.user_id}_${target.attendance_date}`];
+          if (target.teacher_email) delete tRecMap[`${target.teacher_email.toLowerCase()}_${target.attendance_date}`];
+        }
+        localStorage.setItem('pia_teacher_records', JSON.stringify(tRecMap));
+      } catch (_) {}
     }
     return {
       success: true,
-      message: decision === 'Approved' ? 'Presensi berhasil disetujui.' : 'Presensi ditolak.',
+      message: decision === 'Approved' ? 'Presensi dewan guru berhasil disetujui (ACC)!' : 'Pengajuan presensi guru telah ditolak.',
     };
   }
 
@@ -342,7 +369,7 @@ function renderTodayCard(record) {
   } else if (appStatus === 'Rejected') {
     approvalVal.innerHTML = `<span class="badge-rejected">✕ Ditolak</span>`;
   } else {
-    approvalVal.innerHTML = `<span class="badge-pending">⏳ Menunggu Persetujuan Admin</span>`;
+    approvalVal.innerHTML = `<span class="badge-pending">⏳ Menunggu ACC</span>`;
   }
 }
 
@@ -510,6 +537,7 @@ function renderAdminApprovalSection() {
                 data-id="${item.id}"
                 data-name="${item.teacher_name}"
                 title="Setujui presensi guru ini"
+                ${appStatus === 'Approved' ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}
               >
                 ✓ Setujui
               </button>
@@ -519,6 +547,7 @@ function renderAdminApprovalSection() {
                 data-id="${item.id}"
                 data-name="${item.teacher_name}"
                 title="Tolak presensi guru ini"
+                ${appStatus === 'Rejected' ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}
               >
                 ✕ Tolak
               </button>
@@ -532,6 +561,7 @@ function renderAdminApprovalSection() {
   // Event listener tombol Setujui
   tbody.querySelectorAll('.btn-action-approve').forEach((btn) => {
     btn.addEventListener('click', async () => {
+      if (btn.disabled) return;
       const id = btn.getAttribute('data-id');
       const name = btn.getAttribute('data-name');
       await handleApproveDecision(id, 'Approved', name);
@@ -541,6 +571,7 @@ function renderAdminApprovalSection() {
   // Event listener tombol Tolak
   tbody.querySelectorAll('.btn-action-reject').forEach((btn) => {
     btn.addEventListener('click', async () => {
+      if (btn.disabled) return;
       const id = btn.getAttribute('data-id');
       const name = btn.getAttribute('data-name');
       await handleApproveDecision(id, 'Rejected', name);
@@ -559,6 +590,37 @@ async function handleApproveDecision(attendanceId, decision, teacherName) {
         decision: decision,
       }),
     });
+
+    // Update status di allSubmissions secara lokal agar responsif
+    const target = allSubmissions.find((s) => Number(s.id) === Number(attendanceId));
+    if (target) {
+      target.approval_status = decision;
+      target.approved_by = currentUser ? (currentUser.full_name || currentUser.username) : 'Admin';
+
+      // Sinkron ke pia_teacher_records untuk Dashboard jika disetujui
+      try {
+        const rawTRec = localStorage.getItem('pia_teacher_records');
+        const tRecMap = rawTRec ? JSON.parse(rawTRec) : {};
+        const code = target.status === 'Hadir' ? 'H' : target.status === 'Izin' ? 'I' : 'S';
+        if (decision === 'Approved') {
+          if (target.user_id) tRecMap[`${target.user_id}_${target.attendance_date}`] = code;
+          if (target.teacher_email) tRecMap[`${target.teacher_email.toLowerCase()}_${target.attendance_date}`] = code;
+        } else {
+          if (target.user_id) delete tRecMap[`${target.user_id}_${target.attendance_date}`];
+          if (target.teacher_email) delete tRecMap[`${target.teacher_email.toLowerCase()}_${target.attendance_date}`];
+        }
+        localStorage.setItem('pia_teacher_records', JSON.stringify(tRecMap));
+      } catch (_) {}
+
+      // Update di pia_teacher_attendance_db
+      const localDb = getLocalTeacherDb();
+      const localItem = localDb.submissions.find((s) => Number(s.id) === Number(attendanceId));
+      if (localItem) {
+        localItem.approval_status = decision;
+        localItem.approved_by = currentUser ? (currentUser.full_name || currentUser.username) : 'Admin';
+        saveLocalTeacherDb(localDb);
+      }
+    }
 
     showBanner(
       decision === 'Approved'
@@ -584,9 +646,9 @@ async function loadTeacherAttendanceData() {
       if (typeof data.is_admin === 'boolean') {
         isAdmin = data.is_admin;
       }
-      todayRecord = data.today_record || null;
-      myHistory = Array.isArray(data.my_history) ? data.my_history : [];
-      allSubmissions = Array.isArray(data.all_submissions) ? data.all_submissions : [];
+      todayRecord = data.today_record ? normalizeRecord(data.today_record) : null;
+      myHistory = Array.isArray(data.my_history) ? data.my_history.map(normalizeRecord) : [];
+      allSubmissions = Array.isArray(data.all_submissions) ? data.all_submissions.map(normalizeRecord) : [];
       registeredTeachers = Array.isArray(data.registered_users) ? data.registered_users : [];
 
       renderTodayCard(todayRecord);
@@ -597,9 +659,9 @@ async function loadTeacherAttendanceData() {
     console.warn('Gagal memuat overview absensi guru, menggunakan fallback:', err);
     // Gunakan fallback lokal
     const fallback = handleLocalFallback(`/api/teacher-attendance/overview?email=${encodeURIComponent(email)}&date=${today}`, {});
-    todayRecord = fallback.today_record;
-    myHistory = fallback.my_history;
-    allSubmissions = fallback.all_submissions;
+    todayRecord = fallback.today_record ? normalizeRecord(fallback.today_record) : null;
+    myHistory = Array.isArray(fallback.my_history) ? fallback.my_history.map(normalizeRecord) : [];
+    allSubmissions = Array.isArray(fallback.all_submissions) ? fallback.all_submissions.map(normalizeRecord) : [];
     renderTodayCard(todayRecord);
     renderMyHistoryTable();
     renderAdminApprovalSection();
@@ -699,22 +761,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           }),
         });
 
-        // Langsung simpan ke localStorage pia_teacher_records agar sinkron instan di Dashboard
-        try {
-          const code = statusVal === 'Hadir' ? 'H' : statusVal === 'Izin' ? 'I' : 'S';
-          const rawTRec = localStorage.getItem('pia_teacher_records');
-          const tRecMap = rawTRec ? JSON.parse(rawTRec) : {};
-          if (currentUser && currentUser.id) {
-            tRecMap[`${currentUser.id}_${dateVal}`] = code;
-          }
-          if (targetEmail) {
-            tRecMap[`${targetEmail.toLowerCase()}_${dateVal}`] = code;
-          }
-          localStorage.setItem('pia_teacher_records', JSON.stringify(tRecMap));
-        } catch (_) {}
-
         showBanner(
-          res.message || 'Presensi kehadiran berhasil dikirim dan tersinkron ke Dashboard!',
+          res.message || 'Presensi kehadiran berhasil dikirim! Menunggu persetujuan (ACC) Admin.',
           'success'
         );
 

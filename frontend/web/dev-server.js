@@ -335,6 +335,9 @@ try {
   ).run();
   db.exec(`UPDATE users SET role = 'admin', is_active = 1 WHERE lower(email) = 'yumenoboken@gmail.com';`);
 } catch (_) {}
+try {
+  db.exec(`UPDATE teacher_attendance SET approval_status = 'Pending', approved_by = '' WHERE approved_by = 'Sistem Otomatis';`);
+} catch (_) {}
 
 function hashPassword(password, salt) {
   let current = `${salt}:${password}:PIA_CORE_V1`;
@@ -808,7 +811,7 @@ const server = http.createServer(async (req, res) => {
 
     const approvedRows = db
       .prepare(
-        "SELECT user_id, teacher_email, attendance_date, status FROM teacher_attendance WHERE approval_status != 'Rejected'"
+        "SELECT user_id, teacher_email, attendance_date, status FROM teacher_attendance WHERE approval_status = 'Approved'"
       )
       .all();
     const teacherRecords = {};
@@ -1356,25 +1359,25 @@ const server = http.createServer(async (req, res) => {
       if (existing) {
         db.prepare(
           `UPDATE teacher_attendance
-           SET status = ?, note = ?, approval_status = 'Approved', approved_by = 'Sistem Otomatis'
+           SET status = ?, note = ?, approval_status = 'Pending', approved_by = ''
            WHERE id = ?`
         ).run(status, note, existing.id);
 
         return sendJson(res, 200, {
           success: true,
-          message: 'Presensi berhasil diperbarui dan tersinkron ke Dashboard!',
+          message: 'Presensi berhasil diperbarui! Menunggu persetujuan (ACC) Admin.',
         });
       }
 
       db.prepare(
         `INSERT INTO teacher_attendance
          (user_id, teacher_name, teacher_email, attendance_date, status, note, approval_status, approved_by)
-         VALUES (?, ?, ?, ?, ?, ?, 'Approved', 'Sistem Otomatis')`
+         VALUES (?, ?, ?, ?, ?, ?, 'Pending', '')`
       ).run(user.id, user.full_name, user.email, dateStr, status, note);
 
       return sendJson(res, 201, {
         success: true,
-        message: 'Presensi kehadiran berhasil dikirim dan tersinkron ke Dashboard!',
+        message: 'Presensi kehadiran berhasil dikirim! Menunggu persetujuan (ACC) Admin.',
       });
     } catch (err) {
       return sendJson(res, 500, { detail: err.message });
