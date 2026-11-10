@@ -762,26 +762,38 @@ body {
   font-weight: 700;
 }
 
-/* Status Cells Inside Daily Matrix */
+/* Status Cells Inside Daily Matrix (Lingkaran Presensi Harian H, I, S, A, L) */
 .td-day {
   background-color: #ffffff;
   vertical-align: middle;
+  text-align: center;
+  padding: 6px 2px;
 }
 
 .td-day.is-holiday-col {
   background-color: #f8fafc;
 }
 
-.td-day .status-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 26px;
-  border-radius: 6px;
+.td-day .status-pill,
+.matrix-table .status-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 26px !important;
+  height: 26px !important;
+  min-width: 26px !important;
+  max-width: 26px !important;
+  min-height: 26px !important;
+  max-height: 26px !important;
+  border-radius: 50% !important;
+  padding: 1px 0 0 0 !important;
+  margin: 0 auto !important;
   font-weight: 700;
-  font-size: 0.76rem;
-  line-height: 1;
+  font-size: 0.75rem;
+  line-height: 1 !important;
+  text-align: center !important;
+  box-sizing: border-box !important;
+  vertical-align: middle;
 }
 
 .cell-hadir {
@@ -1841,7 +1853,13 @@ select.form-input {
 }
 
 /* Status Pill in Table (Absensi Guru & Approval Table) */
-.status-pill {
+.cell-status .status-pill,
+.card-content .status-pill,
+.form-card .status-pill,
+.today-status-val .status-pill,
+.status-pill.status-pill-hadir,
+.status-pill.status-pill-izin,
+.status-pill.status-pill-sakit {
   display: inline-flex;
   align-items: center;
   justify-content: center;
