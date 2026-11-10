@@ -57,8 +57,8 @@ body {
   border-bottom: 1px solid var(--border-color);
   position: sticky;
   top: 0;
-  z-index: 40;
-  box-shadow: var(--shadow-sm);
+  z-index: 100;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
 }
 
 .topbar-inner {
@@ -69,13 +69,23 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  gap: 16px;
+  position: relative;
 }
 
+/* Pengaman bila ada elemen lama tersimpan dalam cache browser */
 .topbar-brand-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+}
+.nav-links:not(.nav-dropdown-menu),
+.desktop-user-menu,
+.mobile-user-card,
+.mobile-user-menu {
+  display: none !important;
+}
+.topbar-brand-row .btn-hamburger {
+  display: none !important;
 }
 
 .brand {
