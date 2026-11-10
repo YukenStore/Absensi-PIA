@@ -1306,6 +1306,24 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 400, { detail: 'Data santri, kategori, dan materi wajib diisi.' });
       }
 
+      // Batasi 1 santri hanya dapat disimpan 1 kali rekap pembelajarannya dalam 1 hari
+      let existing = null;
+      if (studentId) {
+        existing = db
+          .prepare('SELECT id, student_name, materi FROM learning_records WHERE student_id = ? AND record_date = ? LIMIT 1')
+          .get(studentId, recordDate);
+      }
+      if (!existing && studentName) {
+        existing = db
+          .prepare('SELECT id, student_name, materi FROM learning_records WHERE LOWER(student_name) = LOWER(?) AND record_date = ? LIMIT 1')
+          .get(studentName, recordDate);
+      }
+      if (existing) {
+        return sendJson(res, 400, {
+          detail: `Santri ${studentName} sudah memiliki rekap pembelajaran (${existing.materi}) pada tanggal ${recordDate}. Satu santri hanya dapat dicatat 1 kali dalam 1 hari.`
+        });
+      }
+
       const stmt = db.prepare(`
         INSERT INTO learning_records (
           student_id, student_name, teacher_name, category, materi, jilid, halaman, surat, ayat, doa, predicate, note, record_date

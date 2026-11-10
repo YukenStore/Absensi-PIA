@@ -115,10 +115,24 @@ function handleLocalFallback(endpoint, options) {
 
   if (endpoint === '/api/learning-records' && options.method === 'POST') {
     const body = options.body ? JSON.parse(options.body) : {};
+    const studentName = (body.student_name || 'Santri').trim();
+    const studentId = body.student_id ? Number(body.student_id) : null;
+    const recordDate = body.record_date || getLocalTodayIso();
+
+    const exists = db.records.find(
+      (r) =>
+        ((studentId && Number(r.student_id) === Number(studentId)) ||
+          r.student_name.toLowerCase() === studentName.toLowerCase()) &&
+        r.record_date === recordDate
+    );
+    if (exists) {
+      throw new Error(`Santri ${studentName} sudah memiliki rekap pembelajaran (${exists.materi}) pada tanggal ${formatDateIndo(recordDate)}. Satu santri hanya dapat dicatat 1 kali dalam 1 hari.`);
+    }
+
     const newRecord = {
       id: Date.now(),
-      student_id: body.student_id || null,
-      student_name: body.student_name || 'Santri',
+      student_id: studentId,
+      student_name: studentName,
       teacher_name: body.teacher_name || (currentUser ? currentUser.full_name : 'Guru'),
       category: body.category || 'Iqro',
       materi: body.materi || '-',
@@ -129,7 +143,7 @@ function handleLocalFallback(endpoint, options) {
       doa: body.doa || '',
       predicate: body.predicate || 'Lancar',
       note: body.note || '',
-      record_date: body.record_date || getLocalTodayIso(),
+      record_date: recordDate,
       created_at: new Date().toISOString(),
     };
     db.records.unshift(newRecord);
@@ -367,6 +381,57 @@ async function loadLearningRecords() {
   }
 
   renderLearningTable();
+  checkSelectedStudentStatus();
+}
+
+function checkSelectedStudentStatus() {
+  const studentSelect = document.getElementById('studentSelect');
+  const recordDateInput = document.getElementById('recordDate');
+  const submitBtn = document.getElementById('submitLearningBtn');
+  const cardEl = document.getElementById('learningRecordedCard');
+
+  if (!studentSelect || !recordDateInput || !submitBtn) return;
+
+  const studentId = studentSelect.value;
+  const selectedOpt = studentSelect.options[studentSelect.selectedIndex];
+  const studentName = selectedOpt && selectedOpt.value
+    ? (selectedOpt.getAttribute('data-name') || selectedOpt.textContent).trim()
+    : '';
+  const dateVal = recordDateInput.value;
+
+  if (!studentName || !dateVal) {
+    if (cardEl) cardEl.style.display = 'none';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Simpan Rekap Pembelajaran';
+    return;
+  }
+
+  const existing = allLearningRecords.find(
+    (r) =>
+      ((studentId && Number(r.student_id) === Number(studentId)) ||
+        r.student_name.toLowerCase() === studentName.toLowerCase()) &&
+      r.record_date === dateVal
+  );
+
+  if (existing) {
+    if (cardEl) {
+      const elStudent = document.getElementById('recCardStudent');
+      const elMateri = document.getElementById('recCardMateri');
+      const elPred = document.getElementById('recCardPredicate');
+      const elTeacher = document.getElementById('recCardTeacher');
+      if (elStudent) elStudent.textContent = existing.student_name;
+      if (elMateri) elMateri.textContent = `${existing.category} - ${existing.materi}`;
+      if (elPred) elPred.textContent = existing.predicate;
+      if (elTeacher) elTeacher.textContent = existing.teacher_name || 'Guru PIA';
+      cardEl.style.display = 'block';
+    }
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Santri Sudah Memiliki Rekap pada Tanggal Ini';
+  } else {
+    if (cardEl) cardEl.style.display = 'none';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Simpan Rekap Pembelajaran';
+  }
 }
 
 async function syncLocalOfflineRecordsToServer() {
@@ -402,6 +467,7 @@ async function syncLocalOfflineRecordsToServer() {
       allLearningRecords = fresh.records;
       saveLocalLearningDb({ records: allLearningRecords });
       renderLearningTable();
+      checkSelectedStudentStatus();
     }
   } catch (_) {}
 }
@@ -558,13 +624,13 @@ function renderLearningTable() {
 
           <!-- Kartu Modern Khusus Tampilan Layar HP / Mobile -->
           <td class="cell-mobile-card">
-            <div class="learning-mobile-card">
+            <div class="learning-mobile-card" style="text-align: left;">
               <div class="lmc-header">
-                <div class="lmc-student">
+                <div class="lmc-student" style="text-align: left;">
                   <span class="student-num-badge">${idx + 1}</span>
-                  <div class="lmc-student-info">
-                    <strong class="lmc-student-name">${item.student_name}</strong>
-                    <span class="lmc-date">${formattedDate}</span>
+                  <div class="lmc-student-info" style="align-items: flex-start; text-align: left;">
+                    <strong class="lmc-student-name" style="text-align: left;">${item.student_name}</strong>
+                    <span class="lmc-date" style="text-align: left;">${formattedDate}</span>
                   </div>
                 </div>
                 <div class="lmc-badge-wrap">
@@ -572,11 +638,11 @@ function renderLearningTable() {
                 </div>
               </div>
 
-              <div class="lmc-body">
+              <div class="lmc-body" style="text-align: left;">
                 <div class="lmc-materi-row">
-                  <div class="lmc-materi-content">
-                    <span class="lmc-label">Capaian / Materi:</span>
-                    <div class="lmc-materi-val">${item.materi}</div>
+                  <div class="lmc-materi-content" style="align-items: flex-start; text-align: left;">
+                    <span class="lmc-label" style="text-align: left;">Capaian / Materi:</span>
+                    <div class="lmc-materi-val" style="text-align: left;">${item.materi}</div>
                   </div>
                   <span class="badge-pred ${predClass}">${pred}</span>
                 </div>
@@ -657,6 +723,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   const dateInput = document.getElementById('recordDate');
   if (dateInput) {
     dateInput.value = getLocalTodayIso();
+    dateInput.addEventListener('change', checkSelectedStudentStatus);
+  }
+
+  const studentSelectEl = document.getElementById('studentSelect');
+  if (studentSelectEl) {
+    studentSelectEl.addEventListener('change', checkSelectedStudentStatus);
   }
 
   initCategoryTabs();
@@ -688,6 +760,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (!dateVal) {
         showBanner('Harap tentukan tanggal pembelajaran.', 'error');
+        return;
+      }
+
+      // Validasi duplikasi: 1 santri hanya boleh 1 kali rekap pembelajaran per hari
+      const duplicateRecord = allLearningRecords.find(
+        (r) =>
+          ((studentId && Number(r.student_id) === Number(studentId)) ||
+            r.student_name.toLowerCase() === studentName.toLowerCase()) &&
+          r.record_date === dateVal
+      );
+      if (duplicateRecord) {
+        showBanner(
+          `Santri ${studentName} sudah memiliki rekap pembelajaran (${duplicateRecord.materi}) pada tanggal ${formatDateIndo(dateVal)}. Satu santri hanya dapat dicatat 1 kali dalam 1 hari.`,
+          'error'
+        );
+        checkSelectedStudentStatus();
         return;
       }
 

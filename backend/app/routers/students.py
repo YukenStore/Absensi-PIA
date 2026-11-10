@@ -325,6 +325,18 @@ def add_learning_record(payload: Dict[str, Any], db: DatabaseClient = Depends(ge
         raise HTTPException(status_code=400, detail="Data santri, kategori, dan materi wajib diisi.")
 
     try:
+        # Batasi 1 santri hanya dapat disimpan 1 kali rekap pembelajarannya dalam 1 hari
+        existing = db.execute(
+            "SELECT id, student_name, materi FROM learning_records WHERE (student_id = ? OR LOWER(student_name) = LOWER(?)) AND record_date = ? LIMIT 1",
+            [student_id or 0, student_name, record_date],
+        )
+        if existing:
+            existing_materi = existing[0].get("materi", "-") if isinstance(existing[0], dict) else "-"
+            raise HTTPException(
+                status_code=400,
+                detail=f"Santri {student_name} sudah memiliki rekap pembelajaran ({existing_materi}) pada tanggal {record_date}. Satu santri hanya dapat dicatat 1 kali dalam 1 hari.",
+            )
+
         db.execute(
             """INSERT INTO learning_records (
                 student_id, student_name, teacher_name, category, materi, jilid, halaman, surat, ayat, doa, predicate, note, record_date
@@ -332,6 +344,8 @@ def add_learning_record(payload: Dict[str, Any], db: DatabaseClient = Depends(ge
             [student_id, student_name, teacher_name, category, materi, jilid, halaman, surat, ayat, doa, predicate, note, record_date],
         )
         return {"success": True, "message": f"Capaian belajar {student_name} ({materi}) berhasil disimpan!"}
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 

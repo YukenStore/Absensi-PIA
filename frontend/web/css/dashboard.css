@@ -3066,6 +3066,7 @@ select.form-input {
     border-radius: 14px !important;
     padding: 14px 15px !important;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05) !important;
+    text-align: left !important;
   }
 
   /* Komponen Desain Kartu Mobile Mutaba'ah */
@@ -3074,28 +3075,34 @@ select.form-input {
     flex-direction: column;
     gap: 10px;
     width: 100%;
+    text-align: left !important;
   }
 
   .lmc-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
-    padding-bottom: 8px;
+    gap: 10px;
+    padding-bottom: 9px;
     border-bottom: 1px solid #f1f5f9;
   }
 
   .lmc-student {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     min-width: 0;
+    text-align: left !important;
   }
 
   .lmc-student-info {
     display: flex;
     flex-direction: column;
+    align-items: flex-start !important;
+    justify-content: center;
+    text-align: left !important;
     min-width: 0;
+    gap: 2px;
   }
 
   .lmc-student-name {
@@ -3105,21 +3112,32 @@ select.form-input {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-align: left !important;
+    display: block;
+    width: 100%;
+    line-height: 1.3;
   }
 
   .lmc-date {
     font-size: 0.74rem;
     color: var(--text-muted);
+    text-align: left !important;
+    display: block;
+    width: 100%;
+    line-height: 1.3;
   }
 
   .lmc-badge-wrap {
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
   }
 
   .lmc-body {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    text-align: left !important;
   }
 
   .lmc-materi-row {
@@ -3127,13 +3145,16 @@ select.form-input {
     align-items: flex-start;
     justify-content: space-between;
     gap: 8px;
+    text-align: left !important;
   }
 
   .lmc-materi-content {
     display: flex;
     flex-direction: column;
+    align-items: flex-start !important;
     gap: 2px;
     min-width: 0;
+    text-align: left !important;
   }
 
   .lmc-label {
@@ -3142,6 +3163,8 @@ select.form-input {
     text-transform: uppercase;
     letter-spacing: 0.03em;
     color: #94a3b8;
+    text-align: left !important;
+    display: block;
   }
 
   .lmc-materi-val {
@@ -3150,6 +3173,8 @@ select.form-input {
     color: #0f172a;
     line-height: 1.35;
     word-break: break-word;
+    text-align: left !important;
+    display: block;
   }
 
   .lmc-note-box {
@@ -3163,6 +3188,7 @@ select.form-input {
     font-size: 0.79rem;
     color: #334155;
     line-height: 1.4;
+    text-align: left !important;
   }
 
   .lmc-note-icon {
@@ -3173,6 +3199,7 @@ select.form-input {
 
   .lmc-note-val {
     word-break: break-word;
+    text-align: left !important;
   }
 
   .lmc-footer {
@@ -3180,7 +3207,7 @@ select.form-input {
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    padding-top: 6px;
+    padding-top: 8px;
     border-top: 1px dashed #f1f5f9;
   }
 
@@ -3190,6 +3217,7 @@ select.form-input {
     gap: 5px;
     font-size: 0.75rem;
     color: #64748b;
+    text-align: left !important;
   }
 
   .lmc-footer .btn-action-delete {

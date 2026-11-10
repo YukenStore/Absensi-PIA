@@ -8,7 +8,7 @@
   <meta http-equiv="Expires" content="0" />
   <title>Rekap Pembelajaran - Pendidikan Islam At-Taqwa</title>
   <link rel="icon" type="image/png" href="assets/logo-pia.png" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261110_15" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261110_16" />
 </head>
 <body>
   <!-- Navigasi Utama -->
@@ -143,6 +143,35 @@
             </svg>
             <span id="activeTeacherName">Guru PIA</span>
           </span>
+        </div>
+
+        <!-- Kartu Notifikasi Jika Santri Sudah Memiliki Rekap Pembelajaran pada Tanggal Terpilih -->
+        <div id="learningRecordedCard" class="today-status-card" style="display: none; margin-bottom: 20px; border-left: 4px solid #f59e0b;">
+          <div class="today-status-header">
+            <span class="status-indicator-dot" style="background: #f59e0b;"></span>
+            <span class="today-status-title" style="color: #b45309; font-weight: 700;">Santri Sudah Memiliki Rekap pada Tanggal Ini:</span>
+          </div>
+          <div class="today-status-content">
+            <div class="today-status-row">
+              <span class="label">Santri:</span>
+              <span class="val font-bold" id="recCardStudent">-</span>
+            </div>
+            <div class="today-status-row">
+              <span class="label">Materi:</span>
+              <span class="val font-bold" id="recCardMateri">-</span>
+            </div>
+            <div class="today-status-row">
+              <span class="label">Kelancaran:</span>
+              <span class="val font-bold" id="recCardPredicate">-</span>
+            </div>
+            <div class="today-status-row">
+              <span class="label">Guru:</span>
+              <span class="val" id="recCardTeacher">-</span>
+            </div>
+          </div>
+          <div style="font-size: 0.77rem; color: #b45309; margin-top: 8px; font-weight: 600; line-height: 1.4;">
+            ℹ️ Satu santri hanya dapat disimpan 1 kali rekap pembelajarannya dalam 1 hari. Hapus catatan lama di tabel terlebih dahulu jika ingin mengganti setoran.
+          </div>
         </div>
 
         <form id="learningRecordForm" class="form-stack">
@@ -406,7 +435,7 @@
     </div>
   </main>
 
-  <script src="js/rekap-pembelajaran.js?v=20261110_15"></script>
+  <script src="js/rekap-pembelajaran.js?v=20261110_16"></script>
 </body>
 </html>
 

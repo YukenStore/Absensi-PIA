@@ -1287,7 +1287,34 @@ export default {
             return jsonResponse({ detail: 'Data santri, kategori, dan materi wajib diisi.' }, 400);
           }
 
+          // Batasi 1 santri hanya dapat disimpan 1 kali rekap pembelajarannya dalam 1 hari
           if (db) {
+            let existing = null;
+            if (studentId) {
+              existing = await db
+                .prepare(
+                  'SELECT id, student_name, materi FROM learning_records WHERE student_id = ? AND record_date = ? LIMIT 1'
+                )
+                .bind(studentId, recordDate)
+                .first();
+            }
+            if (!existing && studentName) {
+              existing = await db
+                .prepare(
+                  'SELECT id, student_name, materi FROM learning_records WHERE LOWER(student_name) = LOWER(?) AND record_date = ? LIMIT 1'
+                )
+                .bind(studentName, recordDate)
+                .first();
+            }
+            if (existing) {
+              return jsonResponse(
+                {
+                  detail: `Santri ${studentName} sudah memiliki rekap pembelajaran (${existing.materi}) pada tanggal ${recordDate}. Satu santri hanya dapat dicatat 1 kali dalam 1 hari.`,
+                },
+                400
+              );
+            }
+
             const res = await db
               .prepare(
                 `INSERT INTO learning_records (
@@ -1302,6 +1329,22 @@ export default {
               message: `Capaian belajar ${studentName} (${materi}) berhasil disimpan!`,
               id: res.meta?.last_row_id,
             });
+          }
+
+          if (!memoryStore.learningRecords) memoryStore.learningRecords = [];
+          const existsMem = memoryStore.learningRecords.find(
+            (r) =>
+              ((studentId && Number(r.student_id) === Number(studentId)) ||
+                r.student_name.toLowerCase() === studentName.toLowerCase()) &&
+              r.record_date === recordDate
+          );
+          if (existsMem) {
+            return jsonResponse(
+              {
+                detail: `Santri ${studentName} sudah memiliki rekap pembelajaran (${existsMem.materi}) pada tanggal ${recordDate}. Satu santri hanya dapat dicatat 1 kali dalam 1 hari.`,
+              },
+              400
+            );
           }
 
           const newRec = {
@@ -1321,7 +1364,6 @@ export default {
             record_date: recordDate,
             created_at: new Date().toISOString(),
           };
-          if (!memoryStore.learningRecords) memoryStore.learningRecords = [];
           memoryStore.learningRecords.unshift(newRec);
 
           return jsonResponse({
@@ -1560,4 +1602,3 @@ export default {
     return new Response('Sistem Absensi PIA Worker Aktif', { status: 200 });
   },
 };
-
