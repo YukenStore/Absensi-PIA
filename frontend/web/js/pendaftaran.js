@@ -88,9 +88,15 @@ function initHamburgerMenu() {
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
+    if (e.key === 'Escape' && navLinks.classList.contains('is-open')) {
       toggleMenu(true);
     }
+  });
+
+  navLinks.querySelectorAll('a').forEach((link) => {
+    link.addEventListener('click', () => {
+      toggleMenu(true);
+    });
   });
 }
 
@@ -101,23 +107,39 @@ function initHeaderAndAuth() {
   const emailEl = document.getElementById('activeUserEmail');
   const mobileNameEl = document.getElementById('mobileUserName');
   const mobileEmailEl = document.getElementById('mobileUserEmail');
+  const dropdownNameEl = document.getElementById('dropdownUserName');
+  const dropdownEmailEl = document.getElementById('dropdownUserEmail');
+  const dropdownAvatarEl = document.getElementById('dropdownUserAvatar');
+  const dropdownRoleEl = document.getElementById('dropdownUserRole');
 
   try {
-    const rawUser = localStorage.getItem('pia_user');
+    const rawUser = localStorage.getItem('pia_user') || localStorage.getItem('pia_current_user');
     if (rawUser) {
       currentUser = JSON.parse(rawUser);
       const userName = currentUser.full_name || currentUser.username || 'Pengguna PIA';
       const userEmail = currentUser.email || 'Pendidikan Islam At-Taqwa';
+      const isAdmin = Boolean(
+        (currentUser.email && currentUser.email.toLowerCase() === 'yumenoboken@gmail.com') ||
+        currentUser.role === 'admin'
+      );
+      const initial = (userName.trim()[0] || 'U').toUpperCase();
+
       if (nameEl) nameEl.textContent = userName;
       if (emailEl) emailEl.textContent = userEmail;
       if (mobileNameEl) mobileNameEl.textContent = userName;
       if (mobileEmailEl) mobileEmailEl.textContent = userEmail;
+      if (dropdownNameEl) dropdownNameEl.textContent = userName;
+      if (dropdownEmailEl) dropdownEmailEl.textContent = userEmail;
+      if (dropdownAvatarEl) dropdownAvatarEl.textContent = initial;
+      if (dropdownRoleEl) dropdownRoleEl.textContent = isAdmin ? 'Administrator' : 'Guru';
     }
   } catch (_) {}
 
   document.querySelectorAll('.logout-trigger').forEach((btn) => {
     btn.addEventListener('click', () => {
       localStorage.removeItem('pia_access_token');
+      localStorage.removeItem('pia_user');
+      localStorage.removeItem('pia_current_user');
       window.location.href = 'index.html';
     });
   });

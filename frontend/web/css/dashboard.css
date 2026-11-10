@@ -120,46 +120,48 @@ body {
   display: block;
 }
 
-/* Main Navigation Links */
-.nav-links {
+/* Topbar Right Section (Pojok Kanan: User Info + Tombol Garis 3 Menu) */
+.topbar-right {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 14px;
+  position: relative;
 }
 
-.nav-item {
-  padding: 9px 16px;
-  border-radius: 10px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-decoration: none;
-  transition: all 0.2s ease;
-  white-space: nowrap;
+.header-user-chip {
+  text-align: right;
+  line-height: 1.25;
 }
 
-.nav-item:hover {
-  color: var(--primary);
-  background: #f8fafc;
-}
-
-.nav-item.active {
-  color: var(--primary);
-  background: var(--primary-light);
-}
-
-.btn-hamburger {
-  display: none;
-  background: #f8fafc;
-  border: 1.5px solid var(--border-color);
+.header-user-chip .name,
+.user-chip .name {
+  font-size: 0.88rem;
+  font-weight: 700;
   color: var(--secondary);
-  padding: 8px 10px;
-  border-radius: 10px;
-  cursor: pointer;
+}
+
+.header-user-chip .role,
+.user-chip .role {
+  font-size: 0.73rem;
+  color: var(--text-muted);
+}
+
+/* Tombol Garis 3 (Hamburger Menu Button) - Tampil di Semua Layar (Desktop & Mobile) */
+.btn-hamburger {
+  display: inline-flex !important;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  background: #f8fafc;
+  border: 1.5px solid var(--border-color);
+  color: #1e293b;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+  flex-shrink: 0;
 }
 
 .btn-hamburger:hover,
@@ -167,10 +169,177 @@ body {
   background: #eff6ff;
   border-color: #93c5fd;
   color: #2563eb;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.15);
 }
 
-.mobile-user-card {
+/* Panel Dropdown Menu Navigasi di Pojok Kanan */
+.nav-dropdown-menu {
   display: none;
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 310px;
+  max-width: calc(100vw - 32px);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.16), 0 0 0 1px rgba(15, 23, 42, 0.04);
+  padding: 12px;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.nav-dropdown-menu.is-open {
+  display: flex !important;
+  flex-direction: column;
+  animation: slideDownNavDropdown 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideDownNavDropdown {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Header Profil Pengguna di Dropdown */
+.dropdown-user-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid #edf2f7;
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+
+.dropdown-user-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.25);
+  text-transform: uppercase;
+}
+
+.dropdown-user-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dropdown-user-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdown-user-email {
+  font-size: 0.76rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdown-user-badge {
+  display: inline-block;
+  align-self: flex-start;
+  margin-top: 3px;
+  padding: 2px 8px;
+  background: #dbeafe;
+  color: #1e40af;
+  border-radius: 9999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 6px 0;
+}
+
+/* List Item Navigasi */
+.dropdown-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dropdown-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #334155;
+  text-decoration: none;
+  transition: all 0.18s ease;
+}
+
+.dropdown-nav-item:hover {
+  background: #f1f5f9;
+  color: var(--primary);
+  transform: translateX(3px);
+}
+
+.dropdown-nav-item.active {
+  background: #eff6ff;
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.dropdown-nav-item .nav-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: currentColor;
+}
+
+/* Tombol Keluar di Dropdown */
+.dropdown-logout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 16px;
+  margin-top: 6px;
+  border-radius: 10px;
+  background: #fff1f2;
+  color: #be123c;
+  border: 1.5px solid #fecdd3;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dropdown-logout-btn:hover {
+  background: #ffe4e6;
+  border-color: #fda4af;
+  color: #9f1239;
 }
 
 .badge-teacher-name,
@@ -727,101 +896,19 @@ body {
    ========================================================= */
 @media (max-width: 992px) {
   .topbar-inner {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 18px;
-    position: relative;
+    padding: 0 18px;
     min-height: 64px;
-    gap: 0;
-  }
-
-  .topbar-brand-row {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .btn-hamburger {
-    display: inline-flex;
-  }
-
-  .desktop-user-menu {
-    display: none !important;
-  }
-
-  .mobile-user-menu {
-    display: none !important;
-  }
-
-  .nav-links {
-    display: none;
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: #ffffff;
-    border-bottom: 2px solid var(--border-color);
-    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.14);
-    flex-direction: column;
-    padding: 16px 20px 20px;
-    gap: 8px;
-    z-index: 999;
-    animation: slideDownNav 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .nav-links.is-open {
-    display: flex !important;
-  }
-
-  .nav-item {
-    width: 100%;
-    padding: 12px 16px;
-    border-radius: 10px;
-    font-size: 0.95rem;
-    font-weight: 600;
-    text-align: left;
-    background: #f8fafc;
-    border: 1px solid transparent;
-  }
-
-  .nav-item:hover {
-    background: #eff6ff;
-    color: var(--primary);
-    border-color: #bfdbfe;
-  }
-
-  .nav-item.active {
-    background: #eff6ff;
-    color: #1d4ed8;
-    border-color: #93c5fd;
-    font-weight: 700;
-  }
-
-  .mobile-user-card {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 8px;
-    padding-top: 14px;
-    border-top: 1px solid var(--border-color);
-    gap: 12px;
-  }
-
-  .mobile-user-card .user-chip {
-    text-align: left;
   }
 }
 
-@keyframes slideDownNav {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
+@media (max-width: 640px) {
+  .header-user-chip {
+    display: none !important;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .nav-dropdown-menu {
+    width: 290px;
+    right: 0;
   }
 }
 

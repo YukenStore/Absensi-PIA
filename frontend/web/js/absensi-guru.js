@@ -242,9 +242,15 @@ function initHamburgerMenu() {
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
+    if (e.key === 'Escape' && navLinks.classList.contains('is-open')) {
       toggleMenu(true);
     }
+  });
+
+  navLinks.querySelectorAll('a').forEach((link) => {
+    link.addEventListener('click', () => {
+      toggleMenu(true);
+    });
   });
 }
 
@@ -266,22 +272,30 @@ function initHeaderAndAuth() {
       const emailEl = document.getElementById('activeUserEmail');
       const mobileNameEl = document.getElementById('mobileUserName');
       const mobileEmailEl = document.getElementById('mobileUserEmail');
+      const dropdownNameEl = document.getElementById('dropdownUserName');
+      const dropdownEmailEl = document.getElementById('dropdownUserEmail');
+      const dropdownAvatarEl = document.getElementById('dropdownUserAvatar');
+      const dropdownRoleEl = document.getElementById('dropdownUserRole');
       const formTeacherNameEl = document.getElementById('formTeacherName');
 
       const userName = currentUser.full_name || currentUser.username || 'Pengguna PIA';
       const userEmail = currentUser.email || 'Pendidikan Islam At-Taqwa';
+      const userEmailLower = (currentUser.email || '').toLowerCase();
+      isAdmin = userEmailLower === 'yumenoboken@gmail.com' || currentUser.role === 'admin';
+      const initial = (userName.trim()[0] || 'U').toUpperCase();
 
       if (nameEl) nameEl.textContent = userName;
       if (emailEl) emailEl.textContent = userEmail;
       if (mobileNameEl) mobileNameEl.textContent = userName;
       if (mobileEmailEl) mobileEmailEl.textContent = userEmail;
+      if (dropdownNameEl) dropdownNameEl.textContent = userName;
+      if (dropdownEmailEl) dropdownEmailEl.textContent = userEmail;
+      if (dropdownAvatarEl) dropdownAvatarEl.textContent = initial;
+      if (dropdownRoleEl) dropdownRoleEl.textContent = isAdmin ? 'Administrator' : 'Guru';
 
       if (formTeacherNameEl) {
         formTeacherNameEl.textContent = userName;
       }
-
-      const userEmailLower = (currentUser.email || '').toLowerCase();
-      isAdmin = userEmailLower === 'yumenoboken@gmail.com' || currentUser.role === 'admin';
     }
   } catch (_) {}
 
