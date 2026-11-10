@@ -211,10 +211,10 @@ function renderStudentDropdown() {
   selectEl.innerHTML =
     '<option value="">-- Pilih Nama Siswa --</option>' +
     studentsList
-      .map(
-        (s) =>
-          `<option value="${s.id}" data-name="${s.name || s.full_name}" data-class="${s.class_name || ''}">${s.name || s.full_name} (${s.class_name || 'Tanpa Kelas'})</option>`
-      )
+      .map((s) => {
+        const studentName = s.name || s.full_name || 'Siswa';
+        return `<option value="${s.id}" data-name="${studentName}" data-class="${s.class_name || ''}">${studentName}</option>`;
+      })
       .join('');
 
   if (currentVal && studentsList.some((s) => String(s.id) === String(currentVal))) {
@@ -225,8 +225,6 @@ function renderStudentDropdown() {
 function updateStudentRecordPreview() {
   const selectEl = document.getElementById('studentSelect');
   const dateInput = document.getElementById('attendanceDate');
-  const classBadge = document.getElementById('studentClassBadge');
-  const classText = document.getElementById('studentClassText');
   const recordedCard = document.getElementById('studentRecordedCard');
   const recordedStudentName = document.getElementById('recordedStudentName');
   const recordedDateVal = document.getElementById('recordedDateVal');
@@ -242,19 +240,12 @@ function updateStudentRecordPreview() {
   const dateVal = dateInput.value;
 
   if (!studentId) {
-    if (classBadge) classBadge.style.display = 'none';
     if (recordedCard) recordedCard.style.display = 'none';
     return;
   }
 
   const selectedOpt = selectEl.options[selectEl.selectedIndex];
-  const studentName = selectedOpt.getAttribute('data-name') || selectedOpt.textContent.split('(')[0].trim();
-  const className = selectedOpt.getAttribute('data-class') || '';
-
-  if (classBadge && classText) {
-    classText.textContent = className ? `Kelas ${className}` : 'Siswa PIA';
-    classBadge.style.display = 'inline-flex';
-  }
+  const studentName = selectedOpt ? (selectedOpt.getAttribute('data-name') || selectedOpt.textContent.trim()) : '';
 
   // Cek apakah ada record di tanggal ini
   const dateRecords = attendanceByDate[dateVal] || {};
