@@ -3,8 +3,9 @@
  * Manajemen mutaba'ah perkembangan belajar Iqro, Al-Qur'an, Hafalan Surat Pendek, dan Doa Harian santri.
  */
 
-const API_BASE = '';
-const CF_WORKER_API = 'https://absensi-pia.yumenoboken.workers.dev';
+const API_BASES = window.location.hostname.includes('github.io')
+  ? ['https://absensi-pia.yumenoboken.workers.dev', 'http://localhost:5173']
+  : ['', 'http://localhost:5173', 'https://absensi-pia.yumenoboken.workers.dev'];
 
 let currentUser = null;
 let isAdmin = false;
@@ -56,9 +57,7 @@ function showBanner(message, type = 'success') {
 }
 
 async function callLearningApi(endpoint, options = {}) {
-  const isGitHubPages = window.location.hostname.includes('github.io');
   const token = getAuthToken();
-
   const headers = {
     'Content-Type': 'application/json',
     ...(options.headers || {}),
@@ -67,10 +66,10 @@ async function callLearningApi(endpoint, options = {}) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  // 1. Coba Server Lokal jika bukan di GitHub Pages
-  if (!isGitHubPages) {
+  for (const base of API_BASES) {
     try {
-      const resp = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
+      const url = `${base}${endpoint}`;
+      const resp = await fetch(url, { ...options, headers });
       const contentType = resp.headers.get('content-type') || '';
       if (contentType.includes('application/json')) {
         const data = await resp.json();
@@ -81,20 +80,7 @@ async function callLearningApi(endpoint, options = {}) {
     } catch (_) {}
   }
 
-  // 2. Coba ke Cloudflare Worker API
-  try {
-    const cfUrl = `${CF_WORKER_API}${endpoint}`;
-    const cfResp = await fetch(cfUrl, { ...options, headers });
-    const cfType = cfResp.headers.get('content-type') || '';
-    if (cfType.includes('application/json')) {
-      const cfData = await cfResp.json();
-      if (cfResp.ok && cfData && (cfData.success !== false || !cfData.detail)) {
-        return cfData;
-      }
-    }
-  } catch (_) {}
-
-  // 3. Fallback Penyimpanan Lokal Browser (Offline / Static GitHub Pages)
+  // Fallback Penyimpanan Lokal Browser (Offline)
   return handleLocalFallback(endpoint, options);
 }
 
@@ -368,6 +354,9 @@ async function loadLearningRecords() {
     const res = await callLearningApi('/api/learning-records');
     if (res && res.success && Array.isArray(res.records)) {
       allLearningRecords = res.records;
+      saveLocalLearningDb({ records: allLearningRecords });
+      // Sinkronkan data offline jika ada
+      syncLocalOfflineRecordsToServer();
     } else {
       const fallback = handleLocalFallback('/api/learning-records', { method: 'GET' });
       allLearningRecords = fallback.records || [];
@@ -378,6 +367,43 @@ async function loadLearningRecords() {
   }
 
   renderLearningTable();
+}
+
+async function syncLocalOfflineRecordsToServer() {
+  const localDb = getLocalLearningDb();
+  if (!localDb || !Array.isArray(localDb.records) || localDb.records.length === 0) return;
+
+  // Cari catatan lokal yang belum tercatat di database server
+  const unsynced = localDb.records.filter((loc) => {
+    return !allLearningRecords.some(
+      (srv) =>
+        srv.student_name === loc.student_name &&
+        srv.materi === loc.materi &&
+        srv.record_date === loc.record_date &&
+        srv.category === loc.category
+    );
+  });
+
+  if (unsynced.length === 0) return;
+
+  for (const item of unsynced) {
+    try {
+      await callLearningApi('/api/learning-records', {
+        method: 'POST',
+        body: JSON.stringify(item),
+      });
+    } catch (_) {}
+  }
+
+  // Muat ulang dari server setelah sinkronisasi berhasil
+  try {
+    const fresh = await callLearningApi('/api/learning-records');
+    if (fresh && fresh.success && Array.isArray(fresh.records)) {
+      allLearningRecords = fresh.records;
+      saveLocalLearningDb({ records: allLearningRecords });
+      renderLearningTable();
+    }
+  } catch (_) {}
 }
 
 function renderLearningTable() {

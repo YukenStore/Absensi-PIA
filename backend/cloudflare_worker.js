@@ -793,7 +793,8 @@ export default {
       pathname.startsWith('/api/student-attendance') ||
       pathname.startsWith('/api/attendance') ||
       pathname.startsWith('/api/teachers') ||
-      pathname.startsWith('/api/teacher-attendance')
+      pathname.startsWith('/api/teacher-attendance') ||
+      pathname.startsWith('/api/learning-records')
     ) {
       try {
         const db = env.DB || null;
