@@ -3811,13 +3811,14 @@ select.form-input {
   /* REKAP PROGRES PEMBELAJARAN SELURUH SISWA (MOBILE)    */
   /* ==================================================== */
   #sectionOverview .card-header {
-    flex-direction: row !important;
-    justify-content: space-between !important;
-    align-items: flex-start !important;
-    gap: 10px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    margin-bottom: 12px !important;
   }
   #sectionOverview .card-title {
-    flex: 1 !important;
+    width: 100% !important;
   }
   #sectionOverview .card-title h3 {
     font-size: 1.05rem !important;
@@ -3827,34 +3828,30 @@ select.form-input {
     font-size: 0.8rem !important;
   }
   #btnRefreshOverview {
-    flex-shrink: 0 !important;
     align-self: flex-start !important;
     white-space: nowrap !important;
     font-size: 0.78rem !important;
-    padding: 6px 10px !important;
+    padding: 6px 12px !important;
   }
 
   .overview-stats-grid {
     display: grid !important;
-    grid-template-columns: repeat(4, 1fr) !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
     gap: 6px !important;
     margin-bottom: 14px !important;
-    overflow-x: auto !important;
-    padding-bottom: 4px !important;
-    scrollbar-width: none !important;
-  }
-  .overview-stats-grid::-webkit-scrollbar {
-    display: none !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
   .overview-stat-card {
     padding: 8px 4px !important;
     border-radius: 10px !important;
-    min-width: 68px !important;
+    min-width: 0 !important;
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
     justify-content: center !important;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+    box-sizing: border-box !important;
   }
   .overview-stat-val {
     font-size: 1.05rem !important;
@@ -3863,7 +3860,7 @@ select.form-input {
     white-space: nowrap !important;
   }
   .overview-stat-lbl {
-    font-size: 0.65rem !important;
+    font-size: 0.62rem !important;
     line-height: 1.15 !important;
     margin-top: 3px !important;
     color: #64748b !important;
@@ -3871,7 +3868,26 @@ select.form-input {
   }
 
   #sectionOverview .table-responsive {
-    overflow-x: visible !important;
+    overflow-x: hidden !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  #sectionOverview #overviewTable {
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border: none !important;
+    display: block !important;
+  }
+  #overviewTable td {
+    white-space: normal !important;
   }
 
   #overviewTable:not(.is-empty-table) thead {
@@ -3881,12 +3897,14 @@ select.form-input {
   #overviewTable:not(.is-empty-table) tbody {
     display: block !important;
     width: 100% !important;
+    min-width: 0 !important;
   }
   #overviewTable:not(.is-empty-table) tbody {
     display: flex !important;
     flex-direction: column !important;
-    gap: 10px !important;
+    gap: 12px !important;
     padding: 2px 0 !important;
+    width: 100% !important;
   }
   #overviewTable:not(.is-empty-table) tbody tr.overview-card-item {
     display: grid !important;
@@ -3896,12 +3914,15 @@ select.form-input {
       "meta meta meta"
       "action action action" !important;
     align-items: center !important;
-    gap: 8px 10px !important;
+    gap: 10px 8px !important;
     background: #ffffff !important;
     border: 1px solid #e2e8f0 !important;
-    border-radius: 12px !important;
+    border-radius: 14px !important;
     padding: 12px 14px !important;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
   }
   #overviewTable:not(.is-empty-table) td.ov-col-no {
     grid-area: num !important;
@@ -3911,9 +3932,10 @@ select.form-input {
   }
   #overviewTable:not(.is-empty-table) td.ov-col-name {
     grid-area: name !important;
-    padding: 0 !important;
+    padding: 0 4px !important;
     border: none !important;
     text-align: left !important;
+    min-width: 0 !important;
   }
   #overviewTable:not(.is-empty-table) td.ov-col-name .student-main-info {
     display: flex !important;
@@ -3922,7 +3944,7 @@ select.form-input {
     flex-wrap: wrap !important;
   }
   #overviewTable:not(.is-empty-table) td.ov-col-name .student-name-val {
-    font-size: 0.93rem !important;
+    font-size: 0.95rem !important;
     font-weight: 700 !important;
     color: var(--secondary) !important;
     word-break: break-word !important;
@@ -3938,6 +3960,11 @@ select.form-input {
     padding: 0 !important;
     border: none !important;
     text-align: right !important;
+    white-space: nowrap !important;
+  }
+  #overviewTable:not(.is-empty-table) td.ov-col-level .badge-progress-iqro {
+    font-size: 0.75rem !important;
+    padding: 4px 8px !important;
   }
   #overviewTable:not(.is-empty-table) td.ov-col-iqro,
   #overviewTable:not(.is-empty-table) td.ov-col-quran {
@@ -3946,23 +3973,33 @@ select.form-input {
   #overviewTable:not(.is-empty-table) td.ov-col-meta {
     grid-area: meta !important;
     display: block !important;
-    padding: 6px 0 0 0 !important;
+    padding: 8px 0 0 0 !important;
     border: none !important;
     border-top: 1px dashed #f1f5f9 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
   .overview-meta-strip {
-    display: flex !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
     gap: 8px !important;
-    flex-wrap: wrap !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
   .ov-meta-badge {
-    display: inline-flex !important;
+    display: flex !important;
     align-items: center !important;
+    justify-content: center !important;
     gap: 4px !important;
-    padding: 5px 9px !important;
+    padding: 6px 4px !important;
     border-radius: 8px !important;
-    font-size: 0.77rem !important;
+    font-size: 0.74rem !important;
     font-weight: 600 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
   .ov-badge-iqro {
     background: #eff6ff !important;
@@ -3979,15 +4016,31 @@ select.form-input {
     display: block !important;
     padding: 2px 0 0 0 !important;
     border: none !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
   #overviewTable:not(.is-empty-table) td.ov-col-action .btn-open-student-recap {
     width: 100% !important;
-    text-align: center !important;
+    display: flex !important;
+    align-items: center !important;
     justify-content: center !important;
-    padding: 8px 12px !important;
-    font-size: 0.84rem !important;
+    gap: 6px !important;
+    padding: 10px 14px !important;
+    font-size: 0.88rem !important;
     font-weight: 700 !important;
-    border-radius: 8px !important;
+    border-radius: 10px !important;
+    background: #2563eb !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2) !important;
+    border: none !important;
+    cursor: pointer !important;
+    box-sizing: border-box !important;
+    transition: all 0.15s ease !important;
+    -webkit-tap-highlight-color: transparent !important;
+  }
+  #overviewTable:not(.is-empty-table) td.ov-col-action .btn-open-student-recap:active {
+    background: #1d4ed8 !important;
+    transform: scale(0.98) !important;
   }
 
   .mutabaah-student-bar {
@@ -4033,4 +4086,24 @@ select.form-input {
     padding: 6px 12px;
     font-size: 0.78rem;
   }
+}
+
+/* Animasi pulse highlight saat memilih siswa dari overview */
+@keyframes pulseGlow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.45);
+    border-color: #2563eb;
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(37, 99, 235, 0);
+    border-color: #3b82f6;
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+  }
+}
+
+.student-bar-pulse {
+  animation: pulseGlow 1.2s ease-out;
+  border: 1px solid #3b82f6 !important;
 }

@@ -70,11 +70,25 @@ let saveTimeout = null;
 let quranFilterMode = 'all';
 let quranSearchQuery = '';
 
+function getAuthToken() {
+  return localStorage.getItem('pia_access_token');
+}
+
 // Helper API
 async function callApi(path, options = {}) {
+  const token = getAuthToken();
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(options.headers || {}),
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  const mergedOptions = { ...options, headers };
+
   for (const base of API_BASES) {
     try {
-      const resp = await fetch(`${base}${path}`, options);
+      const resp = await fetch(`${base}${path}`, mergedOptions);
       const ct = resp.headers.get('content-type') || '';
       if (ct.includes('application/json')) {
         const data = await resp.json();
@@ -266,19 +280,67 @@ async function selectStudent(studentId) {
   selectedStudentId = Number(studentId);
   selectedStudent = studentsList.find((s) => Number(s.id) === selectedStudentId) || null;
 
+  // Fallback: jika siswa belum ada di studentsList, ambil dari cache overview
+  if (!selectedStudent && window._overviewStudentsMap && window._overviewStudentsMap[selectedStudentId]) {
+    const fromOv = window._overviewStudentsMap[selectedStudentId];
+    selectedStudent = {
+      id: fromOv.id,
+      full_name: fromOv.name || fromOv.full_name || `Siswa #${fromOv.id}`,
+      name: fromOv.name || fromOv.full_name || `Siswa #${fromOv.id}`,
+      class_name: fromOv.class_name || '-',
+    };
+    studentsList.push(selectedStudent);
+    renderStudentDropdown();
+  }
+
+  // Fallback darurat jika tetap belum ditemukan
+  if (!selectedStudent) {
+    selectedStudent = {
+      id: selectedStudentId,
+      full_name: `Siswa #${selectedStudentId}`,
+      name: `Siswa #${selectedStudentId}`,
+      class_name: '-',
+    };
+  }
+
   const selectEl = document.getElementById('studentSelect');
   if (selectEl && String(selectEl.value) !== String(selectedStudentId)) {
     selectEl.value = String(selectedStudentId);
   }
 
-  if (!selectedStudent) {
-    document.getElementById('studentPreviewWrap').style.display = 'none';
-    return;
-  }
-
   renderStudentPreview();
   await loadStudentProgress(selectedStudentId);
 }
+
+// Handler publik untuk membuka mutaba'ah siswa dari mana saja (kartu overview / tombol)
+window.openStudentMutabaah = async function (studentId) {
+  const sId = Number(studentId);
+  if (!sId) return;
+
+  await selectStudent(sId);
+  switchTab('panelIqro');
+
+  // Cari elemen scroll: student preview wrap atau student bar
+  const targetEl =
+    document.getElementById('studentPreviewWrap') ||
+    document.querySelector('.mutabaah-student-bar') ||
+    document.querySelector('.page-header');
+
+  if (targetEl) {
+    targetEl.classList.remove('student-bar-pulse');
+    void targetEl.offsetWidth; // trigger reflow
+    targetEl.classList.add('student-bar-pulse');
+    targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // Backup scroll multi-browser
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+
+  const sName = selectedStudent ? (selectedStudent.full_name || selectedStudent.name) : 'Siswa';
+  showBanner(`Membuka Mutaba'ah untuk <strong>${escapeHtml(sName)}</strong>`, 'info', 2500);
+};
 
 function renderStudentPreview() {
   const wrap = document.getElementById('studentPreviewWrap');
@@ -961,9 +1023,30 @@ async function loadOverviewData() {
   renderOverviewList(fallbackList);
 }
 
+window._overviewStudentsMap = window._overviewStudentsMap || {};
+
 function renderOverviewList(list) {
   const bodyEl = document.getElementById('overviewTableBody');
   if (!bodyEl) return;
+
+  // Sinkronkan ke memory cache dan lengkapi studentsList
+  window._overviewListCache = list;
+  let hasNew = false;
+  for (const s of list) {
+    window._overviewStudentsMap[Number(s.id)] = s;
+    if (!studentsList.some((st) => Number(st.id) === Number(s.id))) {
+      studentsList.push({
+        id: s.id,
+        full_name: s.name,
+        name: s.name,
+        class_name: s.class_name,
+      });
+      hasNew = true;
+    }
+  }
+  if (hasNew) {
+    renderStudentDropdown();
+  }
 
   if (list.length === 0) {
     bodyEl.innerHTML = `
@@ -1006,11 +1089,17 @@ function renderOverviewList(list) {
         ? '<span class="badge-progress-iqro" style="background: #ecfdf5; color: #059669; border-color: #a7f3d0;">🎓 Khatam Iqro</span>'
         : `<span class="badge-progress-iqro">📖 Iqro ${curLvl}</span>`;
 
+      const iqroPct = isKhatam ? 100 : Math.round((iqroDone / cfg.totalPages) * 100);
+      const hafalanPct = Math.round((hafalanDone / 37) * 100);
+
       const iqroProgressPct = isKhatam
         ? '100% Selesai'
-        : `${iqroDone} / ${cfg.totalPages} Halaman (${Math.round((iqroDone / cfg.totalPages) * 100)}%)`;
+        : `${iqroDone} / ${cfg.totalPages} Halaman (${iqroPct}%)`;
 
-      const hafalanProgressPct = `${hafalanDone} / 37 Surat (${Math.round((hafalanDone / 37) * 100)}%)`;
+      const hafalanProgressPct = `${hafalanDone} / 37 Surat (${hafalanPct}%)`;
+
+      const iqroBadgeMobile = isKhatam ? 'Khatam 100%' : `${iqroDone}/${cfg.totalPages} (${iqroPct}%)`;
+      const hafalanBadgeMobile = `${hafalanDone}/37 (${hafalanPct}%)`;
 
       return `
         <tr class="overview-card-item">
@@ -1040,21 +1129,22 @@ function renderOverviewList(list) {
               type="button"
               class="btn-tool-pill active btn-open-student-recap"
               data-id="${s.id}"
+              onclick="window.openStudentMutabaah(${s.id})"
             >
               Buka Mutaba'ah →
             </button>
           </td>
           <td class="ov-col-meta">
             <div class="overview-meta-strip">
-              <div class="ov-meta-badge ov-badge-iqro">
+              <div class="ov-meta-badge ov-badge-iqro" title="Progres Iqro: ${iqroProgressPct}">
                 <span class="ov-meta-icon">📖</span>
                 <span class="ov-meta-label">Iqro:</span>
-                <span class="ov-meta-val">${iqroProgressPct}</span>
+                <span class="ov-meta-val">${iqroBadgeMobile}</span>
               </div>
-              <div class="ov-meta-badge ov-badge-quran">
+              <div class="ov-meta-badge ov-badge-quran" title="Progres Hafalan: ${hafalanProgressPct}">
                 <span class="ov-meta-icon">🕌</span>
                 <span class="ov-meta-label">Hafalan:</span>
-                <span class="ov-meta-val">${hafalanProgressPct}</span>
+                <span class="ov-meta-val">${hafalanBadgeMobile}</span>
               </div>
             </div>
           </td>
@@ -1064,11 +1154,12 @@ function renderOverviewList(list) {
     .join('');
 
   bodyEl.querySelectorAll('.btn-open-student-recap').forEach((btn) => {
-    btn.addEventListener('click', async () => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
       const sId = Number(btn.getAttribute('data-id'));
-      await selectStudent(sId);
-      switchTab('panelIqro');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (sId && typeof window.openStudentMutabaah === 'function') {
+        window.openStudentMutabaah(sId);
+      }
     });
   });
 }
@@ -1232,6 +1323,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   initManualLevelModal();
+
+  // Delegated click listener untuk Buka Mutaba'ah di kartu overview
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.btn-open-student-recap');
+    if (btn) {
+      e.preventDefault();
+      const sId = Number(btn.getAttribute('data-id'));
+      if (sId && typeof window.openStudentMutabaah === 'function') {
+        window.openStudentMutabaah(sId);
+      }
+    }
+  });
 
   // Load Data Awal
   await loadStudents();
