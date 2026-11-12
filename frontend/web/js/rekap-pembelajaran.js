@@ -1172,18 +1172,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  const btnSaveIqroManual = document.getElementById('btnSaveIqroManual');
-  if (btnSaveIqroManual) {
-    btnSaveIqroManual.addEventListener('click', async () => {
-      btnSaveIqroManual.disabled = true;
-      btnSaveIqroManual.textContent = 'Menyimpan...';
-      await flushSaveQueue();
-      btnSaveIqroManual.disabled = false;
-      btnSaveIqroManual.textContent = '💾 Simpan Perubahan';
-      showBanner('Perubahan mutaba\'ah Iqro berhasil disimpan ke database!', 'success');
-    });
-  }
-
   // Tombol Unlock Level Iqro Selanjutnya
   const btnUnlock = document.getElementById('btnUnlockNextIqro');
   if (btnUnlock) {
@@ -1210,18 +1198,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       renderQuranChecklist();
     });
   });
-
-  const btnSaveQuranManual = document.getElementById('btnSaveQuranManual');
-  if (btnSaveQuranManual) {
-    btnSaveQuranManual.addEventListener('click', async () => {
-      btnSaveQuranManual.disabled = true;
-      btnSaveQuranManual.textContent = 'Menyimpan...';
-      await flushSaveQueue();
-      btnSaveQuranManual.disabled = false;
-      btnSaveQuranManual.textContent = '💾 Simpan Perubahan';
-      showBanner('Perubahan hafalan Qur\'an berhasil disimpan ke database!', 'success');
-    });
-  }
 
   // Tombol Refresh Overview
   const btnRefreshOverview = document.getElementById('btnRefreshOverview');
