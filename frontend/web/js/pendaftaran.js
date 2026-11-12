@@ -255,7 +255,7 @@ function renderStudentsTable() {
     if (tableEl) tableEl.classList.add('is-empty-table');
     bodyEl.innerHTML = `
       <tr class="empty-row">
-        <td colspan="8" class="empty-table-cell">
+        <td colspan="7" class="empty-table-cell">
           Belum ada data siswa yang didaftarkan. Silakan isi formulir di atas untuk menambahkan siswa pertama.
         </td>
       </tr>
@@ -289,9 +289,6 @@ function renderStudentsTable() {
         </td>
         <td class="cell-phone" data-label="No. HP Ortu / Wali">
           ${renderParentPhoneBadge(s.parent_phone)}
-        </td>
-        <td class="cell-creator" data-label="Didaftarkan Oleh">
-          ${escapeHtml(s.created_by || 'Guru PIA')}
         </td>
         <td class="cell-action" data-label="Aksi">
           <button
@@ -336,14 +333,6 @@ function renderStudentsTable() {
             <span class="meta-item">
               ${renderParentPhoneBadge(s.parent_phone, true)}
             </span>` : ''}
-            <span class="meta-dot">•</span>
-            <span class="meta-item">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; color: #94a3b8;">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
-              </svg>
-              ${escapeHtml(s.created_by || 'Guru PIA')}
-            </span>
           </div>
         </td>
       </tr>
