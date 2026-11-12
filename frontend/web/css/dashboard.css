@@ -3583,11 +3583,20 @@ select.form-input {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
 }
 
 .mutabaah-table thead th.th-check {
   text-align: center;
-  width: 100px;
+  width: 90px;
+}
+
+.mutabaah-table .th-short-text {
+  display: none;
+}
+
+.mutabaah-table .th-full-text {
+  display: inline;
 }
 
 .mutabaah-table tbody tr {
@@ -4152,7 +4161,7 @@ select.form-input {
   }
   .mutabaah-table th:nth-child(1),
   .mutabaah-table td:nth-child(1) {
-    width: 38% !important;
+    width: 34% !important;
     padding: 8px 6px !important;
     word-break: break-word !important;
   }
@@ -4161,6 +4170,17 @@ select.form-input {
     width: 44px !important;
     padding: 8px 2px !important;
     text-align: center !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+  }
+  .mutabaah-table .th-full-text {
+    display: none !important;
+  }
+  .mutabaah-table .th-short-text {
+    display: inline-block !important;
+    font-size: 1.05rem !important;
+    font-weight: 800 !important;
+    color: #10b981 !important;
   }
   .mutabaah-table th:nth-child(3),
   .mutabaah-table td:nth-child(3) {
