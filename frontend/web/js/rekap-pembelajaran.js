@@ -465,7 +465,7 @@ function renderIqroStepper() {
         badgeIcon = '✓';
       } else if (lvl === currentIqroLevel) {
         stateClass = 'is-active';
-        badgeIcon = '⚡';
+        badgeIcon = '⭐';
       } else {
         stateClass = 'is-locked';
         badgeIcon = '🔒';
