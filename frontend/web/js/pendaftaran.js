@@ -170,6 +170,44 @@ function formatBirthDateId(dateStr) {
   return `${day} ${MONTH_NAMES_ID[monthIdx]} ${year}`;
 }
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function formatWhatsAppLink(phone) {
+  if (!phone) return '';
+  let clean = phone.replace(/\D/g, '');
+  if (clean.startsWith('0')) {
+    clean = '62' + clean.slice(1);
+  } else if (!clean.startsWith('62') && clean.length > 5) {
+    clean = '62' + clean;
+  }
+  return `https://wa.me/${clean}`;
+}
+
+function renderParentPhoneBadge(phone, isMini = false) {
+  if (!phone || phone.trim() === '-' || phone.trim() === '') {
+    return `<span style="color: #94a3b8; font-size: 0.82rem;">-</span>`;
+  }
+  const clean = phone.trim();
+  const waUrl = formatWhatsAppLink(clean);
+  const miniClass = isMini ? 'is-mini' : '';
+  return `
+    <a href="${waUrl}" target="_blank" rel="noopener noreferrer" class="parent-phone-pill ${miniClass}" title="Kirim Pesan WhatsApp: ${escapeHtml(clean)}">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 2px;">
+        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+      </svg>
+      <span>${escapeHtml(clean)}</span>
+    </a>
+  `;
+}
+
 function loadLocalStudents() {
   try {
     const raw = localStorage.getItem('pia_students_db');
@@ -217,7 +255,7 @@ function renderStudentsTable() {
     if (tableEl) tableEl.classList.add('is-empty-table');
     bodyEl.innerHTML = `
       <tr class="empty-row">
-        <td colspan="6" class="empty-table-cell">
+        <td colspan="8" class="empty-table-cell">
           Belum ada data siswa yang didaftarkan. Silakan isi formulir di atas untuk menambahkan siswa pertama.
         </td>
       </tr>
@@ -236,25 +274,31 @@ function renderStudentsTable() {
         </td>
         <td class="cell-name" data-label="Nama Siswa">
           <div class="student-main-info">
-            <span class="student-name-val">${s.full_name || s.name}</span>
-            <span class="student-class-tag">${s.class_name || '-'}</span>
+            <span class="student-name-val">${escapeHtml(s.full_name || s.name || '-')}</span>
+            <span class="student-class-tag">${escapeHtml(s.class_name || '-')}</span>
           </div>
         </td>
         <td class="cell-class" data-label="Kelas">
-          <span class="student-class-tag">${s.class_name || '-'}</span>
+          <span class="student-class-tag">${escapeHtml(s.class_name || '-')}</span>
         </td>
         <td class="cell-birth" data-label="Tanggal Lahir">
           ${formatBirthDateId(s.birth_date)}
         </td>
+        <td class="cell-parent" data-label="Nama Ortu / Wali">
+          <span class="parent-name-val">${escapeHtml(s.parent_name || '-')}</span>
+        </td>
+        <td class="cell-phone" data-label="No. HP Ortu / Wali">
+          ${renderParentPhoneBadge(s.parent_phone)}
+        </td>
         <td class="cell-creator" data-label="Didaftarkan Oleh">
-          ${s.created_by || 'Guru PIA'}
+          ${escapeHtml(s.created_by || 'Guru PIA')}
         </td>
         <td class="cell-action" data-label="Aksi">
           <button
             type="button"
             class="btn-delete-student"
             data-delete-id="${s.id}"
-            data-name="${s.full_name || s.name}"
+            data-name="${escapeHtml(s.full_name || s.name || '')}"
             data-dob="${s.birth_date || ''}"
             title="Hapus data siswa ini"
           >
@@ -276,13 +320,29 @@ function renderStudentsTable() {
               </svg>
               ${formatBirthDateId(s.birth_date)}
             </span>
+            ${s.parent_name ? `
+            <span class="meta-dot">•</span>
+            <span class="meta-item">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; color: #94a3b8;">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+              Ortu: ${escapeHtml(s.parent_name)}
+            </span>` : ''}
+            ${s.parent_phone ? `
+            <span class="meta-dot">•</span>
+            <span class="meta-item">
+              ${renderParentPhoneBadge(s.parent_phone, true)}
+            </span>` : ''}
             <span class="meta-dot">•</span>
             <span class="meta-item">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; color: #94a3b8;">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                 <circle cx="12" cy="7" r="4"></circle>
               </svg>
-              ${s.created_by || 'Guru PIA'}
+              ${escapeHtml(s.created_by || 'Guru PIA')}
             </span>
           </div>
         </td>
@@ -302,7 +362,7 @@ function renderStudentsTable() {
   });
 }
 
-async function addStudent({ fullName, className, birthDate }) {
+async function addStudent({ fullName, className, birthDate, parentName, parentPhone }) {
   const createdBy = currentUser ? currentUser.full_name : 'Guru PIA';
 
   // Simpan langsung ke tabel SQL `students` di database
@@ -313,6 +373,8 @@ async function addStudent({ fullName, className, birthDate }) {
       full_name: fullName,
       class_name: className,
       birth_date: birthDate,
+      parent_name: parentName,
+      parent_phone: parentPhone,
       created_by: createdBy,
     }),
   });
@@ -335,6 +397,8 @@ async function addStudent({ fullName, className, birthDate }) {
     full_name: fullName,
     class_name: className,
     birth_date: birthDate,
+    parent_name: parentName,
+    parent_phone: parentPhone,
     created_by: createdBy,
     created_at: new Date().toISOString(),
   };
@@ -391,10 +455,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const fullName = document.getElementById('studentFullName').value.trim();
       const className = document.getElementById('studentClass').value.trim();
       const birthDate = document.getElementById('studentBirthDate').value.trim();
+      const parentName = document.getElementById('studentParentName')
+        ? document.getElementById('studentParentName').value.trim()
+        : '';
+      const parentPhone = document.getElementById('studentParentPhone')
+        ? document.getElementById('studentParentPhone').value.trim()
+        : '';
       const submitBtn = document.getElementById('submitStudentBtn');
 
-      if (!fullName || !className || !birthDate) {
-        showBanner('Harap lengkapi Nama Siswa, Kelas, dan Tanggal Lahir.', 'error');
+      if (!fullName || !className || !birthDate || !parentName || !parentPhone) {
+        showBanner('Harap lengkapi Nama Siswa, Kelas, Tanggal Lahir, Nama Orang Tua/Wali, dan No. HP.', 'error');
         return;
       }
 
@@ -402,7 +472,7 @@ document.addEventListener('DOMContentLoaded', () => {
       submitBtn.textContent = 'Menyimpan ke Database...';
 
       try {
-        await addStudent({ fullName, className, birthDate });
+        await addStudent({ fullName, className, birthDate, parentName, parentPhone });
         form.reset();
         showBanner(
           `Siswa "${fullName}" (${className}) berhasil disimpan ke Database dan telah masuk ke Dashboard!`,

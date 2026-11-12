@@ -97,6 +97,8 @@ class DatabaseClient:
             full_name TEXT NOT NULL,
             class_name TEXT NOT NULL,
             birth_date TEXT NOT NULL,
+            parent_name TEXT NOT NULL DEFAULT '',
+            parent_phone TEXT NOT NULL DEFAULT '',
             created_by TEXT NOT NULL DEFAULT '',
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
@@ -105,6 +107,14 @@ class DatabaseClient:
             self.execute(users_table_sql)
             self.execute(otp_table_sql)
             self.execute(students_table_sql)
+            try:
+                self.execute("ALTER TABLE students ADD COLUMN parent_name TEXT NOT NULL DEFAULT ''")
+            except Exception:
+                pass
+            try:
+                self.execute("ALTER TABLE students ADD COLUMN parent_phone TEXT NOT NULL DEFAULT ''")
+            except Exception:
+                pass
         except Exception as exc:
             print(f"[Database] Peringatan inisialisasi tabel: {exc}")
 

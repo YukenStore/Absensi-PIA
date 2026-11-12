@@ -171,11 +171,20 @@ async function ensureD1Schema(db) {
         full_name TEXT NOT NULL,
         class_name TEXT NOT NULL,
         birth_date TEXT NOT NULL,
+        parent_name TEXT NOT NULL DEFAULT '',
+        parent_phone TEXT NOT NULL DEFAULT '',
         created_by TEXT NOT NULL DEFAULT '',
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
       )`
     )
     .run();
+
+  try {
+    await db.prepare("ALTER TABLE students ADD COLUMN parent_name TEXT NOT NULL DEFAULT ''").run();
+  } catch (_) {}
+  try {
+    await db.prepare("ALTER TABLE students ADD COLUMN parent_phone TEXT NOT NULL DEFAULT ''").run();
+  } catch (_) {}
 
   await db
     .prepare(
@@ -805,7 +814,7 @@ export default {
         if (pathname === '/api/students' && request.method === 'GET') {
           if (db) {
             const { results } = await db
-              .prepare('SELECT id, full_name, class_name, birth_date, created_by, created_at FROM students ORDER BY id ASC')
+              .prepare('SELECT id, full_name, class_name, birth_date, parent_name, parent_phone, created_by, created_at FROM students ORDER BY id ASC')
               .all();
             return jsonResponse({ success: true, students: results || [] });
           }
@@ -817,6 +826,8 @@ export default {
           const fullName = (body.full_name || '').trim();
           const className = (body.class_name || '').trim();
           const birthDate = (body.birth_date || '').trim();
+          const parentName = (body.parent_name || '').trim();
+          const parentPhone = (body.parent_phone || '').trim();
           const createdBy = (body.created_by || 'Guru PIA').trim();
 
           if (!fullName || !className || !birthDate) {
@@ -825,8 +836,8 @@ export default {
 
           if (db) {
             await db
-              .prepare('INSERT INTO students (full_name, class_name, birth_date, created_by) VALUES (?, ?, ?, ?)')
-              .bind(fullName, className, birthDate, createdBy)
+              .prepare('INSERT INTO students (full_name, class_name, birth_date, parent_name, parent_phone, created_by) VALUES (?, ?, ?, ?, ?, ?)')
+              .bind(fullName, className, birthDate, parentName, parentPhone, createdBy)
               .run();
             const newRow = await db
               .prepare('SELECT * FROM students ORDER BY id DESC LIMIT 1')
@@ -843,6 +854,8 @@ export default {
             full_name: fullName,
             class_name: className,
             birth_date: birthDate,
+            parent_name: parentName,
+            parent_phone: parentPhone,
             created_by: createdBy,
             created_at: new Date().toISOString(),
           };
@@ -881,7 +894,7 @@ export default {
               }
             }
             const { results } = await db
-              .prepare('SELECT id, full_name, class_name, birth_date, created_by, created_at FROM students ORDER BY id ASC')
+              .prepare('SELECT id, full_name, class_name, birth_date, parent_name, parent_phone, created_by, created_at FROM students ORDER BY id ASC')
               .all();
             return jsonResponse({
               success: true,
@@ -908,6 +921,8 @@ export default {
               const fullName = (s.full_name || s.name || '').trim();
               const className = (s.class_name || '').trim();
               const birthDate = (s.birth_date || '').trim();
+              const parentName = (s.parent_name || '').trim();
+              const parentPhone = (s.parent_phone || '').trim();
               const createdBy = (s.created_by || 'Guru PIA').trim();
               if (!fullName || !className || !birthDate) continue;
               const existing = await db
@@ -916,13 +931,13 @@ export default {
                 .first();
               if (!existing) {
                 await db
-                  .prepare('INSERT INTO students (full_name, class_name, birth_date, created_by) VALUES (?, ?, ?, ?)')
-                  .bind(fullName, className, birthDate, createdBy)
+                  .prepare('INSERT INTO students (full_name, class_name, birth_date, parent_name, parent_phone, created_by) VALUES (?, ?, ?, ?, ?, ?)')
+                  .bind(fullName, className, birthDate, parentName, parentPhone, createdBy)
                   .run();
               }
             }
             const { results } = await db
-              .prepare('SELECT id, full_name, class_name, birth_date, created_by, created_at FROM students ORDER BY id ASC')
+              .prepare('SELECT id, full_name, class_name, birth_date, parent_name, parent_phone, created_by, created_at FROM students ORDER BY id ASC')
               .all();
             return jsonResponse({ success: true, students: results || [] });
           }
@@ -932,7 +947,7 @@ export default {
         if (pathname === '/api/attendance/overview' && request.method === 'GET') {
           if (db) {
             const { results: stuRows } = await db
-              .prepare('SELECT id, full_name, class_name, birth_date FROM students ORDER BY id ASC')
+              .prepare('SELECT id, full_name, class_name, birth_date, parent_name, parent_phone FROM students ORDER BY id ASC')
               .all();
             const { results: usrRows } = await db
               .prepare('SELECT id, full_name, email, username, role, is_hidden, is_active FROM users ORDER BY id ASC')
@@ -986,6 +1001,8 @@ export default {
                 name: s.full_name,
                 class_name: s.class_name,
                 birth_date: s.birth_date,
+                parent_name: s.parent_name || '',
+                parent_phone: s.parent_phone || '',
               })),
               teachers: allTeachers.filter((t) => !t.is_hidden),
               all_teachers: allTeachers,
@@ -1023,6 +1040,8 @@ export default {
               name: s.full_name,
               class_name: s.class_name,
               birth_date: s.birth_date,
+              parent_name: s.parent_name || '',
+              parent_phone: s.parent_phone || '',
             })),
             teachers: allTeachers.filter((t) => !t.is_hidden),
             all_teachers: allTeachers,
@@ -1173,7 +1192,7 @@ export default {
         if (pathname === '/api/student-attendance' && request.method === 'GET') {
           const dateParam = (url.searchParams.get('date') || '').trim() || new Date().toISOString().slice(0, 10);
           if (db) {
-            const { results: stuList } = await db.prepare('SELECT id, full_name, class_name, birth_date, created_by FROM students ORDER BY id ASC').all();
+            const { results: stuList } = await db.prepare('SELECT id, full_name, class_name, birth_date, parent_name, parent_phone, created_by FROM students ORDER BY id ASC').all();
             const { results: attRows } = await db.prepare('SELECT student_id, attendance_date, status, note, recorded_by FROM student_attendance WHERE attendance_date = ?').bind(dateParam).all();
             const attendanceMap = {};
             for (const r of attRows || []) {

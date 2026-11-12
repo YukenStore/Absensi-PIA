@@ -263,6 +263,8 @@ function loadLocalSyncedData() {
           name: s.full_name || s.name,
           class_name: s.class_name || '',
           birth_date: s.birth_date || '',
+          parent_name: s.parent_name || '',
+          parent_phone: s.parent_phone || '',
         }));
       }
     }
@@ -395,9 +397,11 @@ async function loadServerOverview() {
         JSON.stringify(
           data.students.map((s) => ({
             id: s.id,
-            full_name: s.name,
+            full_name: s.name || s.full_name,
             class_name: s.class_name,
             birth_date: s.birth_date,
+            parent_name: s.parent_name || '',
+            parent_phone: s.parent_phone || '',
           }))
         )
       );

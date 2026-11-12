@@ -9,6 +9,8 @@ try:
         full_name: str
         class_name: str
         birth_date: str
+        parent_name: Optional[str] = ""
+        parent_phone: Optional[str] = ""
         created_by: Optional[str] = "Guru PIA"
 
     class StudentDelete(BaseModel):
@@ -65,7 +67,7 @@ router = APIRouter(tags=["Students & Attendance"])
 def get_students(db: DatabaseClient = Depends(get_db)):
     try:
         rows = db.execute(
-            "SELECT id, full_name, class_name, birth_date, created_by, created_at FROM students ORDER BY id ASC"
+            "SELECT id, full_name, class_name, birth_date, parent_name, parent_phone, created_by, created_at FROM students ORDER BY id ASC"
         )
         return {"success": True, "students": rows}
     except Exception as exc:
@@ -77,6 +79,8 @@ def add_student(payload: Dict[str, Any], db: DatabaseClient = Depends(get_db)):
     full_name = str(payload.get("full_name") or "").strip()
     class_name = str(payload.get("class_name") or "").strip()
     birth_date = str(payload.get("birth_date") or "").strip()
+    parent_name = str(payload.get("parent_name") or "").strip()
+    parent_phone = str(payload.get("parent_phone") or "").strip()
     created_by = str(payload.get("created_by") or "Guru PIA").strip()
 
     if not full_name or not class_name or not birth_date:
@@ -87,8 +91,8 @@ def add_student(payload: Dict[str, Any], db: DatabaseClient = Depends(get_db)):
 
     try:
         db.execute(
-            "INSERT INTO students (full_name, class_name, birth_date, created_by) VALUES (?, ?, ?, ?)",
-            [full_name, class_name, birth_date, created_by],
+            "INSERT INTO students (full_name, class_name, birth_date, parent_name, parent_phone, created_by) VALUES (?, ?, ?, ?, ?, ?)",
+            [full_name, class_name, birth_date, parent_name, parent_phone, created_by],
         )
         new_row = db.fetch_one(
             "SELECT * FROM students WHERE lower(full_name) = lower(?) AND birth_date = ? ORDER BY id DESC LIMIT 1",
@@ -137,7 +141,7 @@ def delete_student(payload: Dict[str, Any], db: DatabaseClient = Depends(get_db)
                 )
 
         rows = db.execute(
-            "SELECT id, full_name, class_name, birth_date, created_by, created_at FROM students ORDER BY id ASC"
+            "SELECT id, full_name, class_name, birth_date, parent_name, parent_phone, created_by, created_at FROM students ORDER BY id ASC"
         )
         return {
             "success": True,
@@ -156,6 +160,8 @@ def sync_students(payload: Dict[str, Any], db: DatabaseClient = Depends(get_db))
             fname = str(s.get("full_name") or s.get("name") or "").strip()
             cname = str(s.get("class_name") or "").strip()
             bdate = str(s.get("birth_date") or "").strip()
+            parent_name = str(s.get("parent_name") or "").strip()
+            parent_phone = str(s.get("parent_phone") or "").strip()
             cby = str(s.get("created_by") or "Guru PIA").strip()
             if not fname or not cname or not bdate:
                 continue
@@ -166,12 +172,12 @@ def sync_students(payload: Dict[str, Any], db: DatabaseClient = Depends(get_db))
             )
             if not exists:
                 db.execute(
-                    "INSERT INTO students (full_name, class_name, birth_date, created_by) VALUES (?, ?, ?, ?)",
-                    [fname, cname, bdate, cby],
+                    "INSERT INTO students (full_name, class_name, birth_date, parent_name, parent_phone, created_by) VALUES (?, ?, ?, ?, ?, ?)",
+                    [fname, cname, bdate, parent_name, parent_phone, cby],
                 )
 
     rows = db.execute(
-        "SELECT id, full_name, class_name, birth_date, created_by, created_at FROM students ORDER BY id ASC"
+        "SELECT id, full_name, class_name, birth_date, parent_name, parent_phone, created_by, created_at FROM students ORDER BY id ASC"
     )
     return {"success": True, "students": rows}
 
@@ -180,7 +186,7 @@ def sync_students(payload: Dict[str, Any], db: DatabaseClient = Depends(get_db))
 def attendance_overview(db: DatabaseClient = Depends(get_db)):
     try:
         student_rows = db.execute(
-            "SELECT id, full_name, class_name, birth_date FROM students ORDER BY id ASC"
+            "SELECT id, full_name, class_name, birth_date, parent_name, parent_phone FROM students ORDER BY id ASC"
         )
         students = [
             {
@@ -188,6 +194,8 @@ def attendance_overview(db: DatabaseClient = Depends(get_db)):
                 "name": s["full_name"],
                 "class_name": s["class_name"],
                 "birth_date": s["birth_date"],
+                "parent_name": s.get("parent_name") or "",
+                "parent_phone": s.get("parent_phone") or "",
             }
             for s in student_rows
         ]

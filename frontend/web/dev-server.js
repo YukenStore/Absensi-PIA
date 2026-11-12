@@ -306,6 +306,8 @@ db.exec(`
     full_name TEXT NOT NULL,
     class_name TEXT NOT NULL,
     birth_date TEXT NOT NULL,
+    parent_name TEXT NOT NULL DEFAULT '',
+    parent_phone TEXT NOT NULL DEFAULT '',
     created_by TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
@@ -354,6 +356,13 @@ try {
 } catch (_) {}
 try {
   db.exec(`UPDATE teacher_attendance SET approval_status = 'Pending', approved_by = '' WHERE approved_by = 'Sistem Otomatis';`);
+} catch (_) {}
+
+try {
+  db.exec(`ALTER TABLE students ADD COLUMN parent_name TEXT NOT NULL DEFAULT '';`);
+} catch (_) {}
+try {
+  db.exec(`ALTER TABLE students ADD COLUMN parent_phone TEXT NOT NULL DEFAULT '';`);
 } catch (_) {}
 
 function hashPassword(password, salt) {
@@ -785,13 +794,15 @@ const server = http.createServer(async (req, res) => {
     }
 
     const studentRows = db
-      .prepare('SELECT id, full_name, class_name, birth_date FROM students ORDER BY id ASC')
+      .prepare('SELECT id, full_name, class_name, birth_date, parent_name, parent_phone FROM students ORDER BY id ASC')
       .all();
     const students = studentRows.map((s) => ({
       id: s.id,
       name: s.full_name,
       class_name: s.class_name,
       birth_date: s.birth_date,
+      parent_name: s.parent_name || '',
+      parent_phone: s.parent_phone || '',
     }));
 
     const allActiveUsers = db
@@ -1021,7 +1032,7 @@ const server = http.createServer(async (req, res) => {
   if (pathname === '/api/students' && req.method === 'GET') {
     const rows = db
       .prepare(
-        'SELECT id, full_name, class_name, birth_date, created_by, created_at FROM students ORDER BY id ASC'
+        'SELECT id, full_name, class_name, birth_date, parent_name, parent_phone, created_by, created_at FROM students ORDER BY id ASC'
       )
       .all();
     return sendJson(res, 200, {
@@ -1036,6 +1047,8 @@ const server = http.createServer(async (req, res) => {
       const fullName = (body.full_name || '').trim();
       const className = (body.class_name || '').trim();
       const birthDate = (body.birth_date || '').trim();
+      const parentName = (body.parent_name || '').trim();
+      const parentPhone = (body.parent_phone || '').trim();
       const createdBy = (body.created_by || '').trim();
 
       if (!fullName || !className || !birthDate) {
@@ -1046,9 +1059,9 @@ const server = http.createServer(async (req, res) => {
 
       const info = db
         .prepare(
-          'INSERT INTO students (full_name, class_name, birth_date, created_by) VALUES (?, ?, ?, ?)'
+          'INSERT INTO students (full_name, class_name, birth_date, parent_name, parent_phone, created_by) VALUES (?, ?, ?, ?, ?, ?)'
         )
-        .run(fullName, className, birthDate, createdBy);
+        .run(fullName, className, birthDate, parentName, parentPhone, createdBy);
 
       const studentId = Number(info.lastInsertRowid);
       const newStudent = db
@@ -1095,7 +1108,7 @@ const server = http.createServer(async (req, res) => {
 
       const rows = db
         .prepare(
-          'SELECT id, full_name, class_name, birth_date, created_by, created_at FROM students ORDER BY id ASC'
+          'SELECT id, full_name, class_name, birth_date, parent_name, parent_phone, created_by, created_at FROM students ORDER BY id ASC'
         )
         .all();
 
@@ -1117,6 +1130,8 @@ const server = http.createServer(async (req, res) => {
         const fullName = (s.full_name || s.name || '').trim();
         const className = (s.class_name || '').trim();
         const birthDate = (s.birth_date || '').trim();
+        const parentName = (s.parent_name || '').trim();
+        const parentPhone = (s.parent_phone || '').trim();
         const createdBy = (s.created_by || 'Guru PIA').trim();
         if (!fullName || !className || !birthDate) continue;
 
@@ -1128,14 +1143,14 @@ const server = http.createServer(async (req, res) => {
 
         if (!exists) {
           db.prepare(
-            'INSERT INTO students (full_name, class_name, birth_date, created_by) VALUES (?, ?, ?, ?)'
-          ).run(fullName, className, birthDate, createdBy);
+            'INSERT INTO students (full_name, class_name, birth_date, parent_name, parent_phone, created_by) VALUES (?, ?, ?, ?, ?, ?)'
+          ).run(fullName, className, birthDate, parentName, parentPhone, createdBy);
         }
       }
 
       const rows = db
         .prepare(
-          'SELECT id, full_name, class_name, birth_date, created_by, created_at FROM students ORDER BY id ASC'
+          'SELECT id, full_name, class_name, birth_date, parent_name, parent_phone, created_by, created_at FROM students ORDER BY id ASC'
         )
         .all();
       return sendJson(res, 200, {
@@ -1175,7 +1190,7 @@ const server = http.createServer(async (req, res) => {
 
     const students = db
       .prepare(
-        'SELECT id, full_name, class_name, birth_date, created_by FROM students ORDER BY id ASC'
+        'SELECT id, full_name, class_name, birth_date, parent_name, parent_phone, created_by FROM students ORDER BY id ASC'
       )
       .all();
 

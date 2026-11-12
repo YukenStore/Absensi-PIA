@@ -8,7 +8,7 @@
   <meta http-equiv="Expires" content="0" />
   <title>Pendaftaran Siswa - Pendidikan Islam At-Taqwa</title>
   <link rel="icon" type="image/png" href="assets/logo-pia.png" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261110_14" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261110_15" />
 </head>
 <body>
   <!-- Navigasi Utama -->
@@ -121,7 +121,7 @@
     <div class="page-header">
       <div class="page-title">
         <h2>Pendaftaran Data Siswa</h2>
-        <p>Tambahkan data siswa baru (Nama Siswa, Kelas, dan Tanggal Lahir) untuk disinkronkan ke dalam Dashboard.</p>
+        <p>Tambahkan data siswa baru (Nama Siswa, Kelas, Tanggal Lahir, serta Orang Tua/Wali) untuk disinkronkan ke dalam Dashboard.</p>
       </div>
     </div>
 
@@ -178,6 +178,28 @@
             />
           </div>
 
+          <div class="form-field">
+            <label for="studentParentName">Nama Orang Tua / Wali</label>
+            <input
+              type="text"
+              id="studentParentName"
+              class="form-input"
+              placeholder="Contoh: Bpk. Rahmat / Ibu Siti"
+              required
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="studentParentPhone">No. HP / WhatsApp Ortu / Wali</label>
+            <input
+              type="tel"
+              id="studentParentPhone"
+              class="form-input"
+              placeholder="Contoh: 081234567890"
+              required
+            />
+          </div>
+
           <button type="submit" id="submitStudentBtn" class="btn-primary-submit">
             Simpan &amp; Tambahkan ke Dashboard
           </button>
@@ -197,12 +219,14 @@
           <table class="recap-table" id="registeredStudentsTable">
             <thead>
               <tr>
-                <th style="width: 52px;">No</th>
+                <th style="width: 48px;">No</th>
                 <th>Nama Siswa</th>
                 <th>Kelas</th>
                 <th>Tanggal Lahir</th>
+                <th>Nama Ortu / Wali</th>
+                <th>No. HP Ortu / Wali</th>
                 <th>Didaftarkan Oleh</th>
-                <th style="width: 110px;">Aksi</th>
+                <th style="width: 100px;">Aksi</th>
               </tr>
             </thead>
             <tbody id="registeredStudentsBody"></tbody>
@@ -212,7 +236,7 @@
     </div>
   </main>
 
-  <script src="js/pendaftaran.js?v=20261110_2"></script>
+  <script src="js/pendaftaran.js?v=20261110_3"></script>
 </body>
 </html>
 

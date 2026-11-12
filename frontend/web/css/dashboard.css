@@ -1228,6 +1228,41 @@ body {
   border-color: #dc2626;
 }
 
+.parent-name-val {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 0.88rem;
+}
+
+.parent-phone-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.parent-phone-pill:hover {
+  background: #16a34a;
+  color: #ffffff;
+  border-color: #16a34a;
+  transform: translateY(-1px);
+}
+
+.parent-phone-pill.is-mini {
+  padding: 2px 7px;
+  font-size: 0.74rem;
+  font-weight: 500;
+}
+
 .mobile-label {
   display: none;
 }
@@ -2355,6 +2390,8 @@ select.form-input {
 
   #registeredStudentsTable:not(.is-empty-table) td.cell-class,
   #registeredStudentsTable:not(.is-empty-table) td.cell-birth,
+  #registeredStudentsTable:not(.is-empty-table) td.cell-parent,
+  #registeredStudentsTable:not(.is-empty-table) td.cell-phone,
   #registeredStudentsTable:not(.is-empty-table) td.cell-creator {
     display: none !important;
   }
