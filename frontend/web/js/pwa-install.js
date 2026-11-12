@@ -6,6 +6,7 @@
 (function () {
   let deferredPrompt = null;
   const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const isInApp = /FBAN|FBAV|Instagram|WhatsApp|Line|Twitter|Telegram/i.test(navigator.userAgent);
   const isStandalone =
     window.matchMedia('(display-mode: standalone)').matches ||
     window.navigator.standalone === true;
@@ -184,6 +185,99 @@
         transform: translateX(-50%) translateY(0);
         opacity: 1;
       }
+      .pwa-floating-banner {
+        position: fixed;
+        bottom: 18px;
+        left: 14px;
+        right: 14px;
+        max-width: 420px;
+        margin: 0 auto;
+        background: rgba(255, 255, 255, 0.96);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(203, 213, 225, 0.85);
+        border-radius: 16px;
+        padding: 10px 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        box-shadow: 0 14px 30px -4px rgba(15, 23, 42, 0.22);
+        z-index: 99998;
+        transform: translateY(130%);
+        opacity: 0;
+        transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease;
+      }
+      .pwa-floating-banner.is-visible {
+        transform: translateY(0);
+        opacity: 1;
+      }
+      .pwa-floating-banner-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+        flex: 1;
+      }
+      .pwa-floating-banner-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        object-fit: cover;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e2e8f0;
+        flex-shrink: 0;
+      }
+      .pwa-floating-banner-text {
+        min-width: 0;
+      }
+      .pwa-floating-banner-title {
+        font-size: 0.86rem;
+        font-weight: 700;
+        color: #0f172a;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .pwa-floating-banner-sub {
+        font-size: 0.74rem;
+        color: #64748b;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .pwa-floating-banner-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+      }
+      .btn-pwa-banner-install {
+        background: #2563eb;
+        color: #ffffff;
+        border: none;
+        padding: 7px 14px;
+        border-radius: 8px;
+        font-size: 0.82rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background 0.15s ease;
+      }
+      .btn-pwa-banner-install:hover {
+        background: #1d4ed8;
+      }
+      .btn-pwa-banner-close {
+        background: none;
+        border: none;
+        color: #94a3b8;
+        font-size: 1.3rem;
+        line-height: 1;
+        cursor: pointer;
+        padding: 4px;
+      }
+      .btn-pwa-banner-close:hover {
+        color: #475569;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -208,12 +302,14 @@
     deferredPrompt = e;
     window._piaInstallPrompt = e;
     updateInstallButtonsState('ready');
+    showFloatingBanner();
   });
 
   // 3. Tangkap event appinstalled
   window.addEventListener('appinstalled', () => {
     deferredPrompt = null;
     window._piaInstallPrompt = null;
+    hideFloatingBanner();
     updateInstallButtonsState('installed');
     showToast('Aplikasi Sistem Absensi PIA berhasil diinstal! ✓');
   });
@@ -237,14 +333,80 @@
     });
   }
 
+  // Floating Banner Pasang Cepat di Layar Ponsel
+  function showFloatingBanner() {
+    if (isStandalone) return;
+    if (sessionStorage.getItem('pia_pwa_banner_dismissed') === 'true') return;
+    if (document.getElementById('pwaFloatingBanner')) return;
+
+    injectPwaStyles();
+    const banner = document.createElement('div');
+    banner.id = 'pwaFloatingBanner';
+    banner.className = 'pwa-floating-banner';
+    banner.innerHTML = `
+      <div class="pwa-floating-banner-left">
+        <img src="assets/icon-192.png" alt="Icon PIA" class="pwa-floating-banner-icon" />
+        <div class="pwa-floating-banner-text">
+          <div class="pwa-floating-banner-title">Instal Aplikasi PIA</div>
+          <div class="pwa-floating-banner-sub">Akses cepat &amp; layar penuh</div>
+        </div>
+      </div>
+      <div class="pwa-floating-banner-actions">
+        <button type="button" class="btn-pwa-banner-install" id="pwaBannerInstallBtn">Instal</button>
+        <button type="button" class="btn-pwa-banner-close" id="pwaBannerCloseBtn" aria-label="Tutup">&times;</button>
+      </div>
+    `;
+    document.body.appendChild(banner);
+
+    requestAnimationFrame(() => {
+      setTimeout(() => banner.classList.add('is-visible'), 50);
+    });
+
+    const installBtn = banner.querySelector('#pwaBannerInstallBtn');
+    const closeBtn = banner.querySelector('#pwaBannerCloseBtn');
+
+    if (installBtn) {
+      installBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.triggerPwaInstall();
+      });
+    }
+
+    if (closeBtn) {
+      closeBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        hideFloatingBanner();
+        sessionStorage.setItem('pia_pwa_banner_dismissed', 'true');
+      });
+    }
+  }
+
+  function hideFloatingBanner() {
+    const banner = document.getElementById('pwaFloatingBanner');
+    if (banner) {
+      banner.classList.remove('is-visible');
+      setTimeout(() => banner.remove(), 400);
+    }
+  }
+
   // 4. Modal Panduan Instalasi (Khusus iOS / Android / Desktop)
   function createModalHtml() {
     injectPwaStyles();
     if (document.getElementById('pwaInstallGuideModal')) return;
 
+    let inAppWarning = '';
+    if (isInApp) {
+      inAppWarning = `
+        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; font-size: 0.82rem; color: #92400e; line-height: 1.45;">
+          ⚠️ <strong>Catatan:</strong> Anda membuka aplikasi melalui peramban internal WhatsApp/Instagram. Harap ketuk Titik Tiga (⋮) lalu pilih <strong>"Buka di Browser Eksternal" (Chrome / Safari)</strong> agar aplikasi dapat diinstal.
+        </div>
+      `;
+    }
+
     let guideContent = '';
     if (isIos) {
       guideContent = `
+        ${inAppWarning}
         <div class="pwa-guide-steps">
           <div class="pwa-step-item">
             <div class="pwa-step-num">1</div>
@@ -276,6 +438,7 @@
       `;
     } else {
       guideContent = `
+        ${inAppWarning}
         <div class="pwa-guide-steps">
           <div class="pwa-step-item">
             <div class="pwa-step-num">1</div>
@@ -390,7 +553,7 @@
     }
   };
 
-  // 6. Bind event listener ke tombol install
+  // 6. Bind event listener ke tombol install & banner proaktif
   function bindInstallTriggers() {
     injectPwaStyles();
     updateInstallButtonsState(isStandalone ? 'installed' : (deferredPrompt ? 'ready' : 'initial'));
@@ -403,6 +566,12 @@
         window.triggerPwaInstall();
       }
     });
+
+    // Tampilkan floating banner pasang cepat di layar mobile jika belum terinstal
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth <= 768;
+    if (isMobile && !isStandalone) {
+      setTimeout(showFloatingBanner, 1500);
+    }
   }
 
   if (document.readyState === 'loading') {
