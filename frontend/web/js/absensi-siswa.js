@@ -4,9 +4,29 @@
  * Tersinkronisasi penuh ke Database SQL & Matriks Dashboard.
  */
 
-const API_BASES = window.location.hostname.includes('github.io')
-  ? ['https://absensi-pia.yumenoboken.workers.dev', 'http://localhost:5173']
-  : ['', 'http://localhost:5173', 'https://absensi-pia.yumenoboken.workers.dev'];
+const CF_WORKER_API_BASE = 'https://absensi-pia.yumenoboken.workers.dev';
+let activeApiBase = (function () {
+  try {
+    return sessionStorage.getItem('pia_active_api_base');
+  } catch (_) {
+    return null;
+  }
+})();
+
+function getSmartApiBases() {
+  const isPortDev = window.location.port === '5173' || window.location.port === '8000';
+  const candidates = [];
+  if (activeApiBase) candidates.push(activeApiBase);
+
+  if (isPortDev) {
+    if (!candidates.includes('')) candidates.push('');
+    if (!candidates.includes(CF_WORKER_API_BASE)) candidates.push(CF_WORKER_API_BASE);
+  } else {
+    if (!candidates.includes(CF_WORKER_API_BASE)) candidates.push(CF_WORKER_API_BASE);
+    if (!candidates.includes('')) candidates.push('');
+  }
+  return candidates;
+}
 
 let currentUser = null;
 let studentsList = [];
@@ -50,13 +70,30 @@ async function callApi(endpoint, options = {}) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  for (const base of API_BASES) {
+  const bases = getSmartApiBases();
+  for (const base of bases) {
     try {
-      const resp = await fetch(`${base}${endpoint}`, { ...options, headers });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      const resp = await fetch(`${base}${endpoint}`, {
+        ...options,
+        headers,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
       const contentType = resp.headers.get('content-type') || '';
       if (contentType.includes('application/json')) {
         const data = await resp.json();
-        if (resp.ok) return data;
+        if (resp.ok) {
+          if (base !== activeApiBase) {
+            activeApiBase = base;
+            try {
+              sessionStorage.setItem('pia_active_api_base', base);
+            } catch (_) {}
+          }
+          return data;
+        }
       }
     } catch (_) {}
   }

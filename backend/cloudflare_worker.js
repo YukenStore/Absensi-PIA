@@ -134,157 +134,167 @@ function jsonResponse(data, status = 200) {
   });
 }
 
+let isSchemaEnsured = false;
+let schemaPromise = null;
+
 async function ensureD1Schema(db) {
   if (!db) return;
-  await db
-    .prepare(
-      `CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        full_name TEXT NOT NULL,
-        email TEXT NOT NULL UNIQUE,
-        username TEXT NOT NULL UNIQUE,
-        password_hash TEXT NOT NULL,
-        password_salt TEXT NOT NULL,
-        is_active INTEGER NOT NULL DEFAULT 0,
-        role TEXT NOT NULL DEFAULT 'guru',
-        is_hidden INTEGER NOT NULL DEFAULT 0,
-        created_at TEXT NOT NULL DEFAULT (datetime('now'))
-      )`
-    )
-    .run();
+  if (isSchemaEnsured) return;
+  if (schemaPromise) return schemaPromise;
 
-  await db
-    .prepare(
-      `CREATE TABLE IF NOT EXISTS otp_verifications (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT NOT NULL,
-        otp_code TEXT NOT NULL,
-        expires_at INTEGER NOT NULL,
-        is_used INTEGER NOT NULL DEFAULT 0,
-        created_at TEXT NOT NULL DEFAULT (datetime('now'))
-      )`
-    )
-    .run();
+  schemaPromise = (async () => {
+    try {
+      await db.batch([
+        db.prepare(
+          `CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            full_name TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            username TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            password_salt TEXT NOT NULL,
+            is_active INTEGER NOT NULL DEFAULT 0,
+            role TEXT NOT NULL DEFAULT 'guru',
+            is_hidden INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+          )`
+        ),
+        db.prepare(
+          `CREATE TABLE IF NOT EXISTS otp_verifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL,
+            otp_code TEXT NOT NULL,
+            expires_at INTEGER NOT NULL,
+            is_used INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+          )`
+        ),
+        db.prepare(
+          `CREATE TABLE IF NOT EXISTS students (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            full_name TEXT NOT NULL,
+            class_name TEXT NOT NULL,
+            birth_date TEXT NOT NULL,
+            parent_name TEXT NOT NULL DEFAULT '',
+            parent_phone TEXT NOT NULL DEFAULT '',
+            created_by TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+          )`
+        ),
+        db.prepare(
+          `CREATE TABLE IF NOT EXISTS custom_holidays (
+            holiday_date TEXT PRIMARY KEY,
+            is_holiday INTEGER NOT NULL DEFAULT 1,
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+          )`
+        ),
+        db.prepare(
+          `CREATE TABLE IF NOT EXISTS teacher_attendance (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            teacher_name TEXT NOT NULL,
+            teacher_email TEXT NOT NULL,
+            attendance_date TEXT NOT NULL,
+            status TEXT NOT NULL,
+            note TEXT NOT NULL DEFAULT '',
+            approval_status TEXT NOT NULL DEFAULT 'Pending',
+            approved_by TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            UNIQUE(user_id, attendance_date)
+          )`
+        ),
+        db.prepare(
+          `CREATE TABLE IF NOT EXISTS student_attendance (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_id INTEGER NOT NULL,
+            attendance_date TEXT NOT NULL,
+            status TEXT NOT NULL,
+            note TEXT NOT NULL DEFAULT '',
+            recorded_by TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            UNIQUE(student_id, attendance_date)
+          )`
+        ),
+        db.prepare(
+          `CREATE TABLE IF NOT EXISTS learning_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_id INTEGER,
+            student_name TEXT NOT NULL,
+            teacher_name TEXT NOT NULL DEFAULT '',
+            category TEXT NOT NULL,
+            materi TEXT NOT NULL,
+            jilid TEXT NOT NULL DEFAULT '',
+            halaman TEXT NOT NULL DEFAULT '',
+            surat TEXT NOT NULL DEFAULT '',
+            ayat TEXT NOT NULL DEFAULT '',
+            doa TEXT NOT NULL DEFAULT '',
+            predicate TEXT NOT NULL,
+            note TEXT NOT NULL DEFAULT '',
+            record_date TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+          )`
+        ),
+        db.prepare(
+          `CREATE TABLE IF NOT EXISTS student_learning_progress (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_id INTEGER NOT NULL,
+            category TEXT NOT NULL,
+            level_name TEXT NOT NULL,
+            item_id TEXT NOT NULL,
+            item_label TEXT NOT NULL,
+            is_completed INTEGER NOT NULL DEFAULT 0,
+            note TEXT NOT NULL DEFAULT '',
+            updated_by TEXT NOT NULL DEFAULT '',
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            UNIQUE(student_id, category, level_name, item_id)
+          )`
+        ),
+        db.prepare(
+          `CREATE TABLE IF NOT EXISTS student_learning_level (
+            student_id INTEGER PRIMARY KEY,
+            current_iqro_level INTEGER NOT NULL DEFAULT 1,
+            updated_by TEXT NOT NULL DEFAULT '',
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+          )`
+        ),
+        // Index performa tinggi untuk pembacaan instan
+        db.prepare(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`),
+        db.prepare(`CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)`),
+        db.prepare(`CREATE INDEX IF NOT EXISTS idx_stu_att_date ON student_attendance(attendance_date)`),
+        db.prepare(`CREATE INDEX IF NOT EXISTS idx_teach_att_date ON teacher_attendance(attendance_date)`),
+        db.prepare(`CREATE INDEX IF NOT EXISTS idx_teach_att_user ON teacher_attendance(user_id, attendance_date)`),
+        db.prepare(`CREATE INDEX IF NOT EXISTS idx_lr_date ON learning_records(record_date)`),
+        db.prepare(`CREATE INDEX IF NOT EXISTS idx_prog_stu_cat ON student_learning_progress(student_id, category, level_name)`),
+        db.prepare(`CREATE INDEX IF NOT EXISTS idx_prog_stu_done ON student_learning_progress(student_id, is_completed)`)
+      ]);
 
-  await db
-    .prepare(
-      `CREATE TABLE IF NOT EXISTS students (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        full_name TEXT NOT NULL,
-        class_name TEXT NOT NULL,
-        birth_date TEXT NOT NULL,
-        parent_name TEXT NOT NULL DEFAULT '',
-        parent_phone TEXT NOT NULL DEFAULT '',
-        created_by TEXT NOT NULL DEFAULT '',
-        created_at TEXT NOT NULL DEFAULT (datetime('now'))
-      )`
-    )
-    .run();
+      try {
+        await db.prepare("ALTER TABLE students ADD COLUMN parent_name TEXT NOT NULL DEFAULT ''").run();
+      } catch (_) {}
+      try {
+        await db.prepare("ALTER TABLE students ADD COLUMN parent_phone TEXT NOT NULL DEFAULT ''").run();
+      } catch (_) {}
+      try {
+        await db.prepare("UPDATE teacher_attendance SET approval_status = 'Pending', approved_by = '' WHERE approved_by = 'Sistem Otomatis'").run();
+      } catch (_) {}
 
-  try {
-    await db.prepare("ALTER TABLE students ADD COLUMN parent_name TEXT NOT NULL DEFAULT ''").run();
-  } catch (_) {}
-  try {
-    await db.prepare("ALTER TABLE students ADD COLUMN parent_phone TEXT NOT NULL DEFAULT ''").run();
-  } catch (_) {}
+      isSchemaEnsured = true;
+    } catch (err) {
+      console.warn('ensureD1Schema batch error, fallback to individual runs:', err);
+      // Fallback jika batch terkendala
+      try {
+        await db.prepare("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, full_name TEXT NOT NULL, email TEXT NOT NULL UNIQUE, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, password_salt TEXT NOT NULL, is_active INTEGER NOT NULL DEFAULT 0, role TEXT NOT NULL DEFAULT 'guru', is_hidden INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now')) )").run();
+        await db.prepare("CREATE TABLE IF NOT EXISTS students (id INTEGER PRIMARY KEY AUTOINCREMENT, full_name TEXT NOT NULL, class_name TEXT NOT NULL, birth_date TEXT NOT NULL, parent_name TEXT NOT NULL DEFAULT '', parent_phone TEXT NOT NULL DEFAULT '', created_by TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT (datetime('now')) )").run();
+        await db.prepare("CREATE TABLE IF NOT EXISTS student_attendance (id INTEGER PRIMARY KEY AUTOINCREMENT, student_id INTEGER NOT NULL, attendance_date TEXT NOT NULL, status TEXT NOT NULL, note TEXT NOT NULL DEFAULT '', recorded_by TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT (datetime('now')), UNIQUE(student_id, attendance_date) )").run();
+        await db.prepare("CREATE TABLE IF NOT EXISTS teacher_attendance (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, teacher_name TEXT NOT NULL, teacher_email TEXT NOT NULL, attendance_date TEXT NOT NULL, status TEXT NOT NULL, note TEXT NOT NULL DEFAULT '', approval_status TEXT NOT NULL DEFAULT 'Pending', approved_by TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT (datetime('now')), UNIQUE(user_id, attendance_date) )").run();
+        await db.prepare("CREATE TABLE IF NOT EXISTS student_learning_progress (id INTEGER PRIMARY KEY AUTOINCREMENT, student_id INTEGER NOT NULL, category TEXT NOT NULL, level_name TEXT NOT NULL, item_id TEXT NOT NULL, item_label TEXT NOT NULL, is_completed INTEGER NOT NULL DEFAULT 0, note TEXT NOT NULL DEFAULT '', updated_by TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL DEFAULT (datetime('now')), UNIQUE(student_id, category, level_name, item_id) )").run();
+        await db.prepare("CREATE TABLE IF NOT EXISTS student_learning_level (student_id INTEGER PRIMARY KEY, current_iqro_level INTEGER NOT NULL DEFAULT 1, updated_by TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL DEFAULT (datetime('now')) )").run();
+      } catch (_) {}
+      isSchemaEnsured = true;
+    }
+  })();
 
-  await db
-    .prepare(
-      `CREATE TABLE IF NOT EXISTS custom_holidays (
-        holiday_date TEXT PRIMARY KEY,
-        is_holiday INTEGER NOT NULL DEFAULT 1,
-        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-      )`
-    )
-    .run();
-
-  await db
-    .prepare(
-      `CREATE TABLE IF NOT EXISTS teacher_attendance (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        teacher_name TEXT NOT NULL,
-        teacher_email TEXT NOT NULL,
-        attendance_date TEXT NOT NULL,
-        status TEXT NOT NULL,
-        note TEXT NOT NULL DEFAULT '',
-        approval_status TEXT NOT NULL DEFAULT 'Pending',
-        approved_by TEXT NOT NULL DEFAULT '',
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        UNIQUE(user_id, attendance_date)
-      )`
-    )
-    .run();
-
-  try {
-    await db.prepare("UPDATE teacher_attendance SET approval_status = 'Pending', approved_by = '' WHERE approved_by = 'Sistem Otomatis'").run();
-  } catch (_) {}
-
-  await db
-    .prepare(
-      `CREATE TABLE IF NOT EXISTS student_attendance (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        student_id INTEGER NOT NULL,
-        attendance_date TEXT NOT NULL,
-        status TEXT NOT NULL,
-        note TEXT NOT NULL DEFAULT '',
-        recorded_by TEXT NOT NULL DEFAULT '',
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        UNIQUE(student_id, attendance_date)
-      )`
-    )
-    .run();
-
-  await db
-    .prepare(
-      `CREATE TABLE IF NOT EXISTS learning_records (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        student_id INTEGER,
-        student_name TEXT NOT NULL,
-        teacher_name TEXT NOT NULL DEFAULT '',
-        category TEXT NOT NULL,
-        materi TEXT NOT NULL,
-        jilid TEXT NOT NULL DEFAULT '',
-        halaman TEXT NOT NULL DEFAULT '',
-        surat TEXT NOT NULL DEFAULT '',
-        ayat TEXT NOT NULL DEFAULT '',
-        doa TEXT NOT NULL DEFAULT '',
-        predicate TEXT NOT NULL,
-        note TEXT NOT NULL DEFAULT '',
-        record_date TEXT NOT NULL,
-        created_at TEXT NOT NULL DEFAULT (datetime('now'))
-      )`
-    )
-    .run();
-
-  await db
-    .prepare(
-      `CREATE TABLE IF NOT EXISTS student_learning_progress (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        student_id INTEGER NOT NULL,
-        category TEXT NOT NULL,
-        level_name TEXT NOT NULL,
-        item_id TEXT NOT NULL,
-        item_label TEXT NOT NULL,
-        is_completed INTEGER NOT NULL DEFAULT 0,
-        note TEXT NOT NULL DEFAULT '',
-        updated_by TEXT NOT NULL DEFAULT '',
-        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-        UNIQUE(student_id, category, level_name, item_id)
-      )`
-    )
-    .run();
-
-  await db
-    .prepare(
-      `CREATE TABLE IF NOT EXISTS student_learning_level (
-        student_id INTEGER PRIMARY KEY,
-        current_iqro_level INTEGER NOT NULL DEFAULT 1,
-        updated_by TEXT NOT NULL DEFAULT '',
-        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-      )`
-    )
-    .run();
+  return schemaPromise;
 }
 
 export default {
@@ -949,6 +959,10 @@ export default {
           const body = await request.json();
           const clientStudents = Array.isArray(body.students) ? body.students : [];
           if (db) {
+            const { results: existingStudents } = await db.prepare('SELECT lower(full_name) as name_lower, birth_date FROM students').all();
+            const existingSet = new Set((existingStudents || []).map((s) => `${s.name_lower}_${s.birth_date}`));
+            const statements = [];
+
             for (const s of clientStudents) {
               const fullName = (s.full_name || s.name || '').trim();
               const className = (s.class_name || '').trim();
@@ -957,17 +971,21 @@ export default {
               const parentPhone = (s.parent_phone || '').trim();
               const createdBy = (s.created_by || 'Guru PIA').trim();
               if (!fullName || !className || !birthDate) continue;
-              const existing = await db
-                .prepare('SELECT id FROM students WHERE lower(full_name) = lower(?) AND birth_date = ? LIMIT 1')
-                .bind(fullName, birthDate)
-                .first();
-              if (!existing) {
-                await db
-                  .prepare('INSERT INTO students (full_name, class_name, birth_date, parent_name, parent_phone, created_by) VALUES (?, ?, ?, ?, ?, ?)')
-                  .bind(fullName, className, birthDate, parentName, parentPhone, createdBy)
-                  .run();
+
+              const key = `${fullName.toLowerCase()}_${birthDate}`;
+              if (!existingSet.has(key)) {
+                existingSet.add(key);
+                statements.push(
+                  db.prepare('INSERT INTO students (full_name, class_name, birth_date, parent_name, parent_phone, created_by) VALUES (?, ?, ?, ?, ?, ?)')
+                    .bind(fullName, className, birthDate, parentName, parentPhone, createdBy)
+                );
               }
             }
+
+            if (statements.length > 0) {
+              await db.batch(statements);
+            }
+
             const { results } = await db
               .prepare('SELECT id, full_name, class_name, birth_date, parent_name, parent_phone, created_by, created_at FROM students ORDER BY id ASC')
               .all();
@@ -978,13 +996,21 @@ export default {
 
         if (pathname === '/api/attendance/overview' && request.method === 'GET') {
           if (db) {
-            const { results: stuRows } = await db
-              .prepare('SELECT id, full_name, class_name, birth_date, parent_name, parent_phone FROM students ORDER BY id ASC')
-              .all();
-            const { results: usrRows } = await db
-              .prepare('SELECT id, full_name, email, username, role, is_hidden, is_active FROM users ORDER BY id ASC')
-              .all();
-            const allTeachers = (usrRows || []).map((u) => ({
+            const [stuRes, usrRes, attRes, sAttRes, hRes] = await Promise.all([
+              db.prepare('SELECT id, full_name, class_name, birth_date, parent_name, parent_phone FROM students ORDER BY id ASC').all(),
+              db.prepare('SELECT id, full_name, email, username, role, is_hidden, is_active FROM users ORDER BY id ASC').all(),
+              db.prepare("SELECT user_id, teacher_email, attendance_date, status FROM teacher_attendance WHERE approval_status = 'Approved'").all(),
+              db.prepare("SELECT student_id, attendance_date, status FROM student_attendance").all(),
+              db.prepare('SELECT holiday_date, is_holiday FROM custom_holidays').all(),
+            ]);
+
+            const stuRows = stuRes.results || [];
+            const usrRows = usrRes.results || [];
+            const attRows = attRes.results || [];
+            const sAttRows = sAttRes.results || [];
+            const hRows = hRes.results || [];
+
+            const allTeachers = usrRows.map((u) => ({
               id: u.id,
               name: u.full_name,
               email: u.email,
@@ -994,41 +1020,28 @@ export default {
             }));
 
             const teacherRecords = {};
-            try {
-              const { results: attRows } = await db
-                .prepare("SELECT user_id, teacher_email, attendance_date, status FROM teacher_attendance WHERE approval_status = 'Approved'")
-                .all();
-              for (const row of attRows || []) {
-                const code = row.status === 'Hadir' ? 'H' : row.status === 'Izin' ? 'I' : 'S';
-                teacherRecords[`${row.user_id}_${row.attendance_date}`] = code;
-                if (row.teacher_email) {
-                  teacherRecords[`${row.teacher_email.toLowerCase()}_${row.attendance_date}`] = code;
-                }
+            for (const row of attRows) {
+              const code = row.status === 'Hadir' ? 'H' : row.status === 'Izin' ? 'I' : 'S';
+              teacherRecords[`${row.user_id}_${row.attendance_date}`] = code;
+              if (row.teacher_email) {
+                teacherRecords[`${row.teacher_email.toLowerCase()}_${row.attendance_date}`] = code;
               }
-            } catch (_) {}
+            }
 
             const studentRecords = {};
-            try {
-              const { results: sAttRows } = await db
-                .prepare("SELECT student_id, attendance_date, status FROM student_attendance")
-                .all();
-              for (const row of sAttRows || []) {
-                const code = row.status === 'Hadir' ? 'H' : row.status === 'Izin' ? 'I' : row.status === 'Sakit' ? 'S' : 'A';
-                studentRecords[`${row.student_id}_${row.attendance_date}`] = code;
-              }
-            } catch (_) {}
+            for (const row of sAttRows) {
+              const code = row.status === 'Hadir' ? 'H' : row.status === 'Izin' ? 'I' : row.status === 'Sakit' ? 'S' : 'A';
+              studentRecords[`${row.student_id}_${row.attendance_date}`] = code;
+            }
 
             const customHolidays = {};
-            try {
-              const { results: hRows } = await db.prepare('SELECT holiday_date, is_holiday FROM custom_holidays').all();
-              for (const row of hRows || []) {
-                customHolidays[row.holiday_date] = Boolean(row.is_holiday);
-              }
-            } catch (_) {}
+            for (const row of hRows) {
+              customHolidays[row.holiday_date] = Boolean(row.is_holiday);
+            }
 
             return jsonResponse({
               success: true,
-              students: (stuRows || []).map((s) => ({
+              students: stuRows.map((s) => ({
                 id: s.id,
                 name: s.full_name,
                 class_name: s.class_name,
@@ -1224,13 +1237,17 @@ export default {
         if (pathname === '/api/student-attendance' && request.method === 'GET') {
           const dateParam = (url.searchParams.get('date') || '').trim() || new Date().toISOString().slice(0, 10);
           if (db) {
-            const { results: stuList } = await db.prepare('SELECT id, full_name, class_name, birth_date, parent_name, parent_phone, created_by FROM students ORDER BY id ASC').all();
-            const { results: attRows } = await db.prepare('SELECT student_id, attendance_date, status, note, recorded_by FROM student_attendance WHERE attendance_date = ?').bind(dateParam).all();
+            const [stuRes, attRes] = await Promise.all([
+              db.prepare('SELECT id, full_name, class_name, birth_date, parent_name, parent_phone, created_by FROM students ORDER BY id ASC').all(),
+              db.prepare('SELECT student_id, attendance_date, status, note, recorded_by FROM student_attendance WHERE attendance_date = ?').bind(dateParam).all(),
+            ]);
+            const stuList = stuRes.results || [];
+            const attRows = attRes.results || [];
             const attendanceMap = {};
-            for (const r of attRows || []) {
+            for (const r of attRows) {
               attendanceMap[r.student_id] = { status: r.status, note: r.note || '', recorded_by: r.recorded_by || '' };
             }
-            return jsonResponse({ success: true, date: dateParam, students: stuList || [], attendance: attendanceMap });
+            return jsonResponse({ success: true, date: dateParam, students: stuList, attendance: attendanceMap });
           }
           return jsonResponse({ success: true, date: dateParam, students: memoryStore.students, attendance: {} });
         }
@@ -1248,22 +1265,19 @@ export default {
           }
 
           if (db) {
-            const existing = await db
-              .prepare('SELECT id FROM student_attendance WHERE student_id = ? AND attendance_date = ? LIMIT 1')
-              .bind(studentId, dateStr)
-              .first();
+            await db
+              .prepare(`
+                INSERT INTO student_attendance (student_id, attendance_date, status, note, recorded_by, created_at)
+                VALUES (?, ?, ?, ?, ?, datetime('now'))
+                ON CONFLICT(student_id, attendance_date) DO UPDATE SET
+                  status = excluded.status,
+                  note = excluded.note,
+                  recorded_by = excluded.recorded_by,
+                  created_at = datetime('now')
+              `)
+              .bind(studentId, dateStr, status, note, recordedBy)
+              .run();
 
-            if (existing) {
-              await db
-                .prepare("UPDATE student_attendance SET status = ?, note = ?, recorded_by = ?, created_at = datetime('now') WHERE id = ?")
-                .bind(status, note, recordedBy, existing.id)
-                .run();
-            } else {
-              await db
-                .prepare("INSERT INTO student_attendance (student_id, attendance_date, status, note, recorded_by, created_at) VALUES (?, ?, ?, ?, ?, datetime('now'))")
-                .bind(studentId, dateStr, status, note, recordedBy)
-                .run();
-            }
             return jsonResponse({ success: true, message: `Presensi siswa untuk tanggal ${dateStr} berhasil disimpan dan tersinkron ke Dashboard!` });
           }
 
@@ -1277,29 +1291,30 @@ export default {
           const recordedBy = (body.recorded_by || 'Guru PIA').trim();
 
           if (db) {
+            const statements = [];
             for (const rec of records) {
               const studentId = Number(rec.student_id);
               const status = (rec.status || 'Hadir').trim();
               const note = (rec.note || '').trim();
               if (!studentId || !['Hadir', 'Izin', 'Sakit', 'Alfa'].includes(status)) continue;
 
-              const existing = await db
-                .prepare('SELECT id FROM student_attendance WHERE student_id = ? AND attendance_date = ? LIMIT 1')
-                .bind(studentId, dateStr)
-                .first();
-
-              if (existing) {
-                await db
-                  .prepare("UPDATE student_attendance SET status = ?, note = ?, recorded_by = ?, created_at = datetime('now') WHERE id = ?")
-                  .bind(status, note, recordedBy, existing.id)
-                  .run();
-              } else {
-                await db
-                  .prepare("INSERT INTO student_attendance (student_id, attendance_date, status, note, recorded_by, created_at) VALUES (?, ?, ?, ?, ?, datetime('now'))")
-                  .bind(studentId, dateStr, status, note, recordedBy)
-                  .run();
-              }
+              statements.push(
+                db.prepare(`
+                  INSERT INTO student_attendance (student_id, attendance_date, status, note, recorded_by, created_at)
+                  VALUES (?, ?, ?, ?, ?, datetime('now'))
+                  ON CONFLICT(student_id, attendance_date) DO UPDATE SET
+                    status = excluded.status,
+                    note = excluded.note,
+                    recorded_by = excluded.recorded_by,
+                    created_at = datetime('now')
+                `).bind(studentId, dateStr, status, note, recordedBy)
+              );
             }
+
+            if (statements.length > 0) {
+              await db.batch(statements);
+            }
+
             return jsonResponse({ success: true, message: `Presensi siswa untuk tanggal ${dateStr} berhasil disimpan dan tersinkron ke Dashboard!` });
           }
           return jsonResponse({ success: true, message: 'Presensi siswa berhasil disimpan!' });
@@ -1507,18 +1522,18 @@ export default {
           }
 
           if (db) {
+            const statements = [];
             if (currentLevel) {
-              await db
-                .prepare(`
+              statements.push(
+                db.prepare(`
                   INSERT INTO student_learning_level (student_id, current_iqro_level, updated_by, updated_at)
                   VALUES (?, ?, ?, datetime('now'))
                   ON CONFLICT(student_id) DO UPDATE SET
                     current_iqro_level = excluded.current_iqro_level,
                     updated_by = excluded.updated_by,
                     updated_at = datetime('now')
-                `)
-                .bind(studentId, currentLevel, updatedBy)
-                .run();
+                `).bind(studentId, currentLevel, updatedBy)
+              );
             }
 
             for (const item of items) {
@@ -1529,8 +1544,8 @@ export default {
               const isCompleted = item.is_completed ? 1 : 0;
               const note = (item.note || '').trim();
 
-              await db
-                .prepare(`
+              statements.push(
+                db.prepare(`
                   INSERT INTO student_learning_progress (student_id, category, level_name, item_id, item_label, is_completed, note, updated_by, updated_at)
                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
                   ON CONFLICT(student_id, category, level_name, item_id) DO UPDATE SET
@@ -1539,9 +1554,12 @@ export default {
                     note = excluded.note,
                     updated_by = excluded.updated_by,
                     updated_at = datetime('now')
-                `)
-                .bind(studentId, category, levelName, itemId, itemLabel, isCompleted, note, updatedBy)
-                .run();
+                `).bind(studentId, category, levelName, itemId, itemLabel, isCompleted, note, updatedBy)
+              );
+            }
+
+            if (statements.length > 0) {
+              await db.batch(statements);
             }
 
             return jsonResponse({ success: true, message: 'Progres mutaba\'ah berhasil disimpan.' });
@@ -1599,20 +1617,26 @@ export default {
 
         if (pathname === '/api/learning-progress/overview' && request.method === 'GET') {
           if (db) {
-            const { results: students } = await db.prepare('SELECT id, full_name, class_name FROM students ORDER BY id ASC').all();
-            const { results: levels } = await db.prepare('SELECT student_id, current_iqro_level, updated_at FROM student_learning_level').all();
-            const { results: counts } = await db.prepare(`
-              SELECT student_id, category, level_name, COUNT(*) as completed_count
-              FROM student_learning_progress
-              WHERE is_completed = 1
-              GROUP BY student_id, category, level_name
-            `).all();
+            const [stuRes, lvlRes, cntRes] = await Promise.all([
+              db.prepare('SELECT id, full_name, class_name FROM students ORDER BY id ASC').all(),
+              db.prepare('SELECT student_id, current_iqro_level, updated_at FROM student_learning_level').all(),
+              db.prepare(`
+                SELECT student_id, category, level_name, COUNT(*) as completed_count
+                FROM student_learning_progress
+                WHERE is_completed = 1
+                GROUP BY student_id, category, level_name
+              `).all(),
+            ]);
+
+            const students = stuRes.results || [];
+            const levels = lvlRes.results || [];
+            const counts = cntRes.results || [];
 
             const levelMap = {};
-            for (const l of levels || []) levelMap[l.student_id] = l.current_iqro_level;
+            for (const l of levels) levelMap[l.student_id] = l.current_iqro_level;
 
             const countMap = {};
-            for (const c of counts || []) {
+            for (const c of counts) {
               if (!countMap[c.student_id]) countMap[c.student_id] = { iqroByLevel: {}, hafalan: 0 };
               if (c.category === 'iqro') {
                 countMap[c.student_id].iqroByLevel[c.level_name] = c.completed_count;
@@ -1621,7 +1645,7 @@ export default {
               }
             }
 
-            const overviewList = (students || []).map((s) => {
+            const overviewList = students.map((s) => {
               const curLvl = levelMap[s.id] || 1;
               const cData = countMap[s.id] || { iqroByLevel: {}, hafalan: 0 };
               const curLvlName = `Iqro ${curLvl}`;
@@ -1670,12 +1694,16 @@ export default {
           const isAdminUser = email === 'yumenoboken@gmail.com';
 
           if (db) {
-            const { results: userRows } = await db.prepare('SELECT id, full_name, email, username, role FROM users ORDER BY id ASC').all();
-            const currUser = (userRows || []).find((u) => u.email.toLowerCase() === email) || null;
+            const [userRowsRes, subRowsRes] = await Promise.all([
+              db.prepare('SELECT id, full_name, email, username, role FROM users ORDER BY id ASC').all(),
+              db.prepare('SELECT * FROM teacher_attendance ORDER BY id DESC').all(),
+            ]);
+            const userRows = userRowsRes.results || [];
+            const subRows = subRowsRes.results || [];
+            const currUser = userRows.find((u) => u.email.toLowerCase() === email) || null;
             const isAdm = isAdminUser || (currUser && currUser.role === 'admin');
 
-            const { results: subRows } = await db.prepare('SELECT * FROM teacher_attendance ORDER BY id DESC').all();
-            const mySubmissions = (subRows || []).filter((s) => s.teacher_email.toLowerCase() === email);
+            const mySubmissions = subRows.filter((s) => s.teacher_email.toLowerCase() === email);
             const todayRec = mySubmissions.find((s) => s.attendance_date === today) || null;
 
             return jsonResponse({
@@ -1684,8 +1712,8 @@ export default {
               current_user: currUser,
               today_record: todayRec,
               my_history: mySubmissions,
-              all_submissions: isAdm ? (subRows || []) : [],
-              registered_users: (userRows || []).map((u) => ({ id: u.id, name: u.full_name, email: u.email })),
+              all_submissions: isAdm ? subRows : [],
+              registered_users: userRows.map((u) => ({ id: u.id, name: u.full_name, email: u.email })),
             });
           }
 

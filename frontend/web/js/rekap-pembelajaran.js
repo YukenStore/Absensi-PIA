@@ -53,9 +53,30 @@ const SURAH_JUZ_30 = [
   { no: 78, name: "An-Naba'", ayat: 40 },
 ];
 
-const API_BASES = window.location.hostname.includes('github.io')
-  ? ['https://absensi-pia.yumenoboken.workers.dev', 'http://localhost:5173']
-  : ['', 'http://localhost:5173', 'https://absensi-pia.yumenoboken.workers.dev'];
+const CF_WORKER_API_BASE = 'https://absensi-pia.yumenoboken.workers.dev';
+let activeApiBase = (function () {
+  try {
+    return sessionStorage.getItem('pia_active_api_base');
+  } catch (_) {
+    return null;
+  }
+})();
+
+function getSmartApiBases() {
+  const isPortDev = window.location.port === '5173' || window.location.port === '8000';
+  const candidates = [];
+  if (activeApiBase) candidates.push(activeApiBase);
+
+  if (isPortDev) {
+    if (!candidates.includes('')) candidates.push('');
+    if (!candidates.includes(CF_WORKER_API_BASE)) candidates.push(CF_WORKER_API_BASE);
+  } else {
+    // Pada mobile LAN IP, Live Server, GitHub Pages, dll, worker harus diprioritaskan
+    if (!candidates.includes(CF_WORKER_API_BASE)) candidates.push(CF_WORKER_API_BASE);
+    if (!candidates.includes('')) candidates.push('');
+  }
+  return candidates;
+}
 
 // State Aplikasi
 let currentUser = null;
@@ -74,7 +95,7 @@ function getAuthToken() {
   return localStorage.getItem('pia_access_token');
 }
 
-// Helper API
+// Helper API Cepat dengan Sticky Endpoint & Timeout Guard
 async function callApi(path, options = {}) {
   const token = getAuthToken();
   const headers = {
@@ -85,23 +106,39 @@ async function callApi(path, options = {}) {
     headers['Authorization'] = `Bearer ${token}`;
   }
   const mergedOptions = { ...options, headers };
+  const bases = getSmartApiBases();
 
-  for (const base of API_BASES) {
+  for (const base of bases) {
     try {
-      const resp = await fetch(`${base}${path}`, mergedOptions);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      const resp = await fetch(`${base}${path}`, {
+        ...mergedOptions,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
       const ct = resp.headers.get('content-type') || '';
       if (ct.includes('application/json')) {
         const data = await resp.json();
         if (!resp.ok) {
           throw new Error(data.detail || data.message || 'Permintaan gagal.');
         }
+        if (base !== activeApiBase) {
+          activeApiBase = base;
+          try {
+            sessionStorage.setItem('pia_active_api_base', base);
+          } catch (_) {}
+        }
         return data;
       }
     } catch (err) {
       if (
         !(err instanceof TypeError) &&
+        err.name !== 'AbortError' &&
         !String(err.message).includes('JSON') &&
-        !String(err.message).includes('Failed to fetch')
+        !String(err.message).includes('Failed to fetch') &&
+        !String(err.message).includes('aborted')
       ) {
         throw err;
       }
@@ -1322,8 +1359,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnUnlock = document.getElementById('btnUnlockNextIqro');
   if (btnUnlock) {
     btnUnlock.addEventListener('click', async () => {
-      const nextLevel = currentIqroLevel + 1;
-      await advanceStudentLevel(nextLevel);
+      const origText = btnUnlock.innerHTML;
+      btnUnlock.disabled = true;
+      btnUnlock.innerHTML = 'Memproses... ⏳';
+      try {
+        const nextLevel = currentIqroLevel + 1;
+        await advanceStudentLevel(nextLevel);
+      } finally {
+        btnUnlock.disabled = false;
+        btnUnlock.innerHTML = origText;
+      }
     });
   }
 
@@ -1346,11 +1391,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // Tombol Refresh Overview
+  // Tombol Refresh Overview dengan Feedback Loading Responsif
   const btnRefreshOverview = document.getElementById('btnRefreshOverview');
   if (btnRefreshOverview) {
-    btnRefreshOverview.addEventListener('click', () => {
-      loadOverviewData();
+    btnRefreshOverview.addEventListener('click', async () => {
+      const origText = btnRefreshOverview.innerHTML;
+      btnRefreshOverview.disabled = true;
+      btnRefreshOverview.innerHTML = 'Memuat Data... ⏳';
+      try {
+        await loadOverviewData();
+      } finally {
+        btnRefreshOverview.disabled = false;
+        btnRefreshOverview.innerHTML = origText;
+      }
     });
   }
 

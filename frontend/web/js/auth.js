@@ -399,52 +399,60 @@ async function handleStaticAuthFallback(endpoint, payload) {
 }
 
 async function callAuthApi(endpoint, payload) {
-  const isGitHubPages = window.location.hostname.includes('github.io');
+  const isPortDev = window.location.port === '5173' || window.location.port === '8000';
+  let activeBase = null;
+  try {
+    activeBase = sessionStorage.getItem('pia_active_api_base');
+  } catch (_) {}
 
-  if (!isGitHubPages) {
+  const candidates = [];
+  if (activeBase) {
+    const clean = activeBase.replace(/\/+$/, '');
+    candidates.push(clean ? `${clean}/api/auth` : API_BASE_URL);
+  }
+
+  if (isPortDev) {
+    if (!candidates.includes(API_BASE_URL)) candidates.push(API_BASE_URL);
+    if (!candidates.includes(CLOUDFLARE_API_URL)) candidates.push(CLOUDFLARE_API_URL);
+  } else {
+    if (!candidates.includes(CLOUDFLARE_API_URL)) candidates.push(CLOUDFLARE_API_URL);
+    if (!candidates.includes(API_BASE_URL)) candidates.push(API_BASE_URL);
+  }
+
+  for (const base of candidates) {
     try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      const resp = await fetch(`${base}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
+        signal: controller.signal,
       });
-      const contentType = response.headers.get('content-type') || '';
+      clearTimeout(timeoutId);
+
+      const contentType = resp.headers.get('content-type') || '';
       if (contentType.includes('application/json')) {
-        const data = await response.json();
-        if (!response.ok) {
+        const data = await resp.json();
+        if (!resp.ok) {
           throw new Error(data.detail || data.message || 'Permintaan gagal.');
         }
+        try {
+          const rootBase = base.replace(/\/api\/auth\/?$/, '');
+          sessionStorage.setItem('pia_active_api_base', rootBase);
+        } catch (_) {}
         return data;
       }
     } catch (err) {
-      if (!(err instanceof TypeError) && !String(err.message).includes('JSON')) {
+      if (
+        !(err instanceof TypeError) &&
+        err.name !== 'AbortError' &&
+        !String(err.message).includes('JSON') &&
+        !String(err.message).includes('Failed to fetch') &&
+        !String(err.message).includes('aborted')
+      ) {
         throw err;
       }
-    }
-  }
-
-  // Coba melalui Cloudflare Worker API, atau gunakan fallback GitHub Pages
-  try {
-    const cfResp = await fetch(`${CLOUDFLARE_API_URL}${endpoint}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const cfType = cfResp.headers.get('content-type') || '';
-    if (cfType.includes('application/json')) {
-      const cfData = await cfResp.json();
-      if (!cfResp.ok) {
-        throw new Error(cfData.detail || cfData.message || 'Permintaan gagal.');
-      }
-      return cfData;
-    }
-  } catch (err) {
-    if (
-      !(err instanceof TypeError) &&
-      !String(err.message).includes('JSON') &&
-      !String(err.message).includes('Failed to fetch')
-    ) {
-      throw err;
     }
   }
 

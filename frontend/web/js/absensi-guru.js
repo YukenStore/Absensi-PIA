@@ -5,6 +5,28 @@
 
 const API_BASE = '';
 const CF_WORKER_API = 'https://absensi-pia.yumenoboken.workers.dev';
+let activeApiBase = (function () {
+  try {
+    return sessionStorage.getItem('pia_active_api_base');
+  } catch (_) {
+    return null;
+  }
+})();
+
+function getSmartTeacherApiBases() {
+  const isPortDev = window.location.port === '5173' || window.location.port === '8000';
+  const candidates = [];
+  if (activeApiBase) candidates.push(activeApiBase);
+
+  if (isPortDev) {
+    if (!candidates.includes('')) candidates.push('');
+    if (!candidates.includes(CF_WORKER_API)) candidates.push(CF_WORKER_API);
+  } else {
+    if (!candidates.includes(CF_WORKER_API)) candidates.push(CF_WORKER_API);
+    if (!candidates.includes('')) candidates.push('');
+  }
+  return candidates;
+}
 
 let currentUser = null;
 function getLocalTodayIso() {
@@ -55,9 +77,7 @@ function normalizeRecord(item) {
 }
 
 async function callTeacherApi(endpoint, options = {}) {
-  const isGitHubPages = window.location.hostname.includes('github.io');
   const token = getAuthToken();
-
   const headers = {
     'Content-Type': 'application/json',
     ...(options.headers || {}),
@@ -66,37 +86,43 @@ async function callTeacherApi(endpoint, options = {}) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  // 1. Coba ke server backend lokal (jika bukan GitHub Pages)
-  if (!isGitHubPages) {
+  const bases = getSmartTeacherApiBases();
+  for (const base of bases) {
     try {
-      const resp = await fetch(endpoint, { ...options, headers });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      const url = `${base}${endpoint}`;
+      const resp = await fetch(url, { ...options, headers, signal: controller.signal });
+      clearTimeout(timeoutId);
+
       const cType = resp.headers.get('content-type') || '';
       if (cType.includes('application/json')) {
         const data = await resp.json();
+        if (resp.ok && data && (data.success !== false || !data.detail)) {
+          if (base !== activeApiBase) {
+            activeApiBase = base;
+            try {
+              sessionStorage.setItem('pia_active_api_base', base);
+            } catch (_) {}
+          }
+          return data;
+        }
         if (!resp.ok) {
           throw new Error(data.detail || data.message || 'Permintaan gagal.');
         }
-        return data;
       }
     } catch (err) {
-      if (!(err instanceof TypeError) && !String(err.message).includes('JSON')) {
+      if (
+        !(err instanceof TypeError) &&
+        err.name !== 'AbortError' &&
+        !String(err.message).includes('JSON') &&
+        !String(err.message).includes('Failed to fetch') &&
+        !String(err.message).includes('aborted')
+      ) {
         throw err;
       }
     }
   }
-
-  // 2. Coba ke Cloudflare Worker API
-  try {
-    const cfUrl = `${CF_WORKER_API}${endpoint}`;
-    const cfResp = await fetch(cfUrl, { ...options, headers });
-    const cfType = cfResp.headers.get('content-type') || '';
-    if (cfType.includes('application/json')) {
-      const cfData = await cfResp.json();
-      if (cfResp.ok && cfData && (cfData.success !== false || !cfData.detail)) {
-        return cfData;
-      }
-    }
-  } catch (_) {}
 
   // 3. Fallback Penyimpanan Lokal Browser (Offline / Static GitHub Pages)
   return handleLocalFallback(endpoint, options);
