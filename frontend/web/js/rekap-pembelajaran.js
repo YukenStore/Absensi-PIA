@@ -1141,13 +1141,13 @@ function renderOverviewList(list) {
 
   // Hitung agregat statistik
   let khatamCount = 0;
-  let totalSurahDone = 0;
+  let hafalJuz30Count = 0;
   let totalLevels = 0;
 
   for (const s of list) {
     if (s.current_iqro_level > 6) khatamCount++;
     totalLevels += Math.min(s.current_iqro_level, 6);
-    totalSurahDone += s.hafalan_completed || 0;
+    if ((s.hafalan_completed || 0) >= 37) hafalJuz30Count++;
   }
 
   const avgLevel = list.length > 0 ? Math.round(totalLevels / list.length) : 1;
@@ -1155,7 +1155,7 @@ function renderOverviewList(list) {
   document.getElementById('statTotalStudents').textContent = String(list.length);
   document.getElementById('statAvgIqro').textContent = `Iqro ${avgLevel}`;
   document.getElementById('statKhatamIqro').textContent = String(khatamCount);
-  document.getElementById('statTotalSurahDone').textContent = String(totalSurahDone);
+  document.getElementById('statTotalSurahDone').textContent = String(hafalJuz30Count);
 
   bodyEl.innerHTML = list
     .map((s, idx) => {
