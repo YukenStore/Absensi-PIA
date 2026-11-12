@@ -3285,7 +3285,7 @@ select.form-input {
 /* ========================================================================= */
 .mutabaah-student-bar {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
   background: #ffffff;
@@ -3306,6 +3306,7 @@ select.form-input {
   display: flex;
   align-items: center;
   gap: 10px;
+  padding-bottom: 3px;
 }
 
 .student-preview-badges-horizontal {
@@ -4026,19 +4027,20 @@ select.form-input {
   }
   #overviewTable:not(.is-empty-table) td.ov-col-action .btn-open-student-recap:active {
     background: #1d4ed8 !important;
-    transform: scale(0.98) !important;
+    transform: scale(0.97) !important;
   }
 
   .mutabaah-student-bar {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 14px;
-    gap: 12px;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 14px !important;
+    gap: 12px !important;
   }
   .mutabaah-student-preview {
-    padding-top: 10px;
-    border-top: 1px dashed #e2e8f0;
-    width: 100%;
+    padding-top: 10px !important;
+    border-top: 1px dashed #e2e8f0 !important;
+    width: 100% !important;
+    padding-bottom: 0 !important;
   }
   .student-preview-badges-horizontal {
     display: flex !important;
@@ -4050,40 +4052,146 @@ select.form-input {
   .mutabaah-student-preview .student-class-tag,
   .mutabaah-student-preview .badge-progress-iqro,
   .mutabaah-student-preview .badge-progress-hafalan {
-    font-size: 0.78rem !important;
-    padding: 5px 10px !important;
+    font-size: 0.76rem !important;
+    padding: 4px 8px !important;
   }
-  .mutabaah-table td, .mutabaah-table thead th {
-    padding: 8px 10px;
+
+  /* Navigasi Tab Mobile (Segmented 2 Kolom) */
+  .mutabaah-main-tabs {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6px !important;
+    border-bottom: none !important;
+    margin-bottom: 16px !important;
+    padding-bottom: 0 !important;
+    width: 100% !important;
   }
-  .mutabaah-item-name {
-    font-size: 0.86rem;
+  .mutabaah-tab-btn {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 10px 6px !important;
+    font-size: 0.8rem !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 10px !important;
+    background: #f8fafc !important;
+    text-align: center !important;
+    white-space: normal !important;
+    line-height: 1.25 !important;
+    margin-bottom: 0 !important;
   }
-  .mutabaah-check-cell {
-    width: 60px;
+  .mutabaah-tab-btn.active {
+    background: #eff6ff !important;
+    border-color: #3b82f6 !important;
+    color: #1d4ed8 !important;
+    font-weight: 800 !important;
+    box-shadow: 0 1px 2px rgba(37, 99, 235, 0.1) !important;
   }
-  .mutabaah-table thead th.th-check {
-    width: 60px;
-  }
-  .mutabaah-checkbox {
-    width: 20px;
-    height: 20px;
-  }
-  .mutabaah-note-cell {
-    width: 50%;
-    min-width: 130px;
-  }
-  .mutabaah-note-input {
-    padding: 6px 8px;
-    font-size: 0.82rem;
-  }
-  .btn-unlock-level {
-    font-size: 0.92rem;
-    padding: 12px 16px;
+
+  /* Iqro Stepper Mobile (2 Baris x 3 Kolom) */
+  .iqro-stepper-wrap {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 6px !important;
+    margin-bottom: 14px !important;
+    width: 100% !important;
   }
   .iqro-step-pill {
-    padding: 6px 12px;
-    font-size: 0.78rem;
+    width: 100% !important;
+    justify-content: center !important;
+    text-align: center !important;
+    padding: 8px 4px !important;
+    font-size: 0.78rem !important;
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+  }
+
+  /* Toolbar Hafalan Mobile */
+  .mutabaah-toolbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    margin-bottom: 12px !important;
+  }
+  .mutabaah-toolbar-left {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+  #quranSearchInput {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .quran-filter-group {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 6px !important;
+    width: 100% !important;
+  }
+  .quran-filter-group .btn-tool-pill {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 6px 4px !important;
+    font-size: 0.76rem !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+  }
+
+  /* Checklist Table Mobile (Anti Horizontal Scroll) */
+  .mutabaah-table-wrap {
+    border-radius: 10px !important;
+    overflow-x: hidden !important;
+    width: 100% !important;
+    border: 1px solid #e2e8f0 !important;
+  }
+  .mutabaah-table {
+    min-width: 100% !important;
+    width: 100% !important;
+    table-layout: fixed !important;
+  }
+  .mutabaah-table th:nth-child(1),
+  .mutabaah-table td:nth-child(1) {
+    width: 38% !important;
+    padding: 8px 6px !important;
+    word-break: break-word !important;
+  }
+  .mutabaah-table th.th-check,
+  .mutabaah-table td.mutabaah-check-cell {
+    width: 44px !important;
+    padding: 8px 2px !important;
+    text-align: center !important;
+  }
+  .mutabaah-table th:nth-child(3),
+  .mutabaah-table td:nth-child(3) {
+    width: auto !important;
+    padding: 8px 6px !important;
+  }
+  .mutabaah-checkbox {
+    width: 18px !important;
+    height: 18px !important;
+  }
+  .mutabaah-note-cell {
+    width: auto !important;
+    min-width: 0 !important;
+  }
+  .mutabaah-note-input {
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    padding: 6px 6px !important;
+    font-size: 0.78rem !important;
+  }
+  .mutabaah-item-name {
+    font-size: 0.82rem !important;
+    white-space: normal !important;
+  }
+  .mutabaah-subtext {
+    font-size: 0.7rem !important;
+  }
+  .btn-unlock-level {
+    font-size: 0.88rem !important;
+    padding: 10px 14px !important;
   }
 }
 

@@ -14,43 +14,43 @@ const IQRO_CONFIG = {
 };
 
 const SURAH_JUZ_30 = [
-  { no: 78, name: "An-Naba'", ayat: 40 },
-  { no: 79, name: "An-Nazi'at", ayat: 46 },
-  { no: 80, name: "'Abasa", ayat: 42 },
-  { no: 81, name: "At-Takwir", ayat: 29 },
-  { no: 82, name: "Al-Infitar", ayat: 19 },
-  { no: 83, name: "Al-Muthaffifin", ayat: 36 },
-  { no: 84, name: "Al-Insyiqaq", ayat: 25 },
-  { no: 85, name: "Al-Buruj", ayat: 22 },
-  { no: 86, name: "At-Tariq", ayat: 17 },
-  { no: 87, name: "Al-A'la", ayat: 19 },
-  { no: 88, name: "Al-Ghasyiyah", ayat: 26 },
-  { no: 89, name: "Al-Fajr", ayat: 30 },
-  { no: 90, name: "Al-Balad", ayat: 20 },
-  { no: 91, name: "Asy-Syams", ayat: 15 },
-  { no: 92, name: "Al-Lail", ayat: 21 },
-  { no: 93, name: "Ad-Duha", ayat: 11 },
-  { no: 94, name: "Al-Insyirah", ayat: 8 },
-  { no: 95, name: "At-Tin", ayat: 8 },
-  { no: 96, name: "Al-'Alaq", ayat: 19 },
-  { no: 97, name: "Al-Qadr", ayat: 5 },
-  { no: 98, name: "Al-Bayyinah", ayat: 8 },
-  { no: 99, name: "Az-Zalzalah", ayat: 8 },
-  { no: 100, name: "Al-'Adiyat", ayat: 11 },
-  { no: 101, name: "Al-Qari'ah", ayat: 11 },
-  { no: 102, name: "At-Takatsur", ayat: 8 },
-  { no: 103, name: "Al-'Asr", ayat: 3 },
-  { no: 104, name: "Al-Humazah", ayat: 9 },
-  { no: 105, name: "Al-Fil", ayat: 5 },
-  { no: 106, name: "Quraisy", ayat: 4 },
-  { no: 107, name: "Al-Ma'un", ayat: 7 },
-  { no: 108, name: "Al-Kautsar", ayat: 3 },
-  { no: 109, name: "Al-Kafirun", ayat: 6 },
-  { no: 110, name: "An-Nasr", ayat: 3 },
-  { no: 111, name: "Al-Lahab", ayat: 5 },
-  { no: 112, name: "Al-Ikhlas", ayat: 4 },
-  { no: 113, name: "Al-Falaq", ayat: 5 },
   { no: 114, name: "An-Nas", ayat: 6 },
+  { no: 113, name: "Al-Falaq", ayat: 5 },
+  { no: 112, name: "Al-Ikhlas", ayat: 4 },
+  { no: 111, name: "Al-Lahab", ayat: 5 },
+  { no: 110, name: "An-Nasr", ayat: 3 },
+  { no: 109, name: "Al-Kafirun", ayat: 6 },
+  { no: 108, name: "Al-Kautsar", ayat: 3 },
+  { no: 107, name: "Al-Ma'un", ayat: 7 },
+  { no: 106, name: "Quraisy", ayat: 4 },
+  { no: 105, name: "Al-Fil", ayat: 5 },
+  { no: 104, name: "Al-Humazah", ayat: 9 },
+  { no: 103, name: "Al-'Asr", ayat: 3 },
+  { no: 102, name: "At-Takatsur", ayat: 8 },
+  { no: 101, name: "Al-Qari'ah", ayat: 11 },
+  { no: 100, name: "Al-'Adiyat", ayat: 11 },
+  { no: 99, name: "Az-Zalzalah", ayat: 8 },
+  { no: 98, name: "Al-Bayyinah", ayat: 8 },
+  { no: 97, name: "Al-Qadr", ayat: 5 },
+  { no: 96, name: "Al-'Alaq", ayat: 19 },
+  { no: 95, name: "At-Tin", ayat: 8 },
+  { no: 94, name: "Al-Insyirah", ayat: 8 },
+  { no: 93, name: "Ad-Duha", ayat: 11 },
+  { no: 92, name: "Al-Lail", ayat: 21 },
+  { no: 91, name: "Asy-Syams", ayat: 15 },
+  { no: 90, name: "Al-Balad", ayat: 20 },
+  { no: 89, name: "Al-Fajr", ayat: 30 },
+  { no: 88, name: "Al-Ghasyiyah", ayat: 26 },
+  { no: 87, name: "Al-A'la", ayat: 19 },
+  { no: 86, name: "At-Tariq", ayat: 17 },
+  { no: 85, name: "Al-Buruj", ayat: 22 },
+  { no: 84, name: "Al-Insyiqaq", ayat: 25 },
+  { no: 83, name: "Al-Muthaffifin", ayat: 36 },
+  { no: 82, name: "Al-Infitar", ayat: 19 },
+  { no: 81, name: "At-Takwir", ayat: 29 },
+  { no: 80, name: "'Abasa", ayat: 42 },
+  { no: 79, name: "An-Nazi'at", ayat: 46 },
+  { no: 78, name: "An-Naba'", ayat: 40 },
 ];
 
 const API_BASES = window.location.hostname.includes('github.io')
@@ -311,34 +311,59 @@ async function selectStudent(studentId) {
   await loadStudentProgress(selectedStudentId);
 }
 
-// Handler publik untuk membuka mutaba'ah siswa dari mana saja (kartu overview / tombol)
-window.openStudentMutabaah = async function (studentId) {
-  const sId = Number(studentId);
-  if (!sId) return;
+// State guard agar tidak terjadi double-trigger atau race condition
+let isOpeningMutabaah = false;
 
-  await selectStudent(sId);
-  switchTab('panelIqro');
+// Handler publik untuk membuka mutaba'ah siswa dari kartu overview
+window.openStudentMutabaah = async function (studentId, triggerBtn = null) {
+  if (isOpeningMutabaah) return;
+  isOpeningMutabaah = true;
 
-  // Cari elemen scroll: student preview wrap atau student bar
-  const targetEl =
-    document.getElementById('studentPreviewWrap') ||
-    document.querySelector('.mutabaah-student-bar') ||
-    document.querySelector('.page-header');
-
-  if (targetEl) {
-    targetEl.classList.remove('student-bar-pulse');
-    void targetEl.offsetWidth; // trigger reflow
-    targetEl.classList.add('student-bar-pulse');
-    targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const originalBtnText = triggerBtn ? triggerBtn.innerHTML : '';
+  if (triggerBtn) {
+    triggerBtn.disabled = true;
+    triggerBtn.innerHTML = 'Memuat... ⏳';
   }
 
-  // Backup scroll multi-browser
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-  document.documentElement.scrollTop = 0;
-  document.body.scrollTop = 0;
+  try {
+    const sId = Number(studentId);
+    if (!sId) return;
 
-  const sName = selectedStudent ? (selectedStudent.full_name || selectedStudent.name) : 'Siswa';
-  showBanner(`Membuka Mutaba'ah untuk <strong>${escapeHtml(sName)}</strong>`, 'info', 2500);
+    await selectStudent(sId);
+
+    // Jika siswa sudah lulus/khatam Iqro (level > 6), buka langsung tab Hafalan Al-Qur'an
+    if (currentIqroLevel > 6) {
+      switchTab('panelQuran');
+    } else {
+      switchTab('panelIqro');
+    }
+
+    // Scroll mulus dengan memperhitungkan sticky topbar agar tidak tertutup header
+    const topbar = document.querySelector('.topbar');
+    const topbarH = topbar ? topbar.offsetHeight : 64;
+    const scrollTarget =
+      document.querySelector('.mutabaah-student-bar') ||
+      document.querySelector('.mutabaah-main-tabs') ||
+      document.querySelector('.page-header');
+
+    if (scrollTarget) {
+      scrollTarget.classList.remove('student-bar-pulse');
+      void scrollTarget.offsetWidth; // trigger reflow
+      scrollTarget.classList.add('student-bar-pulse');
+
+      const targetY = scrollTarget.getBoundingClientRect().top + window.pageYOffset - topbarH - 12;
+      window.scrollTo({ top: Math.max(0, targetY), behavior: 'smooth' });
+    }
+
+    const sName = selectedStudent ? (selectedStudent.full_name || selectedStudent.name) : 'Siswa';
+    showBanner(`Membuka Mutaba'ah untuk <strong>${escapeHtml(sName)}</strong>`, 'info', 2500);
+  } finally {
+    if (triggerBtn) {
+      triggerBtn.disabled = false;
+      triggerBtn.innerHTML = originalBtnText;
+    }
+    isOpeningMutabaah = false;
+  }
 };
 
 function renderStudentPreview() {
@@ -404,7 +429,7 @@ async function loadStudentProgress(studentId) {
       if (parsed && typeof parsed === 'object') {
         progressMap = parsed.progress || {};
         currentIqroLevel = parsed.current_iqro_level || 1;
-        viewedIqroLevel = currentIqroLevel;
+        viewedIqroLevel = Math.min(Math.max(currentIqroLevel, 1), 6);
       }
     }
   } catch (_) {}
@@ -718,7 +743,18 @@ function renderIqroUnlockCard() {
   const remaining = currentCfg.totalPages - activeDoneCount;
   const isAllDone = remaining <= 0;
 
-  if (currentIqroLevel >= 6) {
+  if (currentIqroLevel > 6) {
+    card.className = 'unlock-promotion-card is-ready';
+    congrats.style.display = 'block';
+    congrats.textContent = '🎓 Maa Syaa Allah! Siswa Telah Lulus / Khatam Iqro 6 & Aktif di Hafalan Al-Qur\'an Juz 30.';
+    btn.className = 'btn-unlock-level is-ready';
+    btn.disabled = false;
+    btn.innerHTML = '🕌 Buka Hafalan Al-Qur\'an Juz 30 →';
+    btn.onclick = () => switchTab('panelQuran');
+    return;
+  }
+
+  if (currentIqroLevel === 6) {
     if (isAllDone) {
       card.className = 'unlock-promotion-card is-ready';
       congrats.style.display = 'block';
@@ -726,12 +762,14 @@ function renderIqroUnlockCard() {
       btn.className = 'btn-unlock-level is-ready';
       btn.disabled = false;
       btn.innerHTML = '🌟 Lulus / Khatam Iqro &amp; Siap Masuk Al-Qur\'an';
+      btn.onclick = async () => advanceStudentLevel(7);
     } else {
       card.className = 'unlock-promotion-card';
       congrats.style.display = 'none';
       btn.className = 'btn-unlock-level is-locked';
       btn.disabled = true;
       btn.innerHTML = `🔒 Selesaikan Semua Halaman Iqro 6 (${remaining} Halaman Tersisa)`;
+      btn.onclick = null;
     }
     return;
   }
@@ -1134,7 +1172,6 @@ function renderOverviewList(list) {
               type="button"
               class="btn-tool-pill active btn-open-student-recap"
               data-id="${s.id}"
-              onclick="window.openStudentMutabaah(${s.id})"
             >
               Buka Mutaba'ah →
             </button>
@@ -1157,16 +1194,6 @@ function renderOverviewList(list) {
       `;
     })
     .join('');
-
-  bodyEl.querySelectorAll('.btn-open-student-recap').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const sId = Number(btn.getAttribute('data-id'));
-      if (sId && typeof window.openStudentMutabaah === 'function') {
-        window.openStudentMutabaah(sId);
-      }
-    });
-  });
 }
 
 // ============================================================
@@ -1336,7 +1363,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       e.preventDefault();
       const sId = Number(btn.getAttribute('data-id'));
       if (sId && typeof window.openStudentMutabaah === 'function') {
-        window.openStudentMutabaah(sId);
+        window.openStudentMutabaah(sId, btn);
       }
     }
   });
