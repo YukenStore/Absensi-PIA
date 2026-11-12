@@ -3775,7 +3775,202 @@ select.form-input {
   margin-top: 4px;
 }
 
+/* Desktop default untuk kolom overview table */
+#overviewTable td.ov-col-meta {
+  display: none;
+}
+#overviewTable td.ov-col-no {
+  text-align: center;
+  font-weight: 700;
+  color: #64748b;
+  width: 48px;
+}
+#overviewTable td.ov-col-name strong,
+#overviewTable td.ov-col-name .student-name-val {
+  font-weight: 700;
+  font-size: 0.93rem;
+  color: #0f172a;
+}
+#overviewTable td.ov-col-iqro {
+  font-weight: 600;
+  font-size: 0.86rem;
+  color: #334155;
+}
+#overviewTable td.ov-col-quran {
+  font-weight: 600;
+  font-size: 0.86rem;
+  color: #be185d;
+}
+#overviewTable td.ov-col-action button {
+  padding: 5px 12px;
+  font-size: 0.8rem;
+}
+
 @media (max-width: 640px) {
+  /* ==================================================== */
+  /* REKAP PROGRES PEMBELAJARAN SELURUH SISWA (MOBILE)    */
+  /* ==================================================== */
+  #sectionOverview .card-header {
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+  #sectionOverview .card-title {
+    flex: 1 !important;
+  }
+  #sectionOverview .card-title h3 {
+    font-size: 1.05rem !important;
+    line-height: 1.35 !important;
+  }
+  #sectionOverview .card-title p {
+    font-size: 0.8rem !important;
+  }
+  #btnRefreshOverview {
+    flex-shrink: 0 !important;
+    align-self: flex-start !important;
+    white-space: nowrap !important;
+    font-size: 0.78rem !important;
+    padding: 6px 10px !important;
+  }
+
+  .overview-stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    margin-bottom: 14px !important;
+  }
+  .overview-stat-card {
+    padding: 10px 8px !important;
+    border-radius: 10px !important;
+  }
+  .overview-stat-val {
+    font-size: 1.25rem !important;
+  }
+  .overview-stat-lbl {
+    font-size: 0.72rem !important;
+    margin-top: 2px !important;
+  }
+
+  #sectionOverview .table-responsive {
+    overflow-x: visible !important;
+  }
+
+  #overviewTable:not(.is-empty-table) thead {
+    display: none !important;
+  }
+  #overviewTable:not(.is-empty-table),
+  #overviewTable:not(.is-empty-table) tbody {
+    display: block !important;
+    width: 100% !important;
+  }
+  #overviewTable:not(.is-empty-table) tbody {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    padding: 2px 0 !important;
+  }
+  #overviewTable:not(.is-empty-table) tbody tr.overview-card-item {
+    display: grid !important;
+    grid-template-columns: auto 1fr auto !important;
+    grid-template-areas:
+      "num name level"
+      "meta meta meta"
+      "action action action" !important;
+    align-items: center !important;
+    gap: 8px 10px !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    padding: 12px 14px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+  }
+  #overviewTable:not(.is-empty-table) td.ov-col-no {
+    grid-area: num !important;
+    padding: 0 !important;
+    border: none !important;
+    width: auto !important;
+  }
+  #overviewTable:not(.is-empty-table) td.ov-col-name {
+    grid-area: name !important;
+    padding: 0 !important;
+    border: none !important;
+    text-align: left !important;
+  }
+  #overviewTable:not(.is-empty-table) td.ov-col-name .student-main-info {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    flex-wrap: wrap !important;
+  }
+  #overviewTable:not(.is-empty-table) td.ov-col-name .student-name-val {
+    font-size: 0.93rem !important;
+    font-weight: 700 !important;
+    color: var(--secondary) !important;
+    word-break: break-word !important;
+  }
+  #overviewTable:not(.is-empty-table) td.ov-col-name .student-class-tag {
+    display: inline-block !important;
+  }
+  #overviewTable:not(.is-empty-table) td.ov-col-class {
+    display: none !important;
+  }
+  #overviewTable:not(.is-empty-table) td.ov-col-level {
+    grid-area: level !important;
+    padding: 0 !important;
+    border: none !important;
+    text-align: right !important;
+  }
+  #overviewTable:not(.is-empty-table) td.ov-col-iqro,
+  #overviewTable:not(.is-empty-table) td.ov-col-quran {
+    display: none !important;
+  }
+  #overviewTable:not(.is-empty-table) td.ov-col-meta {
+    grid-area: meta !important;
+    display: block !important;
+    padding: 6px 0 0 0 !important;
+    border: none !important;
+    border-top: 1px dashed #f1f5f9 !important;
+  }
+  .overview-meta-strip {
+    display: flex !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+  }
+  .ov-meta-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    padding: 5px 9px !important;
+    border-radius: 8px !important;
+    font-size: 0.77rem !important;
+    font-weight: 600 !important;
+  }
+  .ov-badge-iqro {
+    background: #eff6ff !important;
+    color: #1e40af !important;
+    border: 1px solid #dbeafe !important;
+  }
+  .ov-badge-quran {
+    background: #fdf2f8 !important;
+    color: #9d174d !important;
+    border: 1px solid #fce7f3 !important;
+  }
+  #overviewTable:not(.is-empty-table) td.ov-col-action {
+    grid-area: action !important;
+    display: block !important;
+    padding: 2px 0 0 0 !important;
+    border: none !important;
+  }
+  #overviewTable:not(.is-empty-table) td.ov-col-action .btn-open-student-recap {
+    width: 100% !important;
+    text-align: center !important;
+    justify-content: center !important;
+    padding: 8px 12px !important;
+    font-size: 0.84rem !important;
+    font-weight: 700 !important;
+    border-radius: 8px !important;
+  }
+
   .mutabaah-student-bar {
     flex-direction: column;
     align-items: stretch;

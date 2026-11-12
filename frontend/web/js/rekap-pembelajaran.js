@@ -1014,26 +1014,50 @@ function renderOverviewList(list) {
       const hafalanProgressPct = `${hafalanDone} / 37 Surat (${Math.round((hafalanDone / 37) * 100)}%)`;
 
       return `
-        <tr>
-          <td style="text-align: center; font-weight: 700; color: #64748b;">${idx + 1}</td>
-          <td>
-            <strong style="color: #0f172a; font-size: 0.93rem;">${escapeHtml(s.name)}</strong>
+        <tr class="overview-card-item">
+          <td class="ov-col-no" data-label="No">
+            <span class="student-num-badge">${idx + 1}</span>
           </td>
-          <td>
+          <td class="ov-col-name" data-label="Nama Siswa">
+            <div class="student-main-info">
+              <span class="student-name-val">${escapeHtml(s.name)}</span>
+              <span class="student-class-tag">${escapeHtml(s.class_name || '-')}</span>
+            </div>
+          </td>
+          <td class="ov-col-class" data-label="Kelas">
             <span class="student-class-tag">${escapeHtml(s.class_name || '-')}</span>
           </td>
-          <td>${iqroTag}</td>
-          <td style="font-weight: 600; font-size: 0.86rem; color: #334155;">${iqroProgressPct}</td>
-          <td style="font-weight: 600; font-size: 0.86rem; color: #be185d;">${hafalanProgressPct}</td>
-          <td>
+          <td class="ov-col-level" data-label="Level Iqro">
+            ${iqroTag}
+          </td>
+          <td class="ov-col-iqro" data-label="Progres">
+            ${iqroProgressPct}
+          </td>
+          <td class="ov-col-quran" data-label="Hafalan Juz 30">
+            ${hafalanProgressPct}
+          </td>
+          <td class="ov-col-action" data-label="Aksi">
             <button
               type="button"
               class="btn-tool-pill active btn-open-student-recap"
               data-id="${s.id}"
-              style="padding: 4px 10px; font-size: 0.78rem;"
             >
               Buka Mutaba'ah →
             </button>
+          </td>
+          <td class="ov-col-meta">
+            <div class="overview-meta-strip">
+              <div class="ov-meta-badge ov-badge-iqro">
+                <span class="ov-meta-icon">📖</span>
+                <span class="ov-meta-label">Iqro:</span>
+                <span class="ov-meta-val">${iqroProgressPct}</span>
+              </div>
+              <div class="ov-meta-badge ov-badge-quran">
+                <span class="ov-meta-icon">🕌</span>
+                <span class="ov-meta-label">Hafalan:</span>
+                <span class="ov-meta-val">${hafalanProgressPct}</span>
+              </div>
+            </div>
           </td>
         </tr>
       `;
