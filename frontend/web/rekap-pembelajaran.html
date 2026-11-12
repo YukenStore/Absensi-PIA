@@ -8,10 +8,10 @@
   <meta http-equiv="Expires" content="0" />
   <title>Rekap Pembelajaran - Pendidikan Islam At-Taqwa</title>
   <link rel="icon" type="image/png" href="assets/logo-pia.png" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261110_16" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261112_1" />
 </head>
 <body>
-  <!-- Navigasi Utama -->
+  <!-- Navigasi Utama Topbar -->
   <header class="topbar">
     <div class="topbar-inner">
       <!-- Kiri: Brand / Identitas -->
@@ -25,7 +25,7 @@
         </div>
       </a>
 
-      <!-- Pojok Kanan: Info Akun + Tombol Menu Garis 3 (☰) -->
+      <!-- Pojok Kanan: Info Akun + Tombol Menu Hamburger -->
       <div class="topbar-right">
         <div class="user-chip header-user-chip">
           <div class="name" id="activeUserName">Pengguna PIA</div>
@@ -44,7 +44,7 @@
           </svg>
         </button>
 
-        <!-- Dropdown Menu Navigasi & Akun Pojok Kanan -->
+        <!-- Dropdown Menu Navigasi -->
         <nav class="nav-dropdown-menu" id="mainNavLinks" aria-label="Menu Navigasi">
           <div class="dropdown-user-header">
             <div class="dropdown-user-avatar" id="dropdownUserAvatar">P</div>
@@ -120,322 +120,277 @@
   <main class="container">
     <div class="page-header">
       <div class="page-title">
-        <h2>Rekapitulasi Pembelajaran Santri / Siswa</h2>
-        <p>Pencatatan perkembangan belajar Iqro, Al-Qur'an, Hafalan Surat Pendek, dan Hafalan Doa Harian.</p>
+        <h2>Mutaba'ah &amp; Rekap Pembelajaran Santri</h2>
+        <p>Pencatatan perkembangan belajar Iqro (Jilid 1 s/d 6) dan Hafalan Al-Qur'an Juz 30.</p>
       </div>
     </div>
 
     <!-- Alert Notifikasi Global -->
     <div id="learningAlert" class="alert-banner"></div>
 
-    <div class="pendaftaran-grid">
-      <!-- Panel Kiri: Form Input Setoran Pembelajaran -->
-      <section class="section-card">
-        <div class="card-header">
-          <div class="card-title">
-            <h3>Catat Capaian Pembelajaran</h3>
-            <p>Pilih santri, kategori materi, dan simpan penilaian perkembangan.</p>
-          </div>
-          <span id="teacherBadge" class="badge-teacher-name">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-            <span id="activeTeacherName">Guru PIA</span>
-          </span>
-        </div>
+    <!-- Bar Pemilihan Santri & Profil Ringkas -->
+    <section class="mutabaah-student-bar">
+      <div class="mutabaah-student-selector">
+        <label for="studentSelect" style="display: block; font-size: 0.85rem; font-weight: 700; color: #1e293b; margin-bottom: 6px;">
+          Pilih Santri / Siswa:
+        </label>
+        <select id="studentSelect" class="form-input" style="font-weight: 600;">
+          <option value="">-- Memuat data santri... --</option>
+        </select>
+      </div>
 
-        <!-- Kartu Notifikasi Jika Santri Sudah Memiliki Rekap Pembelajaran pada Tanggal Terpilih -->
-        <div id="learningRecordedCard" class="today-status-card" style="display: none; margin-bottom: 20px; border-left: 4px solid #f59e0b;">
-          <div class="today-status-header">
-            <span class="status-indicator-dot" style="background: #f59e0b;"></span>
-            <span class="today-status-title" style="color: #b45309; font-weight: 700;">Santri Sudah Memiliki Rekap pada Tanggal Ini:</span>
+      <div class="mutabaah-student-preview" id="studentPreviewWrap" style="display: none;">
+        <div class="student-avatar-circle" id="studentAvatar">S</div>
+        <div class="student-preview-info">
+          <div class="student-preview-name-row">
+            <span class="student-preview-name" id="studentNamePreview">-</span>
+            <span class="student-class-tag" id="studentClassPreview">-</span>
           </div>
-          <div class="today-status-content">
-            <div class="today-status-row">
-              <span class="label">Santri:</span>
-              <span class="val font-bold" id="recCardStudent">-</span>
-            </div>
-            <div class="today-status-row">
-              <span class="label">Materi:</span>
-              <span class="val font-bold" id="recCardMateri">-</span>
-            </div>
-            <div class="today-status-row">
-              <span class="label">Kelancaran:</span>
-              <span class="val font-bold" id="recCardPredicate">-</span>
-            </div>
-            <div class="today-status-row">
-              <span class="label">Guru:</span>
-              <span class="val" id="recCardTeacher">-</span>
-            </div>
-          </div>
-          <div style="font-size: 0.77rem; color: #b45309; margin-top: 8px; font-weight: 600; line-height: 1.4;">
-            ℹ️ Satu santri hanya dapat disimpan 1 kali rekap pembelajarannya dalam 1 hari. Hapus catatan lama di tabel terlebih dahulu jika ingin mengganti setoran.
+          <div class="student-badges-strip">
+            <span class="badge-progress-iqro" id="studentIqroBadge">
+              📖 Iqro 1 (0/36)
+            </span>
+            <span class="badge-progress-hafalan" id="studentHafalanBadge">
+              🕌 Hafalan: 0/37
+            </span>
           </div>
         </div>
+      </div>
+    </section>
 
-        <form id="learningRecordForm" class="form-stack">
-          <!-- Pilih Siswa -->
-          <div class="form-field">
-            <label for="studentSelect">Pilih Nama Siswa <span style="color: #ef4444;">*</span></label>
-            <select id="studentSelect" class="form-input" required>
-              <option value="">-- Pilih Nama Siswa --</option>
-            </select>
-          </div>
+    <!-- Navigasi Tab Utama (Iqro, Hafalan, Rekap Semua) -->
+    <nav class="mutabaah-main-tabs" aria-label="Tab Pembelajaran">
+      <button type="button" class="mutabaah-tab-btn active" id="tabBtnIqro" data-tab="panelIqro">
+        📖 Mutaba'ah Iqro (1 - 6)
+      </button>
+      <button type="button" class="mutabaah-tab-btn" id="tabBtnQuran" data-tab="panelQuran">
+        🕌 Hafalan Qur'an (Juz 30)
+      </button>
+      <button type="button" class="mutabaah-tab-btn" id="tabBtnOverview" data-tab="panelOverview">
+        📊 Rekap Seluruh Santri
+      </button>
+    </nav>
 
-          <!-- Tanggal Pembelajaran -->
-          <div class="form-field">
-            <label for="recordDate">Tanggal Pembelajaran <span style="color: #ef4444;">*</span></label>
-            <input type="date" id="recordDate" class="form-input" required />
-          </div>
-
-          <!-- Kategori Pembelajaran (Tabs) -->
-          <div class="form-field">
-            <label>Kategori Materi <span style="color: #ef4444;">*</span></label>
-            <div class="learning-category-tabs" id="categoryTabs">
-              <button type="button" class="btn-category-tab active" data-category="Iqro">
-                📖 Iqro
-              </button>
-              <button type="button" class="btn-category-tab" data-category="Quran">
-                📗 Al-Qur'an
-              </button>
-              <button type="button" class="btn-category-tab" data-category="Hafalan Surat">
-                🕌 Hafalan Surat
-              </button>
-              <button type="button" class="btn-category-tab" data-category="Hafalan Doa">
-                🤲 Hafalan Doa
-              </button>
-            </div>
-            <input type="hidden" id="selectedCategory" value="Iqro" />
-          </div>
-
-          <!-- Form Fields Dinamis: IQRO -->
-          <div id="fieldsIqro" class="category-field-group">
-            <div class="form-row-2col">
-              <div class="form-field">
-                <label for="iqroJilid">Jilid Iqro <span style="color: #ef4444;">*</span></label>
-                <select id="iqroJilid" class="form-input">
-                  <option value="Iqro 1" selected>Iqro 1</option>
-                  <option value="Iqro 2">Iqro 2</option>
-                  <option value="Iqro 3">Iqro 3</option>
-                  <option value="Iqro 4">Iqro 4</option>
-                  <option value="Iqro 5">Iqro 5</option>
-                  <option value="Iqro 6">Iqro 6</option>
-                </select>
-              </div>
-              <div class="form-field">
-                <label for="iqroHalaman">Halaman <span style="color: #ef4444;">*</span></label>
-                <input type="number" id="iqroHalaman" class="form-input" min="1" max="50" placeholder="Contoh: 15" />
-              </div>
-            </div>
-          </div>
-
-          <!-- Form Fields Dinamis: AL-QUR'AN -->
-          <div id="fieldsQuran" class="category-field-group" style="display: none;">
-            <div class="form-row-2col">
-              <div class="form-field">
-                <label for="quranSurat">Nama Surat <span style="color: #ef4444;">*</span></label>
-                <input type="text" id="quranSurat" class="form-input" list="quranSuratList" placeholder="Ketik atau pilih surat..." />
-                <datalist id="quranSuratList">
-                  <option value="Al-Fatihah"></option>
-                  <option value="Al-Baqarah"></option>
-                  <option value="Ali 'Imran"></option>
-                  <option value="An-Nisa'"></option>
-                  <option value="Al-Ma'idah"></option>
-                  <option value="Al-An'am"></option>
-                  <option value="Al-A'raf"></option>
-                  <option value="Yasin"></option>
-                  <option value="Al-Waqi'ah"></option>
-                  <option value="Al-Mulk"></option>
-                  <option value="An-Naba'"></option>
-                </datalist>
-              </div>
-              <div class="form-field">
-                <label for="quranAyat">Ayat <span style="color: #ef4444;">*</span></label>
-                <input type="text" id="quranAyat" class="form-input" placeholder="Contoh: Ayat 1 - 15" />
-              </div>
-            </div>
-          </div>
-
-          <!-- Form Fields Dinamis: HAFALAN SURAT -->
-          <div id="fieldsSurat" class="category-field-group" style="display: none;">
-            <div class="form-row-2col">
-              <div class="form-field">
-                <label for="hafalanSurat">Nama Surat (Juz 30) <span style="color: #ef4444;">*</span></label>
-                <select id="hafalanSurat" class="form-input">
-                  <option value="An-Nas" selected>An-Nas</option>
-                  <option value="Al-Falaq">Al-Falaq</option>
-                  <option value="Al-Ikhlas">Al-Ikhlas</option>
-                  <option value="Al-Lahab">Al-Lahab</option>
-                  <option value="An-Nasr">An-Nasr</option>
-                  <option value="Al-Kafirun">Al-Kafirun</option>
-                  <option value="Al-Kautsar">Al-Kautsar</option>
-                  <option value="Al-Ma'un">Al-Ma'un</option>
-                  <option value="Quraisy">Quraisy</option>
-                  <option value="Al-Fil">Al-Fil</option>
-                  <option value="Al-Humazah">Al-Humazah</option>
-                  <option value="Al-'Asr">Al-'Asr</option>
-                  <option value="At-Takatsur">At-Takatsur</option>
-                  <option value="Al-Qari'ah">Al-Qari'ah</option>
-                  <option value="Al-'Adiyat">Al-'Adiyat</option>
-                  <option value="Az-Zalzalah">Az-Zalzalah</option>
-                  <option value="Al-Bayyinah">Al-Bayyinah</option>
-                  <option value="Al-Qadr">Al-Qadr</option>
-                  <option value="Al-'Alaq">Al-'Alaq</option>
-                  <option value="At-Tin">At-Tin</option>
-                  <option value="Al-Insyirah">Al-Insyirah</option>
-                  <option value="Ad-Duha">Ad-Duha</option>
-                </select>
-              </div>
-              <div class="form-field">
-                <label for="hafalanSuratAyat">Capaian Ayat</label>
-                <input type="text" id="hafalanSuratAyat" class="form-input" placeholder="Contoh: Full Surat atau Ayat 1-5" value="Full Surat" />
-              </div>
-            </div>
-          </div>
-
-          <!-- Form Fields Dinamis: HAFALAN DOA -->
-          <div id="fieldsDoa" class="category-field-group" style="display: none;">
-            <div class="form-field">
-              <label for="hafalanDoa">Nama Doa / Hadits <span style="color: #ef4444;">*</span></label>
-              <select id="hafalanDoa" class="form-input">
-                <option value="Doa Sebelum Makan" selected>Doa Sebelum Makan</option>
-                <option value="Doa Sesudah Makan">Doa Sesudah Makan</option>
-                <option value="Doa Masuk Kamar Mandi">Doa Masuk Kamar Mandi</option>
-                <option value="Doa Keluar Kamar Mandi">Doa Keluar Kamar Mandi</option>
-                <option value="Doa Sebelum Tidur">Doa Sebelum Tidur</option>
-                <option value="Doa Bangun Tidur">Doa Bangun Tidur</option>
-                <option value="Doa Untuk Kedua Orang Tua">Doa Untuk Kedua Orang Tua</option>
-                <option value="Doa Kebaikan Dunia & Akhirat">Doa Kebaikan Dunia &amp; Akhirat</option>
-                <option value="Doa Masuk Masjid">Doa Masuk Masjid</option>
-                <option value="Doa Keluar Masjid">Doa Keluar Masjid</option>
-                <option value="Doa Belajar">Doa Belajar</option>
-                <option value="Doa Memakai Pakaian">Doa Memakai Pakaian</option>
-                <option value="Doa Naik Kendaraan">Doa Naik Kendaraan</option>
-                <option value="Doa Bercermin">Doa Bercermin</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Predikat / Kelancaran -->
-          <div class="form-field">
-            <label for="predicateSelect">Predikat / Tingkat Kelancaran <span style="color: #ef4444;">*</span></label>
-            <select id="predicateSelect" class="form-input" required>
-              <option value="Sangat Lancar" selected>Sangat Lancar (A - Mutqin)</option>
-              <option value="Lancar">Lancar (B - Baik)</option>
-              <option value="Cukup">Cukup (C - Masih Terbata)</option>
-              <option value="Mengulang">Mengulang (Perlu Pengulangan Materi)</option>
-            </select>
-          </div>
-
-          <!-- Catatan / Keterangan Evaluasi -->
-          <div class="form-field">
-            <label for="learningNote">Catatan / Evaluasi Guru</label>
-            <textarea
-              id="learningNote"
-              class="form-input textarea-note"
-              rows="3"
-              placeholder="Catatan tajwid, makharijul huruf, atau pesan untuk orang tua..."
-            ></textarea>
-          </div>
-
-          <button type="submit" id="submitLearningBtn" class="btn-primary-submit">
-            Simpan Rekap Pembelajaran
+    <!-- ============================================================ -->
+    <!-- TAB 1: MUTABA'AH IQRO (JILID 1 - 6)                          -->
+    <!-- ============================================================ -->
+    <section id="panelIqro" class="mutabaah-panel">
+      <div class="section-card">
+        <!-- Level Stepper (Iqro 1..6) -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+          <span style="font-size: 0.85rem; font-weight: 700; color: #475569;">Pilih Jilid Iqro:</span>
+          <button type="button" class="btn-tool-pill" id="btnManualLevel" title="Atur Level Santri Secara Manual">
+            ⚙️ Atur Level Manual
           </button>
-        </form>
-      </section>
+        </div>
 
-      <!-- Panel Kanan: Riwayat & Rekapitulasi Pembelajaran -->
-      <section class="section-card">
-        <div class="card-header">
-          <div class="card-title">
-            <h3>Riwayat &amp; Perkembangan Belajar</h3>
-            <p>Daftar mutaba'ah hafalan dan bacaan santri yang telah tercatat.</p>
+        <div class="iqro-stepper-wrap" id="iqroStepper">
+          <!-- Tombol stepper di-generate via JavaScript -->
+        </div>
+
+        <!-- Kartu Progres Iqro -->
+        <div class="mutabaah-progress-card">
+          <div class="progress-header">
+            <span class="progress-title" id="iqroDisplayTitle">Progres Iqro 1</span>
+            <span class="progress-val-text" id="iqroProgressText">0 dari 36 Halaman Selesai (0%)</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="iqroProgressFill" style="width: 0%;"></div>
           </div>
         </div>
 
-        <!-- Ringkasan Statistik Pembelajaran -->
-        <div class="learning-stat-grid">
-          <div class="stat-pill stat-cat-total">
-            <span class="stat-num" id="statTotalSetoran">0</span>
-            <span class="stat-lbl">Total Setoran</span>
+        <!-- Toolbar Checklist Iqro -->
+        <div class="mutabaah-toolbar">
+          <div class="mutabaah-toolbar-left">
+            <button type="button" class="btn-tool-pill" id="btnCheckAllIqro">
+              ✓ Tandai Semua Tuntas
+            </button>
+            <button type="button" class="btn-tool-pill" id="btnUncheckAllIqro">
+              ✕ Hapus Semua Tanda
+            </button>
           </div>
-          <div class="stat-pill stat-cat-iqro">
-            <span class="stat-num" id="statIqroCount">0</span>
-            <span class="stat-lbl">Iqro</span>
-          </div>
-          <div class="stat-pill stat-cat-quran">
-            <span class="stat-num" id="statQuranCount">0</span>
-            <span class="stat-lbl">Al-Qur'an</span>
-          </div>
-          <div class="stat-pill stat-cat-hafalan">
-            <span class="stat-num" id="statHafalanCount">0</span>
-            <span class="stat-lbl">Hafalan</span>
+          <div class="mutabaah-toolbar-right">
+            <span class="save-status-pill" id="iqroSaveStatus">Otomatis tersimpan ✓</span>
+            <button type="button" class="btn-tool-pill active" id="btnSaveIqroManual">
+              💾 Simpan Perubahan
+            </button>
           </div>
         </div>
 
-        <!-- Toolbar Filter Rekap Pembelajaran -->
-        <div class="approval-toolbar" id="learningToolbar" style="margin-top: 14px;">
-          <div class="toolbar-left">
-            <!-- Filter Kategori -->
-            <div class="filter-item">
-              <label for="filterCategory">Kategori:</label>
-              <select id="filterCategory" class="form-input filter-status-select">
-                <option value="all">Semua Kategori</option>
-                <option value="Iqro">📖 Iqro</option>
-                <option value="Quran">📗 Al-Qur'an</option>
-                <option value="Hafalan Surat">🕌 Hafalan Surat</option>
-                <option value="Hafalan Doa">🤲 Hafalan Doa</option>
-              </select>
-            </div>
-
-            <!-- Filter Siswa -->
-            <div class="filter-item">
-              <label for="filterStudent">Siswa:</label>
-              <select id="filterStudent" class="form-input filter-status-select">
-                <option value="all">Semua Siswa</option>
-              </select>
-            </div>
-
-            <!-- Filter Tanggal -->
-            <div class="filter-item">
-              <label for="filterDate">Tanggal:</label>
-              <div class="date-input-group">
-                <input type="date" id="filterDate" class="form-input filter-date-input" />
-                <button type="button" id="btnFilterToday" class="btn-filter-pill active">Hari Ini</button>
-                <button type="button" id="btnFilterAllDates" class="btn-filter-pill">Semua Tanggal</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="toolbar-right">
-            <span class="filter-status-info" id="learningFilterInfo">Memuat data...</span>
-          </div>
-        </div>
-
-        <!-- Tabel Riwayat Pembelajaran -->
-        <div class="table-responsive learning-table-wrap">
-          <table class="recap-table" id="learningRecordsTable">
+        <!-- Tabel Checklist Halaman Iqro -->
+        <div class="mutabaah-table-wrap">
+          <table class="mutabaah-table" id="iqroTable">
             <thead>
               <tr>
-                <th class="col-no">No</th>
-                <th class="col-name">Siswa</th>
-                <th class="col-date">Tanggal</th>
-                <th class="col-cat">Kategori</th>
-                <th class="col-materi">Capaian / Materi</th>
-                <th class="col-predicate">Kelancaran</th>
-                <th class="col-note">Catatan Guru</th>
-                <th class="col-action">Aksi</th>
+                <th style="width: 35%;">Halaman</th>
+                <th class="th-check">Ketuntasan</th>
+                <th style="width: 50%;">Keterangan</th>
               </tr>
             </thead>
-            <tbody id="learningRecordsBody"></tbody>
+            <tbody id="iqroTableBody">
+              <!-- Baris per halaman di-render via JavaScript -->
+            </tbody>
           </table>
         </div>
-      </section>
-    </div>
+
+        <!-- Kartu Buka / Naik ke Iqro Selanjutnya (Unlock Button) -->
+        <div class="unlock-promotion-card" id="iqroUnlockCard">
+          <div class="unlock-congrats-text" id="unlockCongratsText" style="display: none;">
+            🎉 Luar Biasa! Semua Halaman Telah Tuntas!
+          </div>
+          <button type="button" class="btn-unlock-level is-locked" id="btnUnlockNextIqro" disabled>
+            🔒 Selesaikan Semua Halaman untuk Membuka Iqro Selanjutnya
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- TAB 2: HAFALAN AL-QUR'AN (JUZ 30: SURAH AN-NABA' S/D AN-NAS) -->
+    <!-- ============================================================ -->
+    <section id="panelQuran" class="mutabaah-panel" style="display: none;">
+      <div class="section-card">
+        <!-- Kartu Progres Hafalan -->
+        <div class="mutabaah-progress-card">
+          <div class="progress-header">
+            <span class="progress-title">Hafalan Al-Qur'an Juz 30 (Surah An-Naba' s/d An-Nas)</span>
+            <span class="progress-val-text" id="quranProgressText">0 dari 37 Surat Tuntas (0%)</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="quranProgressFill" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- Toolbar Pencarian & Filter Surat -->
+        <div class="mutabaah-toolbar">
+          <div class="mutabaah-toolbar-left">
+            <input
+              type="text"
+              id="quranSearchInput"
+              placeholder="🔍 Cari nama surat..."
+              class="form-input"
+              style="min-height: 36px; padding: 6px 12px; font-size: 0.85rem; width: 170px;"
+            />
+            <button type="button" class="btn-tool-pill active" id="filterSurahAll" data-filter="all">
+              Semua (37)
+            </button>
+            <button type="button" class="btn-tool-pill" id="filterSurahDone" data-filter="done">
+              Tuntas (<span id="countDoneSurah">0</span>)
+            </button>
+            <button type="button" class="btn-tool-pill" id="filterSurahPending" data-filter="pending">
+              Belum (<span id="countPendingSurah">37</span>)
+            </button>
+          </div>
+          <div class="mutabaah-toolbar-right">
+            <span class="save-status-pill" id="quranSaveStatus">Otomatis tersimpan ✓</span>
+            <button type="button" class="btn-tool-pill active" id="btnSaveQuranManual">
+              💾 Simpan Perubahan
+            </button>
+          </div>
+        </div>
+
+        <!-- Tabel Checklist Hafalan Qur'an -->
+        <div class="mutabaah-table-wrap">
+          <table class="mutabaah-table" id="quranTable">
+            <thead>
+              <tr>
+                <th style="width: 35%;">Surat</th>
+                <th class="th-check">Ketuntasan</th>
+                <th style="width: 50%;">Keterangan</th>
+              </tr>
+            </thead>
+            <tbody id="quranTableBody">
+              <!-- 37 baris surat An-Naba' s/d An-Nas di-render via JavaScript -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- TAB 3: REKAPITULASI PROGRES SELURUH SANTRI                    -->
+    <!-- ============================================================ -->
+    <section id="panelOverview" class="mutabaah-panel" style="display: none;">
+      <div class="section-card">
+        <div class="card-header">
+          <div class="card-title">
+            <h3>Rekap Progres Pembelajaran Seluruh Santri</h3>
+            <p>Pantau perkembangan Iqro dan Hafalan Qur'an seluruh santri di sekolah secara real-time.</p>
+          </div>
+          <button type="button" class="btn-tool-pill" id="btnRefreshOverview">
+            🔄 Segarkan Data
+          </button>
+        </div>
+
+        <!-- Statistik Ringkasan Kelas -->
+        <div class="overview-stats-grid">
+          <div class="overview-stat-card">
+            <div class="overview-stat-val" id="statTotalStudents">0</div>
+            <div class="overview-stat-lbl">Total Santri Terdaftar</div>
+          </div>
+          <div class="overview-stat-card">
+            <div class="overview-stat-val" style="color: #2563eb;" id="statAvgIqro">Iqro 1</div>
+            <div class="overview-stat-lbl">Tingkat Iqro Rata-rata</div>
+          </div>
+          <div class="overview-stat-card">
+            <div class="overview-stat-val" style="color: #10b981;" id="statKhatamIqro">0</div>
+            <div class="overview-stat-lbl">Santri Khatam Iqro 6</div>
+          </div>
+          <div class="overview-stat-card">
+            <div class="overview-stat-val" style="color: #be185d;" id="statTotalSurahDone">0</div>
+            <div class="overview-stat-lbl">Total Surat Dihafal</div>
+          </div>
+        </div>
+
+        <!-- Tabel Daftar Seluruh Santri -->
+        <div class="table-responsive">
+          <table class="recap-table" id="overviewTable">
+            <thead>
+              <tr>
+                <th style="width: 48px;">No</th>
+                <th>Nama Santri</th>
+                <th>Kelas</th>
+                <th>Level Iqro</th>
+                <th>Progres Jilid Aktif</th>
+                <th>Hafalan Juz 30</th>
+                <th style="width: 140px;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="overviewTableBody">
+              <!-- Di-render via JavaScript -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
   </main>
 
-  <script src="js/rekap-pembelajaran.js?v=20261110_16"></script>
+  <!-- Modal Dialog: Atur Level Iqro Manual -->
+  <dialog id="modalManualLevel" style="border: 1px solid #cbd5e1; border-radius: 14px; padding: 24px; max-width: 420px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
+    <h3 style="margin-top: 0; font-size: 1.15rem; color: #1e293b;">Atur Level Iqro Santri</h3>
+    <p style="font-size: 0.88rem; color: #64748b; line-height: 1.5; margin-bottom: 16px;">
+      Gunakan fitur ini jika santri baru masuk langsung di Iqro tingkat lanjut (misal Iqro 2, 3, dst.) tanpa harus mencentang jilid sebelumnya satu per satu.
+    </p>
+
+    <div class="form-field" style="margin-bottom: 20px;">
+      <label for="selectManualIqroLevel" style="display: block; font-weight: 700; font-size: 0.88rem; color: #1e293b; margin-bottom: 6px;">Pilih Level Iqro Baru:</label>
+      <select id="selectManualIqroLevel" class="form-input">
+        <option value="1">Iqro 1 (Halaman 1 - 36)</option>
+        <option value="2">Iqro 2 (Halaman 3 - 32)</option>
+        <option value="3">Iqro 3 (Halaman 3 - 32)</option>
+        <option value="4">Iqro 4 (Halaman 3 - 32)</option>
+        <option value="5">Iqro 5 (Halaman 3 - 32)</option>
+        <option value="6">Iqro 6 (Halaman 3 - 32)</option>
+        <option value="7">Khatam Iqro (Lulus ke Al-Qur'an)</option>
+      </select>
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; gap: 10px;">
+      <button type="button" class="btn-tool-pill" id="btnCancelManualLevel">Batal</button>
+      <button type="button" class="btn-tool-pill active" id="btnConfirmManualLevel" style="background: #2563eb; color: #ffffff;">Simpan Level</button>
+    </div>
+  </dialog>
+
+  <script src="js/rekap-pembelajaran.js?v=20261112_1"></script>
 </body>
 </html>
-

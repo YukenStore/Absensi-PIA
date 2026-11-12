@@ -1,5 +1,20 @@
+import os
+import sys
 from typing import Any, Dict, List, Optional
-from ..core.database import DatabaseClient, get_db
+
+# Pastikan direktori backend masuk ke sys.path untuk mencegah error relative import
+_current_dir = os.path.dirname(os.path.abspath(__file__))
+_backend_dir = os.path.abspath(os.path.join(_current_dir, "..", ".."))
+if _backend_dir not in sys.path:
+    sys.path.insert(0, _backend_dir)
+
+try:
+    from ..core.database import DatabaseClient, get_db
+except (ImportError, ValueError):
+    try:
+        from app.core.database import DatabaseClient, get_db
+    except (ImportError, ValueError):
+        from backend.app.core.database import DatabaseClient, get_db
 
 try:
     from fastapi import APIRouter, Depends, HTTPException, status  # type: ignore
@@ -368,5 +383,163 @@ def delete_learning_record(payload: Dict[str, Any], db: DatabaseClient = Depends
         return {"success": True, "message": "Catatan pembelajaran berhasil dihapus."}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ==========================================
+# MUTABA'AH PROGRES IQRO & HAFALAN QUR'AN
+# ==========================================
+
+@router.get("/api/learning-progress")
+def get_learning_progress(student_id: Optional[int] = None, db: DatabaseClient = Depends(get_db)):
+    try:
+        if student_id:
+            level_row = db.fetch_one("SELECT current_iqro_level FROM student_learning_level WHERE student_id = ?", [student_id])
+            current_level = int(level_row["current_iqro_level"]) if level_row and level_row.get("current_iqro_level") else 1
+            progress_rows = db.execute(
+                "SELECT category, level_name, item_id, item_label, is_completed, note, updated_by, updated_at FROM student_learning_progress WHERE student_id = ?",
+                [student_id]
+            )
+            return {
+                "success": True,
+                "student_id": student_id,
+                "current_iqro_level": current_level,
+                "progress": progress_rows or []
+            }
+        else:
+            all_levels = db.execute("SELECT student_id, current_iqro_level FROM student_learning_level")
+            all_progress = db.execute(
+                "SELECT student_id, category, level_name, item_id, item_label, is_completed, note, updated_by, updated_at FROM student_learning_progress"
+            )
+            return {
+                "success": True,
+                "levels": all_levels or [],
+                "progress": all_progress or []
+            }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/api/learning-progress")
+def save_learning_progress(payload: Dict[str, Any], db: DatabaseClient = Depends(get_db)):
+    try:
+        student_id = payload.get("student_id")
+        if not student_id:
+            raise HTTPException(status_code=400, detail="ID Santri wajib disertakan.")
+        student_id = int(student_id)
+        current_level = payload.get("current_iqro_level")
+        items = payload.get("items", [])
+        updated_by = (payload.get("updated_by") or "Guru PIA").strip()
+
+        if current_level:
+            db.execute("""
+                INSERT INTO student_learning_level (student_id, current_iqro_level, updated_by, updated_at)
+                VALUES (?, ?, ?, datetime('now'))
+                ON CONFLICT(student_id) DO UPDATE SET
+                    current_iqro_level = excluded.current_iqro_level,
+                    updated_by = excluded.updated_by,
+                    updated_at = datetime('now')
+            """, [student_id, int(current_level), updated_by])
+
+        for item in items:
+            category = (item.get("category") or "iqro").strip()
+            level_name = (item.get("level_name") or "").strip()
+            item_id = str(item.get("item_id") or "").strip()
+            item_label = str(item.get("item_label") or item_id).strip()
+            is_completed = 1 if item.get("is_completed") else 0
+            note = (item.get("note") or "").strip()
+
+            db.execute("""
+                INSERT INTO student_learning_progress (student_id, category, level_name, item_id, item_label, is_completed, note, updated_by, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                ON CONFLICT(student_id, category, level_name, item_id) DO UPDATE SET
+                    item_label = excluded.item_label,
+                    is_completed = excluded.is_completed,
+                    note = excluded.note,
+                    updated_by = excluded.updated_by,
+                    updated_at = datetime('now')
+            """, [student_id, category, level_name, item_id, item_label, is_completed, note, updated_by])
+
+        return {"success": True, "message": "Progres mutaba'ah berhasil disimpan."}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/api/learning-progress/advance-level")
+def advance_learning_level(payload: Dict[str, Any], db: DatabaseClient = Depends(get_db)):
+    try:
+        student_id = payload.get("student_id")
+        target_level = int(payload.get("target_level") or 1)
+        updated_by = (payload.get("updated_by") or "Guru PIA").strip()
+
+        if not student_id:
+            raise HTTPException(status_code=400, detail="ID Santri wajib disertakan.")
+        student_id = int(student_id)
+
+        db.execute("""
+            INSERT INTO student_learning_level (student_id, current_iqro_level, updated_by, updated_at)
+            VALUES (?, ?, ?, datetime('now'))
+            ON CONFLICT(student_id) DO UPDATE SET
+                current_iqro_level = excluded.current_iqro_level,
+                updated_by = excluded.updated_by,
+                updated_at = datetime('now')
+        """, [student_id, target_level, updated_by])
+
+        return {
+            "success": True,
+            "student_id": student_id,
+            "current_iqro_level": target_level,
+            "message": f"Berhasil naik ke Iqro {target_level}!"
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.get("/api/learning-progress/overview")
+def get_learning_overview(db: DatabaseClient = Depends(get_db)):
+    try:
+        students = db.execute("SELECT id, full_name, class_name FROM students ORDER BY id ASC")
+        levels = db.execute("SELECT student_id, current_iqro_level, updated_at FROM student_learning_level")
+        counts = db.execute("""
+            SELECT student_id, category, level_name, COUNT(*) as completed_count
+            FROM student_learning_progress
+            WHERE is_completed = 1
+            GROUP BY student_id, category, level_name
+        """)
+
+        level_map = {l["student_id"]: l["current_iqro_level"] for l in levels or []}
+        count_map = {}
+        for c in counts or []:
+            sid = c["student_id"]
+            if sid not in count_map:
+                count_map[sid] = {"iqroByLevel": {}, "hafalan": 0}
+            if c["category"] == "iqro":
+                count_map[sid]["iqroByLevel"][c["level_name"]] = c["completed_count"]
+            elif c["category"] == "hafalan":
+                count_map[sid]["hafalan"] += c["completed_count"]
+
+        overview_list = []
+        for s in students or []:
+            sid = s["id"]
+            cur_lvl = level_map.get(sid, 1)
+            c_data = count_map.get(sid, {"iqroByLevel": {}, "hafalan": 0})
+            cur_lvl_name = f"Iqro {cur_lvl}"
+            cur_lvl_completed = c_data["iqroByLevel"].get(cur_lvl_name, 0)
+            overview_list.append({
+                "id": sid,
+                "name": s["full_name"],
+                "class_name": s["class_name"],
+                "current_iqro_level": cur_lvl,
+                "current_iqro_completed": cur_lvl_completed,
+                "hafalan_completed": c_data.get("hafalan", 0)
+            })
+
+        return {"success": True, "students": overview_list}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
 
 

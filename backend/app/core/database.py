@@ -68,6 +68,16 @@ class DatabaseClient:
         rows = self.execute(sql, params)
         return rows[0] if rows else None
 
+    def query_all(
+        self, sql: str, params: Optional[List[Any]] = None
+    ) -> List[Dict[str, Any]]:
+        return self.execute(sql, params)
+
+    def query_one(
+        self, sql: str, params: Optional[List[Any]] = None
+    ) -> Optional[Dict[str, Any]]:
+        return self.fetch_one(sql, params)
+
     def _init_schema(self) -> None:
         users_table_sql = """
         CREATE TABLE IF NOT EXISTS users (
@@ -103,10 +113,35 @@ class DatabaseClient:
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
         """
+        learning_progress_sql = """
+        CREATE TABLE IF NOT EXISTS student_learning_progress (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_id INTEGER NOT NULL,
+            category TEXT NOT NULL,
+            level_name TEXT NOT NULL,
+            item_id TEXT NOT NULL,
+            item_label TEXT NOT NULL,
+            is_completed INTEGER NOT NULL DEFAULT 0,
+            note TEXT NOT NULL DEFAULT '',
+            updated_by TEXT NOT NULL DEFAULT '',
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            UNIQUE(student_id, category, level_name, item_id)
+        );
+        """
+        learning_level_sql = """
+        CREATE TABLE IF NOT EXISTS student_learning_level (
+            student_id INTEGER PRIMARY KEY,
+            current_iqro_level INTEGER NOT NULL DEFAULT 1,
+            updated_by TEXT NOT NULL DEFAULT '',
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        """
         try:
             self.execute(users_table_sql)
             self.execute(otp_table_sql)
             self.execute(students_table_sql)
+            self.execute(learning_progress_sql)
+            self.execute(learning_level_sql)
             try:
                 self.execute("ALTER TABLE students ADD COLUMN parent_name TEXT NOT NULL DEFAULT ''")
             except Exception:

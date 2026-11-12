@@ -338,6 +338,25 @@ db.exec(`
     record_date TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
+  CREATE TABLE IF NOT EXISTS student_learning_progress (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id INTEGER NOT NULL,
+    category TEXT NOT NULL,
+    level_name TEXT NOT NULL,
+    item_id TEXT NOT NULL,
+    item_label TEXT NOT NULL,
+    is_completed INTEGER NOT NULL DEFAULT 0,
+    note TEXT NOT NULL DEFAULT '',
+    updated_by TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(student_id, category, level_name, item_id)
+  );
+  CREATE TABLE IF NOT EXISTS student_learning_level (
+    student_id INTEGER PRIMARY KEY,
+    current_iqro_level INTEGER NOT NULL DEFAULT 1,
+    updated_by TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `);
 
 // Pastikan kolom role & is_hidden tersedia pada tabel users dan akun yumenoboken@gmail.com menjadi Admin utama
@@ -1364,6 +1383,170 @@ const server = http.createServer(async (req, res) => {
       const recordId = Number(body.record_id);
       db.prepare('DELETE FROM learning_records WHERE id = ?').run(recordId);
       return sendJson(res, 200, { success: true, message: 'Catatan pembelajaran berhasil dihapus.' });
+    } catch (err) {
+      return sendJson(res, 500, { detail: err.message });
+    }
+  }
+
+  // ==========================================================
+  // API MUTABA'AH & PROGRES BELAJAR (IQRO & HAFALAN QUR'AN)
+  // ==========================================================
+  if (pathname === '/api/learning-progress' && req.method === 'GET') {
+    try {
+      const studentId = Number(parsedUrl.searchParams.get('student_id')) || 0;
+      if (studentId) {
+        const levelRow = db
+          .prepare('SELECT current_iqro_level FROM student_learning_level WHERE student_id = ?')
+          .get(studentId);
+        const currentLevel = levelRow ? Number(levelRow.current_iqro_level) || 1 : 1;
+
+        const progressRows = db
+          .prepare(
+            'SELECT category, level_name, item_id, item_label, is_completed, note, updated_by, updated_at FROM student_learning_progress WHERE student_id = ?'
+          )
+          .all(studentId);
+
+        return sendJson(res, 200, {
+          success: true,
+          student_id: studentId,
+          current_iqro_level: currentLevel,
+          progress: progressRows || [],
+        });
+      } else {
+        const allLevels = db.prepare('SELECT student_id, current_iqro_level FROM student_learning_level').all();
+        const allProgress = db
+          .prepare(
+            'SELECT student_id, category, level_name, item_id, item_label, is_completed, note, updated_by, updated_at FROM student_learning_progress'
+          )
+          .all();
+        return sendJson(res, 200, {
+          success: true,
+          levels: allLevels || [],
+          progress: allProgress || [],
+        });
+      }
+    } catch (err) {
+      return sendJson(res, 500, { detail: err.message });
+    }
+  }
+
+  if (pathname === '/api/learning-progress' && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const studentId = Number(body.student_id);
+      const currentLevel = body.current_iqro_level ? Number(body.current_iqro_level) : null;
+      const items = Array.isArray(body.items) ? body.items : [];
+      const updatedBy = (body.updated_by || 'Guru PIA').trim();
+
+      if (!studentId) {
+        return sendJson(res, 400, { detail: 'ID Santri wajib disertakan.' });
+      }
+
+      if (currentLevel) {
+        db.prepare(`
+          INSERT INTO student_learning_level (student_id, current_iqro_level, updated_by, updated_at)
+          VALUES (?, ?, ?, datetime('now'))
+          ON CONFLICT(student_id) DO UPDATE SET
+            current_iqro_level = excluded.current_iqro_level,
+            updated_by = excluded.updated_by,
+            updated_at = datetime('now')
+        `).run(studentId, currentLevel, updatedBy);
+      }
+
+      const stmt = db.prepare(`
+        INSERT INTO student_learning_progress (student_id, category, level_name, item_id, item_label, is_completed, note, updated_by, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        ON CONFLICT(student_id, category, level_name, item_id) DO UPDATE SET
+          item_label = excluded.item_label,
+          is_completed = excluded.is_completed,
+          note = excluded.note,
+          updated_by = excluded.updated_by,
+          updated_at = datetime('now')
+      `);
+
+      for (const item of items) {
+        const category = (item.category || 'iqro').trim();
+        const levelName = (item.level_name || '').trim();
+        const itemId = String(item.item_id || '').trim();
+        const itemLabel = String(item.item_label || itemId).trim();
+        const isCompleted = item.is_completed ? 1 : 0;
+        const note = (item.note || '').trim();
+
+        stmt.run(studentId, category, levelName, itemId, itemLabel, isCompleted, note, updatedBy);
+      }
+
+      return sendJson(res, 200, { success: true, message: 'Progres mutaba\'ah berhasil disimpan.' });
+    } catch (err) {
+      return sendJson(res, 500, { detail: err.message });
+    }
+  }
+
+  if (pathname === '/api/learning-progress/advance-level' && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const studentId = Number(body.student_id);
+      const targetLevel = Number(body.target_level) || 1;
+      const updatedBy = (body.updated_by || 'Guru PIA').trim();
+
+      if (!studentId) {
+        return sendJson(res, 400, { detail: 'ID Santri wajib disertakan.' });
+      }
+
+      db.prepare(`
+        INSERT INTO student_learning_level (student_id, current_iqro_level, updated_by, updated_at)
+        VALUES (?, ?, ?, datetime('now'))
+        ON CONFLICT(student_id) DO UPDATE SET
+          current_iqro_level = excluded.current_iqro_level,
+          updated_by = excluded.updated_by,
+          updated_at = datetime('now')
+      `).run(studentId, targetLevel, updatedBy);
+
+      return sendJson(res, 200, { success: true, student_id: studentId, current_iqro_level: targetLevel, message: `Berhasil naik ke Iqro ${targetLevel}!` });
+    } catch (err) {
+      return sendJson(res, 500, { detail: err.message });
+    }
+  }
+
+  if (pathname === '/api/learning-progress/overview' && req.method === 'GET') {
+    try {
+      const students = db.prepare('SELECT id, full_name, class_name FROM students ORDER BY id ASC').all();
+      const levels = db.prepare('SELECT student_id, current_iqro_level, updated_at FROM student_learning_level').all();
+      const counts = db.prepare(`
+        SELECT student_id, category, level_name, COUNT(*) as completed_count
+        FROM student_learning_progress
+        WHERE is_completed = 1
+        GROUP BY student_id, category, level_name
+      `).all();
+
+      const levelMap = {};
+      for (const l of levels || []) levelMap[l.student_id] = l.current_iqro_level;
+
+      const countMap = {};
+      for (const c of counts || []) {
+        if (!countMap[c.student_id]) countMap[c.student_id] = { iqroByLevel: {}, hafalan: 0 };
+        if (c.category === 'iqro') {
+          countMap[c.student_id].iqroByLevel[c.level_name] = c.completed_count;
+        } else if (c.category === 'hafalan') {
+          countMap[c.student_id].hafalan += c.completed_count;
+        }
+      }
+
+      const overviewList = (students || []).map((s) => {
+        const curLvl = levelMap[s.id] || 1;
+        const cData = countMap[s.id] || { iqroByLevel: {}, hafalan: 0 };
+        const curLvlName = `Iqro ${curLvl}`;
+        const curLvlCompleted = cData.iqroByLevel[curLvlName] || 0;
+        return {
+          id: s.id,
+          name: s.full_name,
+          class_name: s.class_name,
+          current_iqro_level: curLvl,
+          current_iqro_completed: curLvlCompleted,
+          hafalan_completed: cData.hafalan || 0,
+        };
+      });
+
+      return sendJson(res, 200, { success: true, students: overviewList });
     } catch (err) {
       return sendJson(res, 500, { detail: err.message });
     }

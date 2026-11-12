@@ -2,21 +2,41 @@ import base64
 import hashlib
 import hmac
 import json
+import os
 import secrets
+import sys
 import time
 from typing import Any, Dict
 
-from ..core.config import settings
-from ..core.cpp_bridge import cpp_core
-from ..core.database import DatabaseClient, get_db
-from ..models.user import OtpVerification, User
-from ..schemas.auth import (
-    LoginRequest,
-    RegisterRequest,
-    ResendOtpRequest,
-    VerifyOtpRequest,
-)
-from ..services.email_service import send_otp_email
+_current_dir = os.path.dirname(os.path.abspath(__file__))
+_backend_dir = os.path.abspath(os.path.join(_current_dir, "..", ".."))
+if _backend_dir not in sys.path:
+    sys.path.insert(0, _backend_dir)
+
+try:
+    from ..core.config import settings
+    from ..core.cpp_bridge import cpp_core
+    from ..core.database import DatabaseClient, get_db
+    from ..models.user import OtpVerification, User
+    from ..schemas.auth import (
+        LoginRequest,
+        RegisterRequest,
+        ResendOtpRequest,
+        VerifyOtpRequest,
+    )
+    from ..services.email_service import send_otp_email
+except (ImportError, ValueError):
+    from app.core.config import settings
+    from app.core.cpp_bridge import cpp_core
+    from app.core.database import DatabaseClient, get_db
+    from app.models.user import OtpVerification, User
+    from app.schemas.auth import (
+        LoginRequest,
+        RegisterRequest,
+        ResendOtpRequest,
+        VerifyOtpRequest,
+    )
+    from app.services.email_service import send_otp_email
 
 try:
     from fastapi import APIRouter, Depends, HTTPException, status  # type: ignore
