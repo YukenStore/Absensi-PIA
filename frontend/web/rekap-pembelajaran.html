@@ -120,7 +120,7 @@
   <main class="container">
     <div class="page-header">
       <div class="page-title">
-        <h2>Mutaba'ah &amp; Rekap Pembelajaran Santri</h2>
+        <h2>Mutaba'ah &amp; Rekap Pembelajaran Siswa</h2>
         <p>Pencatatan perkembangan belajar Iqro (Jilid 1 s/d 6) dan Hafalan Al-Qur'an Juz 30.</p>
       </div>
     </div>
@@ -128,14 +128,14 @@
     <!-- Alert Notifikasi Global -->
     <div id="learningAlert" class="alert-banner"></div>
 
-    <!-- Bar Pemilihan Santri & Profil Ringkas -->
+    <!-- Bar Pemilihan Siswa & Profil Ringkas -->
     <section class="mutabaah-student-bar">
       <div class="mutabaah-student-selector">
         <label for="studentSelect" style="display: block; font-size: 0.85rem; font-weight: 700; color: #1e293b; margin-bottom: 6px;">
-          Pilih Santri / Siswa:
+          Pilih Siswa:
         </label>
         <select id="studentSelect" class="form-input" style="font-weight: 600;">
-          <option value="">-- Memuat data santri... --</option>
+          <option value="">-- Memuat data siswa... --</option>
         </select>
       </div>
 
@@ -158,16 +158,13 @@
       </div>
     </section>
 
-    <!-- Navigasi Tab Utama (Iqro, Hafalan, Rekap Semua) -->
-    <nav class="mutabaah-main-tabs" aria-label="Tab Pembelajaran">
+    <!-- Navigasi Tab Utama (Iqro & Hafalan Siswa) -->
+    <nav class="mutabaah-main-tabs" aria-label="Tab Pembelajaran Siswa">
       <button type="button" class="mutabaah-tab-btn active" id="tabBtnIqro" data-tab="panelIqro">
         📖 Mutaba'ah Iqro (1 - 6)
       </button>
       <button type="button" class="mutabaah-tab-btn" id="tabBtnQuran" data-tab="panelQuran">
         🕌 Hafalan Qur'an (Juz 30)
-      </button>
-      <button type="button" class="mutabaah-tab-btn" id="tabBtnOverview" data-tab="panelOverview">
-        📊 Rekap Seluruh Santri
       </button>
     </nav>
 
@@ -179,7 +176,7 @@
         <!-- Level Stepper (Iqro 1..6) -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
           <span style="font-size: 0.85rem; font-weight: 700; color: #475569;">Pilih Jilid Iqro:</span>
-          <button type="button" class="btn-tool-pill" id="btnManualLevel" title="Atur Level Santri Secara Manual">
+          <button type="button" class="btn-tool-pill" id="btnManualLevel" title="Atur Level Siswa Secara Manual">
             ⚙️ Atur Level Manual
           </button>
         </div>
@@ -308,14 +305,14 @@
     </section>
 
     <!-- ============================================================ -->
-    <!-- TAB 3: REKAPITULASI PROGRES SELURUH SANTRI                    -->
+    <!-- BAGIAN BAWAH: REKAPITULASI PROGRES SELURUH SISWA             -->
     <!-- ============================================================ -->
-    <section id="panelOverview" class="mutabaah-panel" style="display: none;">
+    <section id="sectionOverview" class="mutabaah-overview-section" style="margin-top: 28px;">
       <div class="section-card">
         <div class="card-header">
           <div class="card-title">
-            <h3>Rekap Progres Pembelajaran Seluruh Santri</h3>
-            <p>Pantau perkembangan Iqro dan Hafalan Qur'an seluruh santri di sekolah secara real-time.</p>
+            <h3>📊 Rekap Progres Pembelajaran Seluruh Siswa</h3>
+            <p>Pantau perkembangan Iqro dan Hafalan Qur'an seluruh siswa di sekolah secara real-time.</p>
           </div>
           <button type="button" class="btn-tool-pill" id="btnRefreshOverview">
             🔄 Segarkan Data
@@ -326,7 +323,7 @@
         <div class="overview-stats-grid">
           <div class="overview-stat-card">
             <div class="overview-stat-val" id="statTotalStudents">0</div>
-            <div class="overview-stat-lbl">Total Santri Terdaftar</div>
+            <div class="overview-stat-lbl">Total Siswa Terdaftar</div>
           </div>
           <div class="overview-stat-card">
             <div class="overview-stat-val" style="color: #2563eb;" id="statAvgIqro">Iqro 1</div>
@@ -334,7 +331,7 @@
           </div>
           <div class="overview-stat-card">
             <div class="overview-stat-val" style="color: #10b981;" id="statKhatamIqro">0</div>
-            <div class="overview-stat-lbl">Santri Khatam Iqro 6</div>
+            <div class="overview-stat-lbl">Siswa Khatam Iqro 6</div>
           </div>
           <div class="overview-stat-card">
             <div class="overview-stat-val" style="color: #be185d;" id="statTotalSurahDone">0</div>
@@ -342,16 +339,16 @@
           </div>
         </div>
 
-        <!-- Tabel Daftar Seluruh Santri -->
+        <!-- Tabel Daftar Seluruh Siswa -->
         <div class="table-responsive">
           <table class="recap-table" id="overviewTable">
             <thead>
               <tr>
                 <th style="width: 48px;">No</th>
-                <th>Nama Santri</th>
+                <th>Nama Siswa</th>
                 <th>Kelas</th>
                 <th>Level Iqro</th>
-                <th>Progres Jilid Aktif</th>
+                <th>Progres</th>
                 <th>Hafalan Juz 30</th>
                 <th style="width: 140px;">Aksi</th>
               </tr>
@@ -367,9 +364,9 @@
 
   <!-- Modal Dialog: Atur Level Iqro Manual -->
   <dialog id="modalManualLevel" style="border: 1px solid #cbd5e1; border-radius: 14px; padding: 24px; max-width: 420px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
-    <h3 style="margin-top: 0; font-size: 1.15rem; color: #1e293b;">Atur Level Iqro Santri</h3>
+    <h3 style="margin-top: 0; font-size: 1.15rem; color: #1e293b;">Atur Level Iqro Siswa</h3>
     <p style="font-size: 0.88rem; color: #64748b; line-height: 1.5; margin-bottom: 16px;">
-      Gunakan fitur ini jika santri baru masuk langsung di Iqro tingkat lanjut (misal Iqro 2, 3, dst.) tanpa harus mencentang jilid sebelumnya satu per satu.
+      Gunakan fitur ini jika siswa baru masuk langsung di Iqro tingkat lanjut (misal Iqro 2, 3, dst.) tanpa harus mencentang jilid sebelumnya satu per satu.
     </p>
 
     <div class="form-field" style="margin-bottom: 20px;">
@@ -391,6 +388,6 @@
     </div>
   </dialog>
 
-  <script src="js/rekap-pembelajaran.js?v=20261112_1"></script>
+  <script src="js/rekap-pembelajaran.js?v=20261112_2"></script>
 </body>
 </html>

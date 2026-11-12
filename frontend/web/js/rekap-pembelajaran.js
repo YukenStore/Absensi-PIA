@@ -1,5 +1,5 @@
 /**
- * Sistem Mutaba'ah & Rekap Pembelajaran Santri
+ * Sistem Mutaba'ah & Rekap Pembelajaran Siswa
  * Pendidikan Islam At-Taqwa (PIA)
  * Khusus: Iqro (Jilid 1 - 6) & Hafalan Al-Qur'an Juz 30 (An-Naba' s/d An-Nas)
  */
@@ -62,7 +62,7 @@ let currentUser = null;
 let studentsList = [];
 let selectedStudentId = null;
 let selectedStudent = null;
-let currentIqroLevel = 1; // Level resmi santri saat ini (1..6)
+let currentIqroLevel = 1; // Level resmi siswa saat ini (1..6)
 let viewedIqroLevel = 1;  // Level yang sedang dibuka di tab checklist
 let progressMap = {};     // { [key: `${category}_${level}_${itemId}`]: { is_completed: 0|1, note: '' } }
 let pendingSaveQueue = {};
@@ -235,7 +235,7 @@ async function loadStudents() {
 
   renderStudentDropdown();
 
-  // Pilih santri pertama secara otomatis jika belum ada yang dipilih
+  // Pilih siswa pertama secara otomatis jika belum ada yang dipilih
   if (!selectedStudentId && studentsList.length > 0) {
     selectStudent(studentsList[0].id);
   }
@@ -246,15 +246,15 @@ function renderStudentDropdown() {
   if (!selectEl) return;
 
   if (studentsList.length === 0) {
-    selectEl.innerHTML = '<option value="">Belum ada santri terdaftar di Dashboard</option>';
+    selectEl.innerHTML = '<option value="">Belum ada siswa terdaftar di Dashboard</option>';
     return;
   }
 
   selectEl.innerHTML =
-    '<option value="">-- Pilih Santri / Siswa --</option>' +
+    '<option value="">-- Pilih Siswa --</option>' +
     studentsList
       .map((s) => {
-        const sName = s.full_name || s.name || 'Santri';
+        const sName = s.full_name || s.name || 'Siswa';
         const sClass = s.class_name ? `(${s.class_name})` : '';
         const isSel = String(s.id) === String(selectedStudentId) ? 'selected' : '';
         return `<option value="${s.id}" ${isSel}>${escapeHtml(sName)} ${escapeHtml(sClass)}</option>`;
@@ -285,7 +285,7 @@ function renderStudentPreview() {
   if (!wrap || !selectedStudent) return;
   wrap.style.display = 'flex';
 
-  const sName = selectedStudent.full_name || selectedStudent.name || 'Santri';
+  const sName = selectedStudent.full_name || selectedStudent.name || 'Siswa';
   const initial = (sName.trim()[0] || 'S').toUpperCase();
 
   document.getElementById('studentAvatar').textContent = initial;
@@ -441,6 +441,7 @@ async function flushSaveQueue() {
     });
     showSaveStatus('iqroSaveStatus');
     showSaveStatus('quranSaveStatus');
+    loadOverviewData();
   } catch (err) {
     console.error('Gagal menyimpan mutaba\'ah ke server:', err);
   }
@@ -641,7 +642,7 @@ function renderIqroUnlockCard() {
 
   const currentCfg = IQRO_CONFIG[currentIqroLevel] || IQRO_CONFIG[1];
 
-  // Hitung jumlah halaman tuntas di level AKTIF santri (bukan level yang hanya sedang dilihat)
+  // Hitung jumlah halaman tuntas di level AKTIF siswa (bukan level yang hanya sedang dilihat)
   let activeDoneCount = 0;
   for (let page = currentCfg.startPage; page <= currentCfg.endPage; page++) {
     const key = `iqro_Iqro ${currentIqroLevel}_hal_${page}`;
@@ -655,7 +656,7 @@ function renderIqroUnlockCard() {
     if (isAllDone) {
       card.className = 'unlock-promotion-card is-ready';
       congrats.style.display = 'block';
-      congrats.textContent = '🎓 Maa Syaa Allah! Santri Telah Menyelesaikan Iqro 6!';
+      congrats.textContent = '🎓 Maa Syaa Allah! Siswa Telah Menyelesaikan Iqro 6!';
       btn.className = 'btn-unlock-level is-ready';
       btn.disabled = false;
       btn.innerHTML = '🌟 Lulus / Khatam Iqro &amp; Siap Masuk Al-Qur\'an';
@@ -692,7 +693,7 @@ function renderIqroUnlockCard() {
 // ============================================================
 async function advanceStudentLevel(targetLevel) {
   if (!selectedStudentId) return;
-  const sName = selectedStudent ? (selectedStudent.full_name || selectedStudent.name) : 'Santri';
+  const sName = selectedStudent ? (selectedStudent.full_name || selectedStudent.name) : 'Siswa';
 
   const confirmMsg =
     targetLevel > 6
@@ -729,6 +730,7 @@ async function advanceStudentLevel(targetLevel) {
       renderIqroChecklist();
       renderIqroUnlockCard();
       updateSummaryBadges();
+      loadOverviewData();
 
       showBanner(
         targetLevel > 6
@@ -738,7 +740,7 @@ async function advanceStudentLevel(targetLevel) {
       );
     }
   } catch (err) {
-    showBanner(err.message || 'Gagal menaikkan level santri.', 'error');
+    showBanner(err.message || 'Gagal menaikkan level siswa.', 'error');
   }
 }
 
@@ -922,7 +924,7 @@ function updateQuranProgressStats() {
 }
 
 // ============================================================
-// TAB 3: REKAPITULASI PROGRES SELURUH SANTRI (OVERVIEW KELAS)
+// BAGIAN BAWAH: REKAPITULASI PROGRES SELURUH SISWA (OVERVIEW KELAS)
 // ============================================================
 async function loadOverviewData() {
   const bodyEl = document.getElementById('overviewTableBody');
@@ -931,7 +933,7 @@ async function loadOverviewData() {
   bodyEl.innerHTML = `
     <tr>
       <td colspan="7" style="text-align: center; padding: 24px; color: #64748b;">
-        Memuat rekapitulasi progres seluruh santri...
+        Memuat rekapitulasi progres seluruh siswa...
       </td>
     </tr>
   `;
@@ -968,7 +970,7 @@ function renderOverviewList(list) {
     bodyEl.innerHTML = `
       <tr>
         <td colspan="7" style="text-align: center; padding: 24px; color: #94a3b8;">
-          Belum ada santri yang terdaftar di sistem.
+          Belum ada siswa yang terdaftar di sistem.
         </td>
       </tr>
     `;
@@ -1062,7 +1064,7 @@ function initManualLevelModal() {
 
   btnOpen.addEventListener('click', () => {
     if (!selectedStudentId) {
-      showBanner('Harap pilih santri terlebih dahulu.', 'error');
+      showBanner('Harap pilih siswa terlebih dahulu.', 'error');
       return;
     }
     if (selectLvl) selectLvl.value = String(currentIqroLevel);
@@ -1085,7 +1087,7 @@ function initManualLevelModal() {
 }
 
 // ============================================================
-// TAB SWITCHING
+// TAB SWITCHING (IQRO & HAFALAN)
 // ============================================================
 function switchTab(targetPanelId) {
   document.querySelectorAll('.mutabaah-main-tabs .mutabaah-tab-btn').forEach((btn) => {
@@ -1103,10 +1105,6 @@ function switchTab(targetPanelId) {
       panel.style.display = 'none';
     }
   });
-
-  if (targetPanelId === 'panelOverview') {
-    loadOverviewData();
-  }
 }
 
 // ============================================================
@@ -1237,4 +1235,5 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Load Data Awal
   await loadStudents();
+  loadOverviewData();
 });
