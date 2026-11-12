@@ -3305,41 +3305,27 @@ select.form-input {
 .mutabaah-student-preview {
   display: flex;
   align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
+  gap: 10px;
 }
 
-.student-avatar-circle {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 1.1rem;
-  flex-shrink: 0;
-}
-
-.student-preview-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.student-preview-name-row {
+.student-preview-badges-horizontal {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.student-preview-name {
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: #0f172a;
+.mutabaah-student-preview .student-class-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
 .student-badges-strip {
@@ -4053,6 +4039,19 @@ select.form-input {
     padding-top: 10px;
     border-top: 1px dashed #e2e8f0;
     width: 100%;
+  }
+  .student-preview-badges-horizontal {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    flex-wrap: wrap !important;
+    width: 100% !important;
+  }
+  .mutabaah-student-preview .student-class-tag,
+  .mutabaah-student-preview .badge-progress-iqro,
+  .mutabaah-student-preview .badge-progress-hafalan {
+    font-size: 0.78rem !important;
+    padding: 5px 10px !important;
   }
   .mutabaah-table td, .mutabaah-table thead th {
     padding: 8px 10px;

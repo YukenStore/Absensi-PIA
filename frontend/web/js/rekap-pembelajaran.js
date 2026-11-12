@@ -269,9 +269,8 @@ function renderStudentDropdown() {
     studentsList
       .map((s) => {
         const sName = s.full_name || s.name || 'Siswa';
-        const sClass = s.class_name ? `(${s.class_name})` : '';
         const isSel = String(s.id) === String(selectedStudentId) ? 'selected' : '';
-        return `<option value="${s.id}" ${isSel}>${escapeHtml(sName)} ${escapeHtml(sClass)}</option>`;
+        return `<option value="${s.id}" ${isSel}>${escapeHtml(sName)}</option>`;
       })
       .join('');
 }
@@ -347,11 +346,17 @@ function renderStudentPreview() {
   if (!wrap || !selectedStudent) return;
   wrap.style.display = 'flex';
 
-  const sName = selectedStudent.full_name || selectedStudent.name || 'Siswa';
-  const nameEl = document.getElementById('studentNamePreview');
-  if (nameEl) nameEl.textContent = sName;
   const classEl = document.getElementById('studentClassPreview');
-  if (classEl) classEl.textContent = selectedStudent.class_name || '-';
+  if (classEl) {
+    const rawClass = (selectedStudent.class_name || '').trim();
+    if (!rawClass || rawClass === '-') {
+      classEl.textContent = 'Kelas -';
+    } else if (rawClass.toLowerCase().startsWith('kelas')) {
+      classEl.textContent = rawClass;
+    } else {
+      classEl.textContent = `Kelas ${rawClass}`;
+    }
+  }
 
   updateSummaryBadges();
 }
