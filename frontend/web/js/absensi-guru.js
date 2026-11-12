@@ -391,7 +391,6 @@ function renderTodayCard(record) {
       card.className = 'today-status-card holiday';
       document.getElementById('todayDateVal').textContent = formatDateIndo(getLocalTodayIso());
       document.getElementById('todayStatusVal').innerHTML = '<span class="status-pill cell-libur" style="background:#f1f5f9;color:#64748b;font-weight:700;padding:4px 10px;border-radius:6px;">Hari Libur (Sabtu)</span>';
-      document.getElementById('todayNoteVal').textContent = 'Hari ini adalah hari libur (Sabtu). Tidak ada jadwal belajar-mengajar.';
       document.getElementById('todayApprovalVal').textContent = '-';
       return;
     }
@@ -400,7 +399,6 @@ function renderTodayCard(record) {
     card.className = 'today-status-card warning';
     document.getElementById('todayDateVal').textContent = formatDateIndo(getLocalTodayIso());
     document.getElementById('todayStatusVal').innerHTML = '<span class="status-pill cell-alfa" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;font-weight:700;padding:4px 10px;border-radius:6px;">Belum Mengisi (Otomatis Alfa)</span>';
-    document.getElementById('todayNoteVal').textContent = 'Anda belum mengisi presensi hari ini. Harap segera kirim presensi di bawah untuk mencatat kehadiran.';
     document.getElementById('todayApprovalVal').innerHTML = '<span class="badge-pending" style="background:#fee2e2;color:#991b1b;font-weight:700;border:1px solid #fecaca;">⚠️ Wajib Isi Absensi</span>';
     return;
   }
@@ -413,8 +411,6 @@ function renderTodayCard(record) {
   const code = record.status;
   const badgeClass = code === 'Hadir' ? 'status-pill-hadir' : code === 'Izin' ? 'status-pill-izin' : code === 'Alfa' ? 'status-pill-alfa' : 'status-pill-sakit';
   statusVal.innerHTML = `<span class="status-pill ${badgeClass}">${code}</span>`;
-
-  document.getElementById('todayNoteVal').textContent = record.note || '(Tidak ada catatan)';
 
   const approvalVal = document.getElementById('todayApprovalVal');
   const appStatus = record.approval_status || 'Pending';
