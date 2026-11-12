@@ -1131,21 +1131,31 @@ function initMainTabsAndEvents() {
   const tabButtons = document.querySelectorAll('.main-tab-btn');
   const tabPanels = document.querySelectorAll('.tab-panel');
 
+  function activateTab(targetId) {
+    tabButtons.forEach((b) => {
+      const match = b.getAttribute('data-tab') === targetId;
+      b.classList.toggle('active', match);
+      b.setAttribute('aria-selected', match ? 'true' : 'false');
+    });
+    tabPanels.forEach((p) => {
+      p.classList.toggle('active', p.id === targetId);
+    });
+  }
+
   tabButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
       const targetId = btn.getAttribute('data-tab');
-      tabButtons.forEach((b) => {
-        b.classList.remove('active');
-        b.setAttribute('aria-selected', 'false');
-      });
-      tabPanels.forEach((p) => p.classList.remove('active'));
-
-      btn.classList.add('active');
-      btn.setAttribute('aria-selected', 'true');
-      const panel = document.getElementById(targetId);
-      if (panel) panel.classList.add('active');
+      activateTab(targetId);
     });
   });
+
+  // Default saat dashboard dibuka: tampilkan Data Guru terlebih dahulu (atau jika URL hash #siswa)
+  const hash = (window.location.hash || '').toLowerCase();
+  if (hash === '#siswa' || hash === '#panelsiswa') {
+    activateTab('panelSiswa');
+  } else {
+    activateTab('panelGuru');
+  }
 
   // Event perubahan dropdown Tab Siswa
   ['siswaDailyMonth', 'siswaDailyYear', 'siswaRecapMode', 'siswaRecapMonth', 'siswaRecapYear'].forEach(

@@ -144,141 +144,30 @@
         <button
           type="button"
           class="main-tab-btn active"
-          id="btnTabSiswa"
-          data-tab="panelSiswa"
+          id="btnTabGuru"
+          data-tab="panelGuru"
           role="tab"
           aria-selected="true"
         >
-          <span>Data Siswa</span>
+          <span>Data Guru</span>
         </button>
         <button
           type="button"
           class="main-tab-btn"
-          id="btnTabGuru"
-          data-tab="panelGuru"
+          id="btnTabSiswa"
+          data-tab="panelSiswa"
           role="tab"
           aria-selected="false"
         >
-          <span>Data Guru</span>
+          <span>Data Siswa</span>
         </button>
       </div>
     </div>
 
     <!-- ========================================================= -->
-    <!-- TAB 1: DATA SISWA (Dropdown Harian & Rekap Dibedakan)     -->
+    <!-- TAB 1: DATA GURU (1 Dropdown Bulan & Tahun Untuk Semua)   -->
     <!-- ========================================================= -->
-    <section id="panelSiswa" class="tab-panel active" role="tabpanel">
-      <!-- 1A. Tabel Harian Absensi Siswa -->
-      <div class="section-card">
-        <div class="card-header">
-          <div class="card-title">
-            <h3>Tabel Harian Presensi Siswa</h3>
-            <p>Tabel kehadiran siswa per hari dalam 1 bulan (Hari Sabtu otomatis libur).</p>
-          </div>
-
-          <!-- Dropdown khusus Tabel Harian Siswa -->
-          <div class="filter-controls">
-            <div class="filter-group">
-              <label class="filter-label" for="siswaDailyMonth">Bulan</label>
-              <select id="siswaDailyMonth" class="select-control"></select>
-            </div>
-            <div class="filter-group">
-              <label class="filter-label" for="siswaDailyYear">Tahun</label>
-              <select id="siswaDailyYear" class="select-control"></select>
-            </div>
-          </div>
-        </div>
-
-        <div class="legend-bar">
-          <div class="legend-items">
-            <div class="legend-item">
-              <span class="legend-dot hadir"></span>
-              <span>Hadir</span>
-            </div>
-            <div class="legend-item">
-              <span class="legend-dot izin"></span>
-              <span>Izin</span>
-            </div>
-            <div class="legend-item">
-              <span class="legend-dot sakit"></span>
-              <span>Sakit</span>
-            </div>
-            <div class="legend-item">
-              <span class="legend-dot alfa"></span>
-              <span>Alfa</span>
-            </div>
-            <div class="legend-item">
-              <span class="legend-dot libur"></span>
-              <span>Libur</span>
-            </div>
-          </div>
-          <div class="holiday-tip holiday-tip-admin" style="display: none;">
-            <span>Klik angka tanggal pada tabel untuk meliburkan / mengaktifkan hari.</span>
-          </div>
-        </div>
-
-        <div class="table-responsive">
-          <table class="matrix-table" id="siswaDailyTable">
-            <thead id="siswaDailyHead"></thead>
-            <tbody id="siswaDailyBody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- 1B. Rekap Absensi Siswa (Dropdown Tersendiri: Semua / Tahun / Bulan) -->
-      <div class="section-card">
-        <div class="card-header">
-          <div class="card-title">
-            <h3>Rekap Absensi Siswa</h3>
-            <p>Akumulasi total kehadiran siswa berdasarkan periode yang dipilih.</p>
-          </div>
-
-          <!-- Dropdown khusus Rekap Absensi Siswa -->
-          <div class="filter-controls">
-            <div class="filter-group">
-              <label class="filter-label" for="siswaRecapMode">Periode</label>
-              <select id="siswaRecapMode" class="select-control">
-                <option value="all">Semua Data (Awal s/d Akhir)</option>
-                <option value="year">Pilih Tahun</option>
-                <option value="month">Pilih Bulan &amp; Tahun</option>
-              </select>
-            </div>
-
-            <div class="filter-group" id="siswaRecapMonthWrap" style="display: none;">
-              <label class="filter-label" for="siswaRecapMonth">Bulan</label>
-              <select id="siswaRecapMonth" class="select-control"></select>
-            </div>
-
-            <div class="filter-group" id="siswaRecapYearWrap" style="display: none;">
-              <label class="filter-label" for="siswaRecapYear">Tahun</label>
-              <select id="siswaRecapYear" class="select-control"></select>
-            </div>
-          </div>
-        </div>
-
-        <div class="table-responsive">
-          <table class="recap-table" id="siswaRecapTable">
-            <thead>
-              <tr>
-                <th style="width: 52px;">No</th>
-                <th>Nama Siswa</th>
-                <th>Hadir</th>
-                <th>Izin</th>
-                <th>Sakit</th>
-                <th>Alfa</th>
-                <th>Persentase Kehadiran</th>
-              </tr>
-            </thead>
-            <tbody id="siswaRecapBody"></tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- ========================================================= -->
-    <!-- TAB 2: DATA GURU (1 Dropdown Bulan & Tahun Untuk Semua)   -->
-    <!-- ========================================================= -->
-    <section id="panelGuru" class="tab-panel" role="tabpanel">
+    <section id="panelGuru" class="tab-panel active" role="tabpanel">
       <!-- Master Dropdown Bulan & Tahun untuk Tab Guru -->
       <div class="guru-master-filter">
         <div class="guru-filter-text">
@@ -298,7 +187,7 @@
         </div>
       </div>
 
-      <!-- 2A. Tabel Harian Absensi Guru -->
+      <!-- 1A. Tabel Harian Absensi Guru -->
       <div class="section-card">
         <div class="card-header">
           <div class="card-title">
@@ -359,7 +248,7 @@
         </div>
       </div>
 
-      <!-- 2B. Rekap Absensi Guru (Mengikuti Dropdown Bulan & Tahun di Atas) -->
+      <!-- 1B. Rekap Absensi Guru (Mengikuti Dropdown Bulan & Tahun di Atas) -->
       <div class="section-card">
         <div class="card-header">
           <div class="card-title">
@@ -386,9 +275,120 @@
         </div>
       </div>
     </section>
+
+    <!-- ========================================================= -->
+    <!-- TAB 2: DATA SISWA (Dropdown Harian & Rekap Dibedakan)     -->
+    <!-- ========================================================= -->
+    <section id="panelSiswa" class="tab-panel" role="tabpanel">
+      <!-- 2A. Tabel Harian Absensi Siswa -->
+      <div class="section-card">
+        <div class="card-header">
+          <div class="card-title">
+            <h3>Tabel Harian Presensi Siswa</h3>
+            <p>Tabel kehadiran siswa per hari dalam 1 bulan (Hari Sabtu otomatis libur).</p>
+          </div>
+
+          <!-- Dropdown khusus Tabel Harian Siswa -->
+          <div class="filter-controls">
+            <div class="filter-group">
+              <label class="filter-label" for="siswaDailyMonth">Bulan</label>
+              <select id="siswaDailyMonth" class="select-control"></select>
+            </div>
+            <div class="filter-group">
+              <label class="filter-label" for="siswaDailyYear">Tahun</label>
+              <select id="siswaDailyYear" class="select-control"></select>
+            </div>
+          </div>
+        </div>
+
+        <div class="legend-bar">
+          <div class="legend-items">
+            <div class="legend-item">
+              <span class="legend-dot hadir"></span>
+              <span>Hadir</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot izin"></span>
+              <span>Izin</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot sakit"></span>
+              <span>Sakit</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot alfa"></span>
+              <span>Alfa</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot libur"></span>
+              <span>Libur</span>
+            </div>
+          </div>
+          <div class="holiday-tip holiday-tip-admin" style="display: none;">
+            <span>Klik angka tanggal pada tabel untuk meliburkan / mengaktifkan hari.</span>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="matrix-table" id="siswaDailyTable">
+            <thead id="siswaDailyHead"></thead>
+            <tbody id="siswaDailyBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 2B. Rekap Absensi Siswa (Dropdown Tersendiri: Semua / Tahun / Bulan) -->
+      <div class="section-card">
+        <div class="card-header">
+          <div class="card-title">
+            <h3>Rekap Absensi Siswa</h3>
+            <p>Akumulasi total kehadiran siswa berdasarkan periode yang dipilih.</p>
+          </div>
+
+          <!-- Dropdown khusus Rekap Absensi Siswa -->
+          <div class="filter-controls">
+            <div class="filter-group">
+              <label class="filter-label" for="siswaRecapMode">Periode</label>
+              <select id="siswaRecapMode" class="select-control">
+                <option value="all">Semua Data (Awal s/d Akhir)</option>
+                <option value="year">Pilih Tahun</option>
+                <option value="month">Pilih Bulan &amp; Tahun</option>
+              </select>
+            </div>
+
+            <div class="filter-group" id="siswaRecapMonthWrap" style="display: none;">
+              <label class="filter-label" for="siswaRecapMonth">Bulan</label>
+              <select id="siswaRecapMonth" class="select-control"></select>
+            </div>
+
+            <div class="filter-group" id="siswaRecapYearWrap" style="display: none;">
+              <label class="filter-label" for="siswaRecapYear">Tahun</label>
+              <select id="siswaRecapYear" class="select-control"></select>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="recap-table" id="siswaRecapTable">
+            <thead>
+              <tr>
+                <th style="width: 52px;">No</th>
+                <th>Nama Siswa</th>
+                <th>Hadir</th>
+                <th>Izin</th>
+                <th>Sakit</th>
+                <th>Alfa</th>
+                <th>Persentase Kehadiran</th>
+              </tr>
+            </thead>
+            <tbody id="siswaRecapBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
   </main>
 
-  <script src="js/dashboard.js?v=20261110_13"></script>
+  <script src="js/dashboard.js?v=20261112_14"></script>
   <script src="js/pwa-install.js?v=20261112_2"></script>
 </body>
 </html>
