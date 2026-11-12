@@ -286,11 +286,10 @@ function renderStudentPreview() {
   wrap.style.display = 'flex';
 
   const sName = selectedStudent.full_name || selectedStudent.name || 'Siswa';
-  const initial = (sName.trim()[0] || 'S').toUpperCase();
-
-  document.getElementById('studentAvatar').textContent = initial;
-  document.getElementById('studentNamePreview').textContent = sName;
-  document.getElementById('studentClassPreview').textContent = selectedStudent.class_name || '-';
+  const nameEl = document.getElementById('studentNamePreview');
+  if (nameEl) nameEl.textContent = sName;
+  const classEl = document.getElementById('studentClassPreview');
+  if (classEl) classEl.textContent = selectedStudent.class_name || '-';
 
   updateSummaryBadges();
 }

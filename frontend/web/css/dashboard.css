@@ -3835,20 +3835,39 @@ select.form-input {
   }
 
   .overview-stats-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 8px !important;
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 6px !important;
     margin-bottom: 14px !important;
+    overflow-x: auto !important;
+    padding-bottom: 4px !important;
+    scrollbar-width: none !important;
+  }
+  .overview-stats-grid::-webkit-scrollbar {
+    display: none !important;
   }
   .overview-stat-card {
-    padding: 10px 8px !important;
+    padding: 8px 4px !important;
     border-radius: 10px !important;
+    min-width: 68px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
   }
   .overview-stat-val {
-    font-size: 1.25rem !important;
+    font-size: 1.05rem !important;
+    line-height: 1.2 !important;
+    font-weight: 800 !important;
+    white-space: nowrap !important;
   }
   .overview-stat-lbl {
-    font-size: 0.72rem !important;
-    margin-top: 2px !important;
+    font-size: 0.65rem !important;
+    line-height: 1.15 !important;
+    margin-top: 3px !important;
+    color: #64748b !important;
+    text-align: center !important;
   }
 
   #sectionOverview .table-responsive {
@@ -3976,6 +3995,11 @@ select.form-input {
     align-items: stretch;
     padding: 14px;
     gap: 12px;
+  }
+  .mutabaah-student-preview {
+    padding-top: 10px;
+    border-top: 1px dashed #e2e8f0;
+    width: 100%;
   }
   .mutabaah-table td, .mutabaah-table thead th {
     padding: 8px 10px;
