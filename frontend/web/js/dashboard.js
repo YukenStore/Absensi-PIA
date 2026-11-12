@@ -84,6 +84,7 @@ let state = {
   customHolidays: {},
   studentRecords: {},
   teacherRecords: {},
+  pendingTeacherSubmissions: {},
   currentUser: null,
   isAdmin: false,
 };
@@ -360,16 +361,26 @@ function loadLocalSyncedData() {
 
   // Pastikan data absensi guru yang sudah disetujui (Approved) dari pia_teacher_attendance_db tersambung ke Dashboard
   try {
+    state.pendingTeacherSubmissions = {};
     const rawTeacherDb = localStorage.getItem('pia_teacher_attendance_db');
     if (rawTeacherDb) {
       const parsed = JSON.parse(rawTeacherDb);
       if (parsed && Array.isArray(parsed.submissions)) {
         for (const sub of parsed.submissions) {
           if (sub.approval_status === 'Approved') {
-            const code = sub.status === 'Hadir' ? 'H' : sub.status === 'Izin' ? 'I' : 'S';
+            const code = sub.status === 'Hadir' ? 'H' : sub.status === 'Izin' ? 'I' : sub.status === 'Sakit' ? 'S' : 'A';
             if (sub.user_id) state.teacherRecords[`${sub.user_id}_${sub.attendance_date}`] = code;
             if (sub.teacher_email) state.teacherRecords[`${sub.teacher_email.toLowerCase()}_${sub.attendance_date}`] = code;
-          } else if (sub.approval_status === 'Rejected' || sub.approval_status === 'Pending') {
+          } else if (sub.approval_status === 'Pending') {
+            if (sub.user_id) {
+              delete state.teacherRecords[`${sub.user_id}_${sub.attendance_date}`];
+              state.pendingTeacherSubmissions[`${sub.user_id}_${sub.attendance_date}`] = sub;
+            }
+            if (sub.teacher_email) {
+              delete state.teacherRecords[`${sub.teacher_email.toLowerCase()}_${sub.attendance_date}`];
+              state.pendingTeacherSubmissions[`${sub.teacher_email.toLowerCase()}_${sub.attendance_date}`] = sub;
+            }
+          } else if (sub.approval_status === 'Rejected') {
             if (sub.user_id) delete state.teacherRecords[`${sub.user_id}_${sub.attendance_date}`];
             if (sub.teacher_email) delete state.teacherRecords[`${sub.teacher_email.toLowerCase()}_${sub.attendance_date}`];
           }
@@ -525,10 +536,19 @@ async function loadServerOverview() {
         if (parsed && Array.isArray(parsed.submissions)) {
           for (const sub of parsed.submissions) {
             if (sub.approval_status === 'Approved') {
-              const code = sub.status === 'Hadir' ? 'H' : sub.status === 'Izin' ? 'I' : 'S';
+              const code = sub.status === 'Hadir' ? 'H' : sub.status === 'Izin' ? 'I' : sub.status === 'Sakit' ? 'S' : 'A';
               if (sub.user_id) state.teacherRecords[`${sub.user_id}_${sub.attendance_date}`] = code;
               if (sub.teacher_email) state.teacherRecords[`${sub.teacher_email.toLowerCase()}_${sub.attendance_date}`] = code;
-            } else if (sub.approval_status === 'Rejected' || sub.approval_status === 'Pending') {
+            } else if (sub.approval_status === 'Pending') {
+              if (sub.user_id) {
+                delete state.teacherRecords[`${sub.user_id}_${sub.attendance_date}`];
+                state.pendingTeacherSubmissions[`${sub.user_id}_${sub.attendance_date}`] = sub;
+              }
+              if (sub.teacher_email) {
+                delete state.teacherRecords[`${sub.teacher_email.toLowerCase()}_${sub.attendance_date}`];
+                state.pendingTeacherSubmissions[`${sub.teacher_email.toLowerCase()}_${sub.attendance_date}`] = sub;
+              }
+            } else if (sub.approval_status === 'Rejected') {
               if (sub.user_id) delete state.teacherRecords[`${sub.user_id}_${sub.attendance_date}`];
               if (sub.teacher_email) delete state.teacherRecords[`${sub.teacher_email.toLowerCase()}_${sub.attendance_date}`];
             }
@@ -811,6 +831,17 @@ function renderAdminTeacherVisibilityPanel() {
 }
 
 // =========================================================================
+// HELPER: CEK APAKAH TANGGAL SUDAH BERJALAN / HARI INI
+// =========================================================================
+function isDatePastOrToday(year, monthIndex, day) {
+  const target = new Date(year, monthIndex, day);
+  target.setHours(0, 0, 0, 0);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return target.getTime() <= today.getTime();
+}
+
+// =========================================================================
 // RENDER MATRIKS TABEL HARIAN (1 BULAN PENUH)
 // =========================================================================
 function renderDailyMatrix({
@@ -822,6 +853,7 @@ function renderDailyMatrix({
   monthIndex,
   personLabel,
   emptyMessageHtml,
+  isTeacher = false,
 }) {
   const daysCount = getDaysInMonth(year, monthIndex);
 
@@ -891,9 +923,25 @@ function renderDailyMatrix({
       }
 
       const dateKey = formatDateKey(year, monthIndex, d);
-      const status =
+      let status =
         recordsMap[`${person.id}_${dateKey}`] ||
         (person.email && recordsMap[`${person.email.toLowerCase()}_${dateKey}`]);
+
+      // Cek apakah ada pengajuan presensi yang masih menunggu persetujuan (Pending)
+      const pendingSub =
+        isTeacher &&
+        state.pendingTeacherSubmissions &&
+        (state.pendingTeacherSubmissions[`${person.id}_${dateKey}`] ||
+          (person.email && state.pendingTeacherSubmissions[`${person.email.toLowerCase()}_${dateKey}`]));
+
+      // Sistem Absensi Guru: Jika tidak mengisi absen pada hari aktif sampai hari ini, otomatis Alfa (A)
+      let isAutoAlfa = false;
+      if (!status && isTeacher && isDatePastOrToday(year, monthIndex, d)) {
+        if (!pendingSub) {
+          status = 'A';
+          isAutoAlfa = true;
+        }
+      }
 
       if (status === 'H') {
         bodyHtml += `<td class="td-day" title="${person.name} - Tanggal ${d}: Hadir"><span class="status-pill cell-hadir">H</span></td>`;
@@ -902,7 +950,12 @@ function renderDailyMatrix({
       } else if (status === 'S') {
         bodyHtml += `<td class="td-day" title="${person.name} - Tanggal ${d}: Sakit"><span class="status-pill cell-sakit">S</span></td>`;
       } else if (status === 'A') {
-        bodyHtml += `<td class="td-day" title="${person.name} - Tanggal ${d}: Alfa"><span class="status-pill cell-alfa">A</span></td>`;
+        const titleText = isAutoAlfa
+          ? `${person.name} - Tanggal ${d}: Alfa (Otomatis - Tidak Mengisi Absensi)`
+          : `${person.name} - Tanggal ${d}: Alfa`;
+        bodyHtml += `<td class="td-day" title="${titleText}"><span class="status-pill cell-alfa">A</span></td>`;
+      } else if (pendingSub) {
+        bodyHtml += `<td class="td-day" title="${person.name} - Tanggal ${d}: Menunggu ACC Admin (${pendingSub.status})"><span class="status-pill cell-pending" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;">⏳</span></td>`;
       } else {
         bodyHtml += `<td class="td-day" title="${person.name} - Tanggal ${d}: Belum diisi"><span class="status-empty">-</span></td>`;
       }
@@ -917,7 +970,7 @@ function renderDailyMatrix({
 // =========================================================================
 // RENDER TABEL REKAP ABSENSI (TOTAL HADIR, IZIN, SAKIT, ALFA, PERSENTASE)
 // =========================================================================
-function renderRecapTable({ bodyEl, peopleList, recordsMap, filterConfig, emptyMessageHtml }) {
+function renderRecapTable({ bodyEl, peopleList, recordsMap, filterConfig, emptyMessageHtml, isTeacher = false }) {
   const tableEl = bodyEl ? bodyEl.closest('table') : null;
   if (!peopleList || peopleList.length === 0) {
     if (tableEl) tableEl.classList.add('is-empty-table');
@@ -962,9 +1015,23 @@ function renderRecapTable({ bodyEl, peopleList, recordsMap, filterConfig, emptyM
       for (let d = 1; d <= daysCount; d++) {
         if (isHolidayDate(year, monthIndex, d)) continue;
         const dateKey = formatDateKey(year, monthIndex, d);
-        const st =
+        let st =
           recordsMap[`${person.id}_${dateKey}`] ||
           (person.email && recordsMap[`${person.email.toLowerCase()}_${dateKey}`]);
+
+        const pendingSub =
+          isTeacher &&
+          state.pendingTeacherSubmissions &&
+          (state.pendingTeacherSubmissions[`${person.id}_${dateKey}`] ||
+            (person.email && state.pendingTeacherSubmissions[`${person.email.toLowerCase()}_${dateKey}`]));
+
+        // Sistem Absensi Guru: Jika tidak mengisi absen pada hari aktif sampai hari ini, otomatis Alfa (A)
+        if (!st && isTeacher && isDatePastOrToday(year, monthIndex, d)) {
+          if (!pendingSub) {
+            st = 'A';
+          }
+        }
+
         if (st === 'H') totalHadir++;
         else if (st === 'I') totalIzin++;
         else if (st === 'S') totalSakit++;
@@ -1107,6 +1174,7 @@ function renderGuruSection() {
     monthIndex: masterMonth,
     personLabel: 'Nama Guru',
     emptyMessageHtml: emptyGuruMsg,
+    isTeacher: true,
   });
 
   renderRecapTable({
@@ -1119,6 +1187,7 @@ function renderGuruSection() {
       monthIndex: masterMonth,
     },
     emptyMessageHtml: emptyGuruMsg,
+    isTeacher: true,
   });
 }
 

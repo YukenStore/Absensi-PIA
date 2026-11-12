@@ -864,7 +864,7 @@ const server = http.createServer(async (req, res) => {
       .all();
     const teacherRecords = {};
     for (const row of approvedRows) {
-      const code = row.status === 'Hadir' ? 'H' : row.status === 'Izin' ? 'I' : 'S';
+      const code = row.status === 'Hadir' ? 'H' : row.status === 'Izin' ? 'I' : row.status === 'Sakit' ? 'S' : 'A';
       teacherRecords[`${row.user_id}_${row.attendance_date}`] = code;
       if (row.teacher_email) {
         teacherRecords[`${row.teacher_email.toLowerCase()}_${row.attendance_date}`] = code;

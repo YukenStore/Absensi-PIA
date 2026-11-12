@@ -126,7 +126,20 @@ class _DashboardScreenState extends State<DashboardScreen>
     required bool isTeacher,
   }) {
     final key = '${personId}_${_dateKey(year, monthIndex, day)}';
-    return isTeacher ? _teacherRecords[key] : _studentRecords[key];
+    final existing = isTeacher ? _teacherRecords[key] : _studentRecords[key];
+    if (existing != null && existing.isNotEmpty) {
+      return existing;
+    }
+    // Jika guru dan tidak mengisi absen pada hari aktif sampai hari ini: otomatis Alfa (A)
+    if (isTeacher && !_isHoliday(year, monthIndex, day)) {
+      final targetDate = DateTime(year, monthIndex + 1, day);
+      final now = DateTime.now();
+      final todayDate = DateTime(now.year, now.month, now.day);
+      if (!targetDate.isAfter(todayDate)) {
+        return 'A'; // Otomatis Alfa jika tidak mengisi absen
+      }
+    }
+    return null;
   }
 
   Color _statusBgColor(String status) {

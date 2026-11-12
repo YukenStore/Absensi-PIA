@@ -1,5 +1,5 @@
 // Service Worker untuk Sistem Absensi PIA (PWA Support)
-const CACHE_NAME = 'pia-pwa-v5';
+const CACHE_NAME = 'pia-pwa-v6';
 const PRECACHE_ASSETS = [
   './dashboard.html',
   './rekap-pembelajaran.html',
