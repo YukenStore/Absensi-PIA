@@ -8,7 +8,13 @@
   <meta http-equiv="Expires" content="0" />
   <title>Absensi Guru - Pendidikan Islam At-Taqwa</title>
   <link rel="icon" type="image/png" href="assets/logo-pia.png" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261110_14" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#2563eb" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Absensi PIA" />
+  <link rel="apple-touch-icon" href="assets/logo-pia.png" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261112_7" />
 </head>
 <body>
   <!-- Navigasi Utama -->
@@ -100,6 +106,15 @@
               </svg>
               <span>Rekap Pembelajaran</span>
             </a>
+            <button type="button" class="dropdown-nav-item nav-item btn-install-app" id="navInstallAppBtn" title="Instal Aplikasi Sistem Absensi PIA">
+              <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Install Aplikasi</span>
+              <span class="badge-install-pill">PWA</span>
+            </button>
           </div>
 
           <div class="dropdown-divider"></div>
@@ -318,6 +333,7 @@
   </main>
 
   <script src="js/absensi-guru.js?v=20261110_12"></script>
+  <script src="js/pwa-install.js?v=20261112_1"></script>
 </body>
 </html>
 
