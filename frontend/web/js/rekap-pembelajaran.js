@@ -1190,11 +1190,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  document.querySelectorAll('[data-quran-filter]').forEach((btn) => {
+  const quranFilterBtns = document.querySelectorAll('#panelQuran [data-quran-filter], #panelQuran [data-filter]');
+  quranFilterBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('[data-quran-filter]').forEach((b) => b.classList.remove('active'));
+      quranFilterBtns.forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
-      quranFilterMode = btn.getAttribute('data-quran-filter');
+      quranFilterMode = btn.getAttribute('data-quran-filter') || btn.getAttribute('data-filter') || 'all';
       renderQuranChecklist();
     });
   });
