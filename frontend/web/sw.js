@@ -1,26 +1,33 @@
 // Service Worker untuk Sistem Absensi PIA (PWA Support)
-const CACHE_NAME = 'pia-pwa-v1';
+const CACHE_NAME = 'pia-pwa-v3';
 const PRECACHE_ASSETS = [
-  './',
-  './index.html',
   './dashboard.html',
-  './pendaftaran.html',
-  './absensi-guru.html',
-  './absensi-siswa.html',
   './rekap-pembelajaran.html',
+  './pendaftaran.html',
+  './absensi-siswa.html',
+  './absensi-guru.html',
+  './index.html',
   './assets/logo-pia.png',
+  './assets/icon-192.png',
+  './assets/icon-512.png',
+  './assets/icon-maskable-512.png',
   './css/dashboard.css',
   './css/style.css',
-  './manifest.json'
+  './manifest.json',
+  './js/pwa-install.js'
 ];
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(PRECACHE_ASSETS).catch((err) => {
-        console.warn('PWA Precache partial fail:', err);
-      });
+    caches.open(CACHE_NAME).then(async (cache) => {
+      for (const asset of PRECACHE_ASSETS) {
+        try {
+          await cache.add(asset);
+        } catch (e) {
+          // Precache resilient: tidak menggagalkan aktivasi jika ada 1 aset offline
+        }
+      }
     })
   );
 });
@@ -41,28 +48,20 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const req = event.request;
+  if (req.method !== 'GET') return;
+
   const url = new URL(req.url);
+  if (url.pathname.startsWith('/api/')) return;
 
-  // Jangan cache API atau POST requests
-  if (req.method !== 'GET' || url.pathname.startsWith('/api/')) {
-    return;
-  }
-
-  // Network-first dengan fallback ke cache
   event.respondWith(
     fetch(req)
       .then((networkResponse) => {
         if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(req, responseToCache).catch(() => {});
-          });
+          const toCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, toCache)).catch(() => {});
         }
         return networkResponse;
       })
-      .catch(() => {
-        return caches.match(req);
-      })
+      .catch(() => caches.match(req))
   );
 });
-

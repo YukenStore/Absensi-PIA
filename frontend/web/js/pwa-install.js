@@ -10,13 +10,191 @@
     window.matchMedia('(display-mode: standalone)').matches ||
     window.navigator.standalone === true;
 
+  // Injeksi CSS mandiri agar modal selalu tampil sempurna tanpa bergantung cache CSS eksternal
+  function injectPwaStyles() {
+    if (document.getElementById('pwa-injected-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'pwa-injected-styles';
+    style.textContent = `
+      .pwa-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.65);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        z-index: 999999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease;
+      }
+      .pwa-modal-backdrop.is-open {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .pwa-modal-card {
+        background: #ffffff;
+        border-radius: 20px;
+        max-width: 440px;
+        width: 100%;
+        box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35);
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+        transform: translateY(16px) scale(0.97);
+        transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        font-family: inherit;
+      }
+      .pwa-modal-backdrop.is-open .pwa-modal-card {
+        transform: translateY(0) scale(1);
+      }
+      .pwa-modal-header {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 18px 20px;
+        border-bottom: 1px solid #f1f5f9;
+        background: #f8fafc;
+      }
+      .pwa-modal-app-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        object-fit: cover;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+      }
+      .pwa-modal-title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0;
+      }
+      .pwa-modal-subtitle {
+        font-size: 0.8rem;
+        color: #64748b;
+        font-weight: 500;
+        display: block;
+      }
+      .pwa-modal-close {
+        margin-left: auto;
+        background: none;
+        border: none;
+        font-size: 1.7rem;
+        line-height: 1;
+        color: #94a3b8;
+        cursor: pointer;
+        padding: 4px;
+        transition: color 0.15s ease;
+      }
+      .pwa-modal-close:hover {
+        color: #0f172a;
+      }
+      .pwa-modal-body {
+        padding: 20px;
+      }
+      .pwa-modal-desc {
+        font-size: 0.88rem;
+        color: #475569;
+        line-height: 1.5;
+        margin-top: 0;
+        margin-bottom: 16px;
+      }
+      .pwa-guide-steps {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        background: #f8fafc;
+        padding: 14px;
+        border-radius: 14px;
+        border: 1px solid #e2e8f0;
+      }
+      .pwa-step-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+      }
+      .pwa-step-num {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: #2563eb;
+        color: #ffffff;
+        font-size: 0.78rem;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        margin-top: 2px;
+      }
+      .pwa-step-text {
+        font-size: 0.86rem;
+        color: #1e293b;
+        line-height: 1.45;
+      }
+      .pwa-inline-icon {
+        display: inline-flex;
+        vertical-align: -3px;
+        color: #2563eb;
+        margin: 0 2px;
+      }
+      .pwa-modal-footer {
+        padding: 14px 20px;
+        background: #f8fafc;
+        border-top: 1px solid #f1f5f9;
+        display: flex;
+        justify-content: flex-end;
+      }
+      .btn-pwa-primary {
+        padding: 10px 22px;
+        border-radius: 10px;
+        background: #2563eb;
+        color: #ffffff;
+        border: none;
+        font-weight: 700;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .btn-pwa-primary:hover {
+        background: #1d4ed8;
+      }
+      .pwa-toast {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%) translateY(50px);
+        background: #0f172a;
+        color: #ffffff;
+        padding: 12px 24px;
+        border-radius: 9999px;
+        font-size: 0.88rem;
+        font-weight: 600;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.35);
+        z-index: 1000000;
+        opacity: 0;
+        pointer-events: none;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .pwa-toast.show {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   // 1. Registrasi Service Worker
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker
         .register('sw.js')
         .then(() => {
-          // SW registered successfully
+          // SW terdaftar sukses
         })
         .catch((err) => {
           console.debug('Service Worker reg bypassed:', err);
@@ -59,8 +237,9 @@
     });
   }
 
-  // 4. Modal Panduan Instalasi (Khusus iOS / Browser tanpa beforeinstallprompt)
+  // 4. Modal Panduan Instalasi (Khusus iOS / Android / Desktop)
   function createModalHtml() {
+    injectPwaStyles();
     if (document.getElementById('pwaInstallGuideModal')) return;
 
     let guideContent = '';
@@ -84,7 +263,7 @@
           <div class="pwa-step-item">
             <div class="pwa-step-num">2</div>
             <div class="pwa-step-text">
-              Gulir ke bawah dan pilih opsi <strong>"Tambahkan ke Layar Utama" (Add to Home Screen)</strong>.
+              Gulir menu ke bawah lalu pilih opsi <strong>"Tambahkan ke Layar Utama" (Add to Home Screen)</strong>.
             </div>
           </div>
           <div class="pwa-step-item">
@@ -101,13 +280,13 @@
           <div class="pwa-step-item">
             <div class="pwa-step-num">1</div>
             <div class="pwa-step-text">
-              Ketuk tombol menu browser <strong>Titik Tiga (⋮)</strong> di pojok kanan atas.
+              Ketuk tombol menu browser <strong>Titik Tiga (⋮)</strong> di pojok kanan atas Chrome.
             </div>
           </div>
           <div class="pwa-step-item">
             <div class="pwa-step-num">2</div>
             <div class="pwa-step-text">
-              Pilih menu <strong>"Instal Aplikasi"</strong> atau <strong>"Tambahkan ke Layar Utama"</strong>.
+              Pilih menu <strong>"Instal Aplikasi"</strong> atau <strong>"Tambahkan ke Layar Utama" (Add to Home screen)</strong>.
             </div>
           </div>
           <div class="pwa-step-item">
@@ -118,7 +297,7 @@
           </div>
         </div>
         <p style="font-size: 0.82rem; color: #64748b; margin-top: 14px; text-align: center;">
-          *Di Desktop/PC, Anda juga dapat mengklik ikon instal di sisi kanan bilah alamat (URL bar) browser.
+          *Di Desktop/PC, Anda juga dapat mengklik ikon instal di bilah alamat URL browser (ujung kanan atas).
         </p>
       `;
     }
@@ -129,16 +308,16 @@
     modal.innerHTML = `
       <div class="pwa-modal-card">
         <div class="pwa-modal-header">
-          <img src="assets/logo-pia.png" alt="Logo PIA" class="pwa-modal-app-icon" />
+          <img src="assets/icon-192.png" alt="Logo PIA" class="pwa-modal-app-icon" />
           <div>
-            <h3 class="pwa-modal-title">Instal Sistem Absensi PIA</h3>
+            <h3 class="pwa-modal-title">Instal Aplikasi PIA</h3>
             <span class="pwa-modal-subtitle">Pendidikan Islam At-Taqwa</span>
           </div>
           <button type="button" class="pwa-modal-close" id="pwaCloseModalBtn" aria-label="Tutup">&times;</button>
         </div>
         <div class="pwa-modal-body">
           <p class="pwa-modal-desc">
-            Instal aplikasi ini ke layar utama perangkat Anda untuk akses instan satu ketukan, navigasi layar penuh yang responsif, dan performa maksimal.
+            Pasang aplikasi ini ke layar utama ponsel Anda untuk akses cepat satu ketukan, tampilan layar penuh tanpa URL bar, dan responsivitas maksimal.
           </p>
           ${guideContent}
         </div>
@@ -164,10 +343,13 @@
   function showInstallModal() {
     createModalHtml();
     const modal = document.getElementById('pwaInstallGuideModal');
-    if (modal) modal.classList.add('is-open');
+    if (modal) {
+      setTimeout(() => modal.classList.add('is-open'), 10);
+    }
   }
 
   function showToast(message) {
+    injectPwaStyles();
     let toast = document.getElementById('pwaToast');
     if (!toast) {
       toast = document.createElement('div');
@@ -195,6 +377,8 @@
           deferredPrompt = null;
           window._piaInstallPrompt = null;
           updateInstallButtonsState('installed');
+        } else {
+          showInstallModal();
         }
       } catch (err) {
         console.warn('Prompt error, showing modal guide:', err);
@@ -208,6 +392,7 @@
 
   // 6. Bind event listener ke tombol install
   function bindInstallTriggers() {
+    injectPwaStyles();
     updateInstallButtonsState(isStandalone ? 'installed' : (deferredPrompt ? 'ready' : 'initial'));
 
     document.addEventListener('click', (e) => {
@@ -226,4 +411,3 @@
     bindInstallTriggers();
   }
 })();
-
